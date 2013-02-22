@@ -1,0 +1,37 @@
+# Configuration file for dleyna-server
+#
+#
+#
+# General configuration options
+[general]
+
+# true: Service always stay in memory running
+# false: Service quit when the last client disconnects.
+never-quit=@never_quit@
+
+# IPC connector name
+connector-name=@with_connector_name@
+
+# Log configuration options
+[log]
+
+# Define the logging output method. 3 technologies are defined:
+#
+# 0=Syslog
+# 1=GLib
+# 2=File
+log-type=@with_log_type@
+
+# Comma-separated list of logging level.
+# Log levels are: 1=critical, 2=error, 3=warning, 4=message, 5=info, 6=debug
+#
+# Allowed values for log-levels are
+# 0 = disabled
+# 7 = default (=1,2,5)
+# 8 = all (=1,2,3,4,5,6)
+# 1,..,6 = a comma separated list of log level
+#
+# IMPORTANT: This log level is a subset of the log level defined at compile time
+# You can't enable levels disabled at compile time
+# level=8 means all level flags defined at compile time.
+log-level=@with_log_level@
