@@ -1,0 +1,11 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libexecdir=@libexecdir@
+includedir=${prefix}/include
+libdir=@libdir@
+
+Name: @PACKAGE@
+Description: UPnP & DLNA server library
+Libs: -L${libdir} -ldleyna-server-1.0
+Requires.private: glib-2.0 gio-2.0 gupnp-1.0 gupnp-av-1.0 dleyna-core-1.0
+Version: @VERSION@

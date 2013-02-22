@@ -1,0 +1,191 @@
+/*
+ * dLeyna
+ *
+ * Copyright (C) 2012-2013 Intel Corporation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU Lesser General Public License,
+ * version 2.1, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Regis Merlino <regis.merlino@intel.com>
+ *
+ */
+
+#ifndef DLEYNA_SERVER_INTERFACE_H__
+#define DLEYNA_SERVER_INTERFACE_H__
+
+enum msu_interface_type_ {
+	SERVER_INTERFACE_INFO_PROPERTIES,
+	SERVER_INTERFACE_INFO_OBJECT,
+	SERVER_INTERFACE_INFO_CONTAINER,
+	SERVER_INTERFACE_INFO_ITEM,
+	SERVER_INTERFACE_INFO_DEVICE,
+	SERVER_INTERFACE_INFO_MAX
+};
+
+#define SERVER_INTERFACE_PROPERTIES "org.freedesktop.DBus.Properties"
+#define SERVER_INTERFACE_MEDIA_CONTAINER "org.gnome.UPnP.MediaContainer2"
+#define SERVER_INTERFACE_MEDIA_OBJECT "org.gnome.UPnP.MediaObject2"
+#define SERVER_INTERFACE_MEDIA_ITEM "org.gnome.UPnP.MediaItem2"
+
+/* Object Properties */
+#define SERVER_INTERFACE_PROP_PATH "Path"
+#define SERVER_INTERFACE_PROP_PARENT "Parent"
+#define SERVER_INTERFACE_PROP_RESTRICTED "Restricted"
+#define SERVER_INTERFACE_PROP_DISPLAY_NAME "DisplayName"
+#define SERVER_INTERFACE_PROP_TYPE "Type"
+#define SERVER_INTERFACE_PROP_CREATOR "Creator"
+#define SERVER_INTERFACE_PROP_DLNA_MANAGED "DLNAManaged"
+#define SERVER_INTERFACE_PROP_OBJECT_UPDATE_ID "ObjectUpdateID"
+
+/* Item Properties */
+#define SERVER_INTERFACE_PROP_REFPATH "RefPath"
+#define SERVER_INTERFACE_PROP_ARTIST "Artist"
+#define SERVER_INTERFACE_PROP_ARTISTS "Artists"
+#define SERVER_INTERFACE_PROP_ALBUM "Album"
+#define SERVER_INTERFACE_PROP_DATE "Date"
+#define SERVER_INTERFACE_PROP_GENRE "Genre"
+#define SERVER_INTERFACE_PROP_TRACK_NUMBER "TrackNumber"
+#define SERVER_INTERFACE_PROP_ALBUM_ART_URL "AlbumArtURL"
+#define SERVER_INTERFACE_PROP_RESOURCES "Resources"
+
+/* Container Properties */
+#define SERVER_INTERFACE_PROP_SEARCHABLE "Searchable"
+#define SERVER_INTERFACE_PROP_CHILD_COUNT "ChildCount"
+#define SERVER_INTERFACE_PROP_CREATE_CLASSES "CreateClasses"
+#define SERVER_INTERFACE_PROP_CONTAINER_UPDATE_ID "ContainerUpdateID"
+#define SERVER_INTERFACE_PROP_TOTAL_DELETED_CHILD_COUNT "TotalDeletedChildCount"
+
+/* Device Properties */
+#define SERVER_INTERFACE_PROP_LOCATION "Location"
+#define SERVER_INTERFACE_PROP_UDN "UDN"
+#define SERVER_INTERFACE_PROP_DEVICE_TYPE "DeviceType"
+#define SERVER_INTERFACE_PROP_FRIENDLY_NAME "FriendlyName"
+#define SERVER_INTERFACE_PROP_MANUFACTURER "Manufacturer"
+#define SERVER_INTERFACE_PROP_MANUFACTURER_URL "ManufacturerUrl"
+#define SERVER_INTERFACE_PROP_MODEL_DESCRIPTION "ModelDescription"
+#define SERVER_INTERFACE_PROP_MODEL_NAME "ModelName"
+#define SERVER_INTERFACE_PROP_MODEL_NUMBER "ModelNumber"
+#define SERVER_INTERFACE_PROP_MODEL_URL "ModelURL"
+#define SERVER_INTERFACE_PROP_SERIAL_NUMBER "SerialNumber"
+#define SERVER_INTERFACE_PROP_PRESENTATION_URL "PresentationURL"
+#define SERVER_INTERFACE_PROP_ICON_URL "IconURL"
+#define SERVER_INTERFACE_PROP_SV_DLNA_CAPABILITIES "DLNACaps"
+#define SERVER_INTERFACE_PROP_SV_SEARCH_CAPABILITIES "SearchCaps"
+#define SERVER_INTERFACE_PROP_SV_SORT_CAPABILITIES "SortCaps"
+#define SERVER_INTERFACE_PROP_SV_SORT_EXT_CAPABILITIES "SortExtCaps"
+#define SERVER_INTERFACE_PROP_SV_FEATURE_LIST "FeatureList"
+#define SERVER_INTERFACE_PROP_SV_SERVICE_RESET_TOKEN "ServiceResetToken"
+
+/* Resources Properties */
+#define SERVER_INTERFACE_PROP_MIME_TYPE "MIMEType"
+#define SERVER_INTERFACE_PROP_DLNA_PROFILE "DLNAProfile"
+#define SERVER_INTERFACE_PROP_SIZE "Size"
+#define SERVER_INTERFACE_PROP_DURATION "Duration"
+#define SERVER_INTERFACE_PROP_BITRATE "Bitrate"
+#define SERVER_INTERFACE_PROP_SAMPLE_RATE "SampleRate"
+#define SERVER_INTERFACE_PROP_BITS_PER_SAMPLE "BitsPerSample"
+#define SERVER_INTERFACE_PROP_WIDTH "Width"
+#define SERVER_INTERFACE_PROP_HEIGHT "Height"
+#define SERVER_INTERFACE_PROP_COLOR_DEPTH "ColorDepth"
+#define SERVER_INTERFACE_PROP_URLS "URLs"
+#define SERVER_INTERFACE_PROP_URL "URL"
+#define SERVER_INTERFACE_PROP_UPDATE_COUNT "UpdateCount"
+
+/* Evented State Variable Properties */
+#define SERVER_INTERFACE_PROP_ESV_SYSTEM_UPDATE_ID "SystemUpdateID"
+
+#define SERVER_INTERFACE_GET_VERSION "GetVersion"
+#define SERVER_INTERFACE_GET_SERVERS "GetServers"
+#define SERVER_INTERFACE_RELEASE "Release"
+#define SERVER_INTERFACE_SET_PROTOCOL_INFO "SetProtocolInfo"
+#define SERVER_INTERFACE_PREFER_LOCAL_ADDRESSES "PreferLocalAddresses"
+
+#define SERVER_INTERFACE_FOUND_SERVER "FoundServer"
+#define SERVER_INTERFACE_LOST_SERVER "LostServer"
+
+#define SERVER_INTERFACE_LIST_CHILDREN "ListChildren"
+#define SERVER_INTERFACE_LIST_CHILDREN_EX "ListChildrenEx"
+#define SERVER_INTERFACE_LIST_ITEMS "ListItems"
+#define SERVER_INTERFACE_LIST_ITEMS_EX "ListItemsEx"
+#define SERVER_INTERFACE_LIST_CONTAINERS "ListContainers"
+#define SERVER_INTERFACE_LIST_CONTAINERS_EX "ListContainersEx"
+#define SERVER_INTERFACE_SEARCH_OBJECTS "SearchObjects"
+#define SERVER_INTERFACE_SEARCH_OBJECTS_EX "SearchObjectsEx"
+#define SERVER_INTERFACE_UPDATE "Update"
+
+#define SERVER_INTERFACE_GET_COMPATIBLE_RESOURCE "GetCompatibleResource"
+
+#define SERVER_INTERFACE_GET "Get"
+#define SERVER_INTERFACE_GET_ALL "GetAll"
+#define SERVER_INTERFACE_INTERFACE_NAME "InterfaceName"
+#define SERVER_INTERFACE_PROPERTY_NAME "PropertyName"
+#define SERVER_INTERFACE_PROPERTIES_VALUE "Properties"
+#define SERVER_INTERFACE_VALUE "value"
+#define SERVER_INTERFACE_CHILD_TYPES "ChildTypes"
+
+#define SERVER_INTERFACE_VERSION "Version"
+#define SERVER_INTERFACE_SERVERS "Servers"
+
+#define SERVER_INTERFACE_CRITERIA "Criteria"
+#define SERVER_INTERFACE_DICT "Dictionary"
+#define SERVER_INTERFACE_PATH "Path"
+#define SERVER_INTERFACE_QUERY "Query"
+#define SERVER_INTERFACE_PROTOCOL_INFO "ProtocolInfo"
+#define SERVER_INTERFACE_PREFER "Prefer"
+
+#define SERVER_INTERFACE_OFFSET "Offset"
+#define SERVER_INTERFACE_MAX "Max"
+#define SERVER_INTERFACE_FILTER "Filter"
+#define SERVER_INTERFACE_CHILDREN "Children"
+#define SERVER_INTERFACE_SORT_BY "SortBy"
+#define SERVER_INTERFACE_TOTAL_ITEMS "TotalItems"
+
+#define SERVER_INTERFACE_PROPERTIES_CHANGED "PropertiesChanged"
+#define SERVER_INTERFACE_CHANGED_PROPERTIES "ChangedProperties"
+#define SERVER_INTERFACE_INVALIDATED_PROPERTIES "InvalidatedProperties"
+#define SERVER_INTERFACE_ESV_CONTAINER_UPDATE_IDS "ContainerUpdateIDs"
+#define SERVER_INTERFACE_CONTAINER_PATHS_ID "ContainerPathsIDs"
+#define SERVER_INTERFACE_ESV_LAST_CHANGE "LastChange"
+#define SERVER_INTERFACE_LAST_CHANGE_STATE_EVENT "StateEvent"
+
+#define SERVER_INTERFACE_DELETE "Delete"
+
+#define SERVER_INTERFACE_CREATE_CONTAINER "CreateContainer"
+#define SERVER_INTERFACE_CREATE_CONTAINER_IN_ANY "CreateContainerInAnyContainer"
+
+#define SERVER_INTERFACE_UPLOAD "Upload"
+#define SERVER_INTERFACE_UPLOAD_TO_ANY "UploadToAnyContainer"
+#define SERVER_INTERFACE_GET_UPLOAD_STATUS "GetUploadStatus"
+#define SERVER_INTERFACE_GET_UPLOAD_IDS "GetUploadIDs"
+#define SERVER_INTERFACE_CANCEL_UPLOAD "CancelUpload"
+#define SERVER_INTERFACE_TOTAL "Total"
+#define SERVER_INTERFACE_LENGTH "Length"
+#define SERVER_INTERFACE_FILE_PATH "FilePath"
+#define SERVER_INTERFACE_UPLOAD_ID "UploadId"
+#define SERVER_INTERFACE_UPLOAD_IDS "UploadIDs"
+#define SERVER_INTERFACE_UPLOAD_STATUS "UploadStatus"
+#define SERVER_INTERFACE_UPLOAD_UPDATE "UploadUpdate"
+#define SERVER_INTERFACE_TO_ADD_UPDATE "ToAddUpdate"
+#define SERVER_INTERFACE_TO_DELETE "ToDelete"
+#define SERVER_INTERFACE_CANCEL "Cancel"
+
+#define SERVER_INTERFACE_CREATE_PLAYLIST "CreatePlaylist"
+#define SERVER_INTERFACE_CREATE_PLAYLIST_TO_ANY "CreatePlaylistInAnyContainer"
+#define SERVER_INTERFACE_TITLE "Title"
+#define SERVER_INTERFACE_CREATOR "Creator"
+#define SERVER_INTERFACE_GENRE "Genre"
+#define SERVER_INTERFACE_DESCRIPTION "Description"
+#define SERVER_INTERFACE_PLAYLIST_ITEMS "PlaylistItems"
+
+
+#endif /* DLEYNA_SERVER_INTERFACE_H__ */

@@ -1,0 +1,8 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libexecdir=@libexecdir@
+
+Name: @PACKAGE@-service
+Description: UPnP & DLNA media content management
+Requires.private: glib-2.0 gio-2.0 dleyna-core-1.0 dleyna-server-1.0
+Version: @VERSION@
