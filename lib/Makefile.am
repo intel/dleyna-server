@@ -57,12 +57,9 @@ sysconf_DATA = dleyna-server.conf
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = dleyna-server-1.0.pc
 
-dbussessiondir = @DBUS_SESSION_DIR@
-dbussession_DATA = com.intel.dleyna-server.service
-
 EXTRA_DIST = $(sysconf_DATA)
-CLEANFILES = $(pkgconfig_DATA) $(dbussession_DATA) dleyna-server.conf
-DISTCLEANFILES = $(pkgconfig_DATA) $(dbussession_DATA) dleyna-server.conf
+CLEANFILES = $(pkgconfig_DATA) dleyna-server.conf
+DISTCLEANFILES = $(pkgconfig_DATA) dleyna-server.conf
 
 maintainer-clean-local:
 	rm -rf build-aux

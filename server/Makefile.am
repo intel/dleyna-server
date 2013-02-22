@@ -14,3 +14,9 @@ dleyna_server_LDADD =	$(GLIB_LIBS)					\
 			$(GIO_LIBS)					\
 			$(DLEYNA_CORE_LIBS)				\
 			$(top_builddir)/lib/libdleyna-server-1.0.la
+			
+dbussessiondir = @DBUS_SESSION_DIR@
+dbussession_DATA = com.intel.dleyna-server.service
+
+CLEANFILES = $(dbussession_DATA)
+DISTCLEANFILES = $(dbussession_DATA)

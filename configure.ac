@@ -174,10 +174,16 @@ AC_ARG_ENABLE(lib-only,
 			[compile only the libdleyna-server library]),
 		[],
 		[enable_lib_only=no])
-AM_CONDITIONAL([BUILD_SERVER], [test "x$[]enable_lib_only" = "xno"])
+		
+AS_IF([test "x$[]enable_lib_only" = "xno"],
+      [PKG_CHECK_MODULES([DBUS], [dbus-1],
+			 [DBUS_SESSION_DIR=`$PKG_CONFIG --variable=session_bus_services_dir dbus-1`;
+			  AC_SUBST(DBUS_SESSION_DIR)
+			 ],
+			 [enable_lib_only=yes])
+      ])
 
-DBUS_SESSION_DIR=`$PKG_CONFIG --variable=session_bus_services_dir dbus-1`
-AC_SUBST(DBUS_SESSION_DIR)
+AM_CONDITIONAL([BUILD_SERVER], [test "x$[]enable_lib_only" = "xno"])
 
 AC_DEFINE([DLEYNA_SERVER_OBJECT], "/com/intel/dLeynaServer", [Name of object exposed by dleyna-server])
 AC_DEFINE([DLEYNA_SERVER_PATH], "/com/intel/dLeynaServer/server", [Path of server objects])
@@ -206,7 +212,7 @@ AC_CONFIG_FILES([Makefile				\
 		 lib/Makefile				\
 		 lib/dleyna-server-1.0.pc		\
 		 lib/dleyna-server.conf			\
-		 lib/com.intel.dleyna-server.service	\
+		 server/com.intel.dleyna-server.service	\
 		 server/Makefile
 		])
 
