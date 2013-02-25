@@ -1,0 +1,3 @@
+dLeyna-server uses the dLeyna-core logging guidelines:
+
+https://github.com/01org/dleyna-core/blob/master/doc/logging.txt

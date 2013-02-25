@@ -1,0 +1,7 @@
+TODO:
+-----
+
+You can check the list of features we have planned or are currently working on
+in github:
+
+<https://github.com/01org/dleyna-server/issues?labels=enhancement&page=1&state=open>
