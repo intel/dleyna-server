@@ -1,7 +1,7 @@
 SUBDIRS = lib
 
 if BUILD_SERVER
-SUBDIRS += server
+SUBDIRS += server test/dbus
 endif
 
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}

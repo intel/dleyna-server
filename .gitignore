@@ -40,4 +40,4 @@ lib/dleyna-server.conf
 lib/dleyna-server-1.0.pc
 
 server/dleyna-server-service
-server/dms-info
+test/dbus/dms-info

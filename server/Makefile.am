@@ -14,17 +14,6 @@ dleyna_server_service_LDADD =	$(GLIB_LIBS)				    \
 				$(GIO_LIBS)				    \
 				$(DLEYNA_CORE_LIBS)			    \
 				$(top_builddir)/lib/libdleyna-server-1.0.la
-
-dms_info_sources = ../test/dbus/dms-info.c
-
-noinst_PROGRAMS = dms-info
-dms_info_SOURCES = $(dms_info_sources)
-
-dms_info_CFLAGS =	$(GLIB_CFLAGS)	\
-			$(GIO_CFLAGS)
-
-dms_info_LDADD =	$(GLIB_LIBS)	\
-			$(GIO_LIBS)
 			
 dbussessiondir = @DBUS_SESSION_DIR@
 dbussession_DATA = com.intel.dleyna-server.service
