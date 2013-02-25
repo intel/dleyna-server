@@ -214,7 +214,8 @@ AC_CONFIG_FILES([Makefile				\
 		 lib/dleyna-server.conf			\
 		 server/com.intel.dleyna-server.service	\
 		 server/dleyna-server-service-1.0.pc	\
-		 server/Makefile
+		 server/Makefile			\
+		 test/dbus/Makefile
 		])
 
 AC_OUTPUT
