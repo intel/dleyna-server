@@ -170,7 +170,7 @@ DLEYNA_LOG_TYPE_CHECK([${with_log_type}])
 
 AC_ARG_ENABLE(lib-only,
 		AS_HELP_STRING(
-			[--lib-only],
+			[--enable-lib-only],
 			[compile only the libdleyna-server library]),
 		[],
 		[enable_lib_only=no])
@@ -213,6 +213,7 @@ AC_CONFIG_FILES([Makefile				\
 		 lib/dleyna-server-1.0.pc		\
 		 lib/dleyna-server.conf			\
 		 server/com.intel.dleyna-server.service	\
+		 server/dleyna-server-service-1.0.pc	\
 		 server/Makefile
 		])
 

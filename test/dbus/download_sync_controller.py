@@ -260,7 +260,7 @@ class DscController(object):
 
     Sample usage:
     >>> controller.servers()
-    >>> controller.track('/com/intel/MediaServiceUPnP/server/0')
+    >>> controller.track('/com/intel/dLeynaServer/server/0')
     >>> controller.sync()
 
     """
