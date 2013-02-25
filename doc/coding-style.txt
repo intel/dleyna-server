@@ -1,0 +1,3 @@
+dLeyna-server uses the dLeyna-core coding guidelines:
+
+https://github.com/01org/dleyna-core/blob/master/doc/coding-style.txt
