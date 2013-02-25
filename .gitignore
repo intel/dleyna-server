@@ -39,4 +39,5 @@ server/com.intel.dleyna-server.service
 lib/dleyna-server.conf
 lib/dleyna-server-1.0.pc
 
-server/dleyna-server
+server/dleyna-server-service
+server/dms-info
