@@ -1595,9 +1595,8 @@ static int prv_get_media_server_version(const dls_device_t *device)
 	context = dls_device_get_context(device, NULL);
 	device_type = gupnp_device_info_get_device_type((GUPnPDeviceInfo *)
 							context->device_proxy);
-	/* TODO : g_str_has_prefix */
-	if (strncmp(device_type, DLS_DMS_DEVICE_TYPE,
-		    sizeof(DLS_DMS_DEVICE_TYPE) - 1))
+
+	if (!g_str_has_prefix(device_type, DLS_DMS_DEVICE_TYPE))
 		goto on_error;
 
 	version = device_type + sizeof(DLS_DMS_DEVICE_TYPE) - 1;
