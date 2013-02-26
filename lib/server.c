@@ -1152,20 +1152,20 @@ static void prv_control_point_finalize(void)
 {
 	dls_upnp_unsubscribe(g_context.upnp);
 
+	dls_upnp_delete(g_context.upnp);
+
 	if (g_context.connection) {
 		if (g_context.dls_id)
 			g_context.connector->unpublish_object(
 							g_context.connection,
 							g_context.dls_id);
 	}
-
-	if (g_context.watchers)
-		g_hash_table_unref(g_context.watchers);
 }
 
 static void prv_control_point_free(void)
 {
-	dls_upnp_delete(g_context.upnp);
+	if (g_context.watchers)
+		g_hash_table_unref(g_context.watchers);
 }
 
 static const gchar *prv_control_point_server_name(void)
