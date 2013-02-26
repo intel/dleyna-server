@@ -1,5 +1,5 @@
 /*
- * dleyna
+ * dLeyna
  *
  * Copyright (C) 2012-2013 Intel Corporation. All rights reserved.
  *
@@ -38,13 +38,13 @@
 #include "sort.h"
 #include "upnp.h"
 
-struct msu_upnp_t_ {
+struct dls_upnp_t_ {
 	dleyna_connector_id_t connection;
 	const dleyna_connector_dispatch_cb_t *interface_info;
 	GHashTable *filter_map;
 	GHashTable *property_map;
-	msu_upnp_callback_t found_server;
-	msu_upnp_callback_t lost_server;
+	dls_upnp_callback_t found_server;
+	dls_upnp_callback_t lost_server;
 	GUPnPContextManager *context_manager;
 	void *user_data;
 	GHashTable *server_udn_map;
@@ -55,9 +55,9 @@ struct msu_upnp_t_ {
 /* Private structure used in service task */
 typedef struct prv_device_new_ct_t_ prv_device_new_ct_t;
 struct prv_device_new_ct_t_ {
-	msu_upnp_t *upnp;
+	dls_upnp_t *upnp;
 	char *udn;
-	msu_device_t *device;
+	dls_device_t *device;
 	const dleyna_task_queue_key_t *queue_id;
 };
 
@@ -71,7 +71,7 @@ static void prv_device_new_free(prv_device_new_ct_t *priv_t)
 
 static void prv_device_chain_end(gboolean cancelled, gpointer data)
 {
-	msu_device_t *device;
+	dls_device_t *device;
 	prv_device_new_ct_t *priv_t = (prv_device_new_ct_t *)data;
 
 	DLEYNA_LOG_DEBUG("Enter");
@@ -92,7 +92,7 @@ on_clear:
 	prv_device_new_free(priv_t);
 
 	if (cancelled)
-		msu_device_delete(device);
+		dls_device_delete(device);
 
 	DLEYNA_LOG_DEBUG_NL();
 }
@@ -101,11 +101,11 @@ static void prv_server_available_cb(GUPnPControlPoint *cp,
 				    GUPnPDeviceProxy *proxy,
 				    gpointer user_data)
 {
-	msu_upnp_t *upnp = user_data;
+	dls_upnp_t *upnp = user_data;
 	const char *udn;
-	msu_device_t *device;
+	dls_device_t *device;
 	const gchar *ip_address;
-	msu_device_context_t *context;
+	dls_device_context_t *context;
 	const dleyna_task_queue_key_t *queue_id;
 	unsigned int i;
 	prv_device_new_ct_t *priv_t;
@@ -137,16 +137,16 @@ static void prv_server_available_cb(GUPnPControlPoint *cp,
 
 		queue_id = dleyna_task_processor_add_queue(
 				dls_server_get_task_processor(),
-				msu_service_task_create_source(),
-				DLEYNA_SERVER_SINK,
+				dls_service_task_create_source(),
+				DLS_SERVER_SINK,
 				DLEYNA_TASK_QUEUE_FLAG_AUTO_REMOVE,
-				msu_service_task_process_cb,
-				msu_service_task_cancel_cb,
-				msu_service_task_delete_cb);
+				dls_service_task_process_cb,
+				dls_service_task_cancel_cb,
+				dls_service_task_delete_cb);
 		dleyna_task_queue_set_finally(queue_id, prv_device_chain_end);
 		dleyna_task_queue_set_user_data(queue_id, priv_t);
 
-		device = msu_device_new(upnp->connection, proxy, ip_address,
+		device = dls_device_new(upnp->connection, proxy, ip_address,
 					upnp->interface_info,
 					upnp->property_map, upnp->counter,
 					queue_id);
@@ -170,7 +170,7 @@ static void prv_server_available_cb(GUPnPControlPoint *cp,
 
 		if (i == device->contexts->len) {
 			DLEYNA_LOG_DEBUG("Adding Context");
-			(void) msu_device_append_new_context(device, ip_address,
+			(void) dls_device_append_new_context(device, ip_address,
 							     proxy);
 		}
 
@@ -184,10 +184,10 @@ on_error:
 
 static gboolean prv_subscribe_to_contents_change(gpointer user_data)
 {
-	msu_device_t *device = user_data;
+	dls_device_t *device = user_data;
 
 	device->timeout_id = 0;
-	msu_device_subscribe_to_contents_change(device);
+	dls_device_subscribe_to_contents_change(device);
 
 	return FALSE;
 }
@@ -196,12 +196,12 @@ static void prv_server_unavailable_cb(GUPnPControlPoint *cp,
 				      GUPnPDeviceProxy *proxy,
 				      gpointer user_data)
 {
-	msu_upnp_t *upnp = user_data;
+	dls_upnp_t *upnp = user_data;
 	const char *udn;
-	msu_device_t *device;
+	dls_device_t *device;
 	const gchar *ip_address;
 	unsigned int i;
-	msu_device_context_t *context;
+	dls_device_context_t *context;
 	gboolean subscribed;
 	gboolean under_construction = FALSE;
 	prv_device_new_ct_t *priv_t;
@@ -278,7 +278,7 @@ static void prv_on_context_available(GUPnPContextManager *context_manager,
 				     GUPnPContext *context,
 				     gpointer user_data)
 {
-	msu_upnp_t *upnp = user_data;
+	dls_upnp_t *upnp = user_data;
 	GUPnPControlPoint *cp;
 
 	cp = gupnp_control_point_new(
@@ -296,13 +296,13 @@ static void prv_on_context_available(GUPnPContextManager *context_manager,
 	g_object_unref(cp);
 }
 
-msu_upnp_t *msu_upnp_new(dleyna_connector_id_t connection,
+dls_upnp_t *dls_upnp_new(dleyna_connector_id_t connection,
 			 const dleyna_connector_dispatch_cb_t *dispatch_table,
-			 msu_upnp_callback_t found_server,
-			 msu_upnp_callback_t lost_server,
+			 dls_upnp_callback_t found_server,
+			 dls_upnp_callback_t lost_server,
 			 void *user_data)
 {
-	msu_upnp_t *upnp = g_new0(msu_upnp_t, 1);
+	dls_upnp_t *upnp = g_new0(dls_upnp_t, 1);
 
 	upnp->connection = connection;
 	upnp->interface_info = dispatch_table;
@@ -312,12 +312,12 @@ msu_upnp_t *msu_upnp_new(dleyna_connector_id_t connection,
 
 	upnp->server_udn_map = g_hash_table_new_full(g_str_hash, g_str_equal,
 						     g_free,
-						     msu_device_delete);
+						     dls_device_delete);
 
 	upnp->server_uc_map = g_hash_table_new_full(g_str_hash, g_str_equal,
 						     g_free, NULL);
 
-	msu_prop_maps_new(&upnp->property_map, &upnp->filter_map);
+	dls_prop_maps_new(&upnp->property_map, &upnp->filter_map);
 
 	upnp->context_manager = gupnp_context_manager_create(0);
 
@@ -328,7 +328,7 @@ msu_upnp_t *msu_upnp_new(dleyna_connector_id_t connection,
 	return upnp;
 }
 
-void msu_upnp_delete(msu_upnp_t *upnp)
+void dls_upnp_delete(dls_upnp_t *upnp)
 {
 	if (upnp) {
 		g_object_unref(upnp->context_manager);
@@ -340,12 +340,12 @@ void msu_upnp_delete(msu_upnp_t *upnp)
 	}
 }
 
-GVariant *msu_upnp_get_server_ids(msu_upnp_t *upnp)
+GVariant *dls_upnp_get_server_ids(dls_upnp_t *upnp)
 {
 	GVariantBuilder vb;
 	GHashTableIter iter;
 	gpointer value;
-	msu_device_t *device;
+	dls_device_t *device;
 	GVariant *retval;
 
 	DLEYNA_LOG_DEBUG("Enter");
@@ -366,17 +366,17 @@ GVariant *msu_upnp_get_server_ids(msu_upnp_t *upnp)
 	return retval;
 }
 
-GHashTable *msu_upnp_get_server_udn_map(msu_upnp_t *upnp)
+GHashTable *dls_upnp_get_server_udn_map(dls_upnp_t *upnp)
 {
 	return upnp->server_udn_map;
 }
 
-void msu_upnp_get_children(msu_upnp_t *upnp, msu_client_t *client,
-			   msu_task_t *task,
-			   msu_upnp_task_complete_t cb)
+void dls_upnp_get_children(dls_upnp_t *upnp, dls_client_t *client,
+			   dls_task_t *task,
+			   dls_upnp_task_complete_t cb)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_async_bas_t *cb_task_data;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_async_bas_t *cb_task_data;
 	gchar *upnp_filter = NULL;
 	gchar *sort_by = NULL;
 
@@ -390,19 +390,20 @@ void msu_upnp_get_children(msu_upnp_t *upnp, msu_client_t *client,
 	cb_task_data = &cb_data->ut.bas;
 
 	cb_task_data->filter_mask =
-		msu_props_parse_filter(upnp->filter_map,
+		dls_props_parse_filter(upnp->filter_map,
 				       task->ut.get_children.filter,
 				       &upnp_filter);
 
 	DLEYNA_LOG_DEBUG("Filter Mask 0x%"G_GUINT64_FORMAT"x",
-		      cb_task_data->filter_mask);
+			 cb_task_data->filter_mask);
 
-	sort_by = msu_sort_translate_sort_string(upnp->filter_map,
+	sort_by = dls_sort_translate_sort_string(upnp->filter_map,
 						 task->ut.get_children.sort_by);
 	if (!sort_by) {
 		DLEYNA_LOG_WARNING("Invalid Sort Criteria");
 
-		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR, DLEYNA_ERROR_BAD_QUERY,
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_BAD_QUERY,
 					     "Sort Criteria are not valid");
 		goto on_error;
 	}
@@ -411,12 +412,12 @@ void msu_upnp_get_children(msu_upnp_t *upnp, msu_client_t *client,
 
 	cb_task_data->protocol_info = client->protocol_info;
 
-	msu_device_get_children(client, task, upnp_filter, sort_by);
+	dls_device_get_children(client, task, upnp_filter, sort_by);
 
 on_error:
 
 	if (!cb_data->action)
-		(void) g_idle_add(msu_async_task_complete, cb_data);
+		(void) g_idle_add(dls_async_task_complete, cb_data);
 
 	g_free(sort_by);
 	g_free(upnp_filter);
@@ -424,13 +425,13 @@ on_error:
 	DLEYNA_LOG_DEBUG("Exit with %s", !cb_data->action ? "FAIL" : "SUCCESS");
 }
 
-void msu_upnp_get_all_props(msu_upnp_t *upnp, msu_client_t *client,
-			    msu_task_t *task,
-			    msu_upnp_task_complete_t cb)
+void dls_upnp_get_all_props(dls_upnp_t *upnp, dls_client_t *client,
+			    dls_task_t *task,
+			    dls_upnp_task_complete_t cb)
 {
 	gboolean root_object;
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_async_get_all_t *cb_task_data;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_async_get_all_t *cb_task_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -446,20 +447,20 @@ void msu_upnp_get_all_props(msu_upnp_t *upnp, msu_client_t *client,
 
 	cb_task_data->protocol_info = client->protocol_info;
 
-	msu_device_get_all_props(client, task, root_object);
+	dls_device_get_all_props(client, task, root_object);
 
 	DLEYNA_LOG_DEBUG("Exit with SUCCESS");
 }
 
-void msu_upnp_get_prop(msu_upnp_t *upnp, msu_client_t *client,
-		       msu_task_t *task,
-		       msu_upnp_task_complete_t cb)
+void dls_upnp_get_prop(dls_upnp_t *upnp, dls_client_t *client,
+		       dls_task_t *task,
+		       dls_upnp_task_complete_t cb)
 {
 	gboolean root_object;
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_async_get_prop_t *cb_task_data;
-	msu_prop_map_t *prop_map;
-	msu_task_get_prop_t *task_data;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_async_get_prop_t *cb_task_data;
+	dls_prop_map_t *prop_map;
+	dls_task_get_prop_t *task_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -478,20 +479,20 @@ void msu_upnp_get_prop(msu_upnp_t *upnp, msu_client_t *client,
 	cb_task_data->protocol_info = client->protocol_info;
 	prop_map = g_hash_table_lookup(upnp->filter_map, task_data->prop_name);
 
-	msu_device_get_prop(client, task, prop_map, root_object);
+	dls_device_get_prop(client, task, prop_map, root_object);
 
 	DLEYNA_LOG_DEBUG("Exit with SUCCESS");
 }
 
-void msu_upnp_search(msu_upnp_t *upnp, msu_client_t *client,
-		     msu_task_t *task,
-		     msu_upnp_task_complete_t cb)
+void dls_upnp_search(dls_upnp_t *upnp, dls_client_t *client,
+		     dls_task_t *task,
+		     dls_upnp_task_complete_t cb)
 {
 	gchar *upnp_filter = NULL;
 	gchar *upnp_query = NULL;
 	gchar *sort_by = NULL;
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_async_bas_t *cb_task_data;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_async_bas_t *cb_task_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -504,31 +505,33 @@ void msu_upnp_search(msu_upnp_t *upnp, msu_client_t *client,
 	cb_task_data = &cb_data->ut.bas;
 
 	cb_task_data->filter_mask =
-		msu_props_parse_filter(upnp->filter_map,
+		dls_props_parse_filter(upnp->filter_map,
 				       task->ut.search.filter, &upnp_filter);
 
 	DLEYNA_LOG_DEBUG("Filter Mask 0x%"G_GUINT64_FORMAT"x",
-		      cb_task_data->filter_mask);
+			 cb_task_data->filter_mask);
 
-	upnp_query = msu_search_translate_search_string(upnp->filter_map,
+	upnp_query = dls_search_translate_search_string(upnp->filter_map,
 							task->ut.search.query);
 	if (!upnp_query) {
 		DLEYNA_LOG_WARNING("Query string is not valid:%s",
-				task->ut.search.query);
+				   task->ut.search.query);
 
-		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR, DLEYNA_ERROR_BAD_QUERY,
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_BAD_QUERY,
 					     "Query string is not valid.");
 		goto on_error;
 	}
 
 	DLEYNA_LOG_DEBUG("UPnP Query %s", upnp_query);
 
-	sort_by = msu_sort_translate_sort_string(upnp->filter_map,
+	sort_by = dls_sort_translate_sort_string(upnp->filter_map,
 						 task->ut.search.sort_by);
 	if (!sort_by) {
 		DLEYNA_LOG_WARNING("Invalid Sort Criteria");
 
-		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR, DLEYNA_ERROR_BAD_QUERY,
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_BAD_QUERY,
 					     "Sort Criteria are not valid");
 		goto on_error;
 	}
@@ -537,11 +540,11 @@ void msu_upnp_search(msu_upnp_t *upnp, msu_client_t *client,
 
 	cb_task_data->protocol_info = client->protocol_info;
 
-	msu_device_search(client, task, upnp_filter, upnp_query, sort_by);
+	dls_device_search(client, task, upnp_filter, upnp_query, sort_by);
 on_error:
 
 	if (!cb_data->action)
-		(void) g_idle_add(msu_async_task_complete, cb_data);
+		(void) g_idle_add(dls_async_task_complete, cb_data);
 
 	g_free(sort_by);
 	g_free(upnp_query);
@@ -550,12 +553,12 @@ on_error:
 	DLEYNA_LOG_DEBUG("Exit with %s", !cb_data->action ? "FAIL" : "SUCCESS");
 }
 
-void msu_upnp_get_resource(msu_upnp_t *upnp, msu_client_t *client,
-			   msu_task_t *task,
-			   msu_upnp_task_complete_t cb)
+void dls_upnp_get_resource(dls_upnp_t *upnp, dls_client_t *client,
+			   dls_task_t *task,
+			   dls_upnp_task_complete_t cb)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_async_get_all_t *cb_task_data;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_async_get_all_t *cb_task_data;
 	gchar *upnp_filter = NULL;
 
 	DLEYNA_LOG_DEBUG("Enter");
@@ -566,22 +569,22 @@ void msu_upnp_get_resource(msu_upnp_t *upnp, msu_client_t *client,
 	cb_task_data = &cb_data->ut.get_all;
 
 	DLEYNA_LOG_DEBUG("Root Path %s Id %s", task->target.root_path,
-		      task->target.id);
+			 task->target.id);
 
 	cb_task_data->filter_mask =
-		msu_props_parse_filter(upnp->filter_map,
+		dls_props_parse_filter(upnp->filter_map,
 				       task->ut.resource.filter, &upnp_filter);
 
 	DLEYNA_LOG_DEBUG("Filter Mask 0x%"G_GUINT64_FORMAT"x",
-		      cb_task_data->filter_mask);
+			 cb_task_data->filter_mask);
 
-	msu_device_get_resource(client, task, upnp_filter);
+	dls_device_get_resource(client, task, upnp_filter);
 
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-static gboolean prv_compute_mime_and_class(msu_task_t *task,
-					   msu_async_upload_t *cb_task_data,
+static gboolean prv_compute_mime_and_class(dls_task_t *task,
+					   dls_async_upload_t *cb_task_data,
 					   GError **error)
 {
 	gchar *content_type = NULL;
@@ -593,7 +596,8 @@ static gboolean prv_compute_mime_and_class(msu_task_t *task,
 			"File %s does not exist or is not a regular file",
 			task->ut.upload.file_path);
 
-		*error = g_error_new(DLEYNA_SERVER_ERROR, DLEYNA_ERROR_OBJECT_NOT_FOUND,
+		*error = g_error_new(DLEYNA_SERVER_ERROR,
+				     DLEYNA_ERROR_OBJECT_NOT_FOUND,
 				     "File %s does not exist or is not a regular file",
 				     task->ut.upload.file_path);
 		goto on_error;
@@ -605,7 +609,7 @@ static gboolean prv_compute_mime_and_class(msu_task_t *task,
 	if (!content_type) {
 
 		DLEYNA_LOG_WARNING("Unable to determine Content Type for %s",
-				task->ut.upload.file_path);
+				   task->ut.upload.file_path);
 
 		*error = g_error_new(DLEYNA_SERVER_ERROR, DLEYNA_ERROR_BAD_MIME,
 				     "Unable to determine Content Type for %s",
@@ -619,7 +623,7 @@ static gboolean prv_compute_mime_and_class(msu_task_t *task,
 	if (!cb_task_data->mime_type) {
 
 		DLEYNA_LOG_WARNING("Unable to determine MIME Type for %s",
-				task->ut.upload.file_path);
+				   task->ut.upload.file_path);
 
 		*error = g_error_new(DLEYNA_SERVER_ERROR, DLEYNA_ERROR_BAD_MIME,
 				     "Unable to determine MIME Type for %s",
@@ -636,7 +640,7 @@ static gboolean prv_compute_mime_and_class(msu_task_t *task,
 	} else {
 
 		DLEYNA_LOG_WARNING("Unsupported MIME Type %s",
-				cb_task_data->mime_type);
+				   cb_task_data->mime_type);
 
 		*error = g_error_new(DLEYNA_SERVER_ERROR, DLEYNA_ERROR_BAD_MIME,
 				     "Unsupported MIME Type %s",
@@ -651,12 +655,12 @@ on_error:
 	return FALSE;
 }
 
-void msu_upnp_upload_to_any(msu_upnp_t *upnp, msu_client_t *client,
-			    msu_task_t *task,
-			    msu_upnp_task_complete_t cb)
+void dls_upnp_upload_to_any(dls_upnp_t *upnp, dls_client_t *client,
+			    dls_task_t *task,
+			    dls_upnp_task_complete_t cb)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_async_upload_t *cb_task_data;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_async_upload_t *cb_task_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -664,7 +668,7 @@ void msu_upnp_upload_to_any(msu_upnp_t *upnp, msu_client_t *client,
 	cb_task_data = &cb_data->ut.upload;
 
 	DLEYNA_LOG_DEBUG("Root Path %s Id %s", task->target.root_path,
-		      task->target.id);
+			 task->target.id);
 
 	if (strcmp(task->target.id, "0")) {
 		DLEYNA_LOG_WARNING("Bad path %s", task->target.path);
@@ -681,21 +685,21 @@ void msu_upnp_upload_to_any(msu_upnp_t *upnp, msu_client_t *client,
 	DLEYNA_LOG_DEBUG("MIME Type %s", cb_task_data->mime_type);
 	DLEYNA_LOG_DEBUG("Object class %s", cb_task_data->object_class);
 
-	msu_device_upload(client, task, "DLNA.ORG_AnyContainer");
+	dls_device_upload(client, task, "DLNA.ORG_AnyContainer");
 
 on_error:
 
 	if (!cb_data->action)
-		(void) g_idle_add(msu_async_task_complete, cb_data);
+		(void) g_idle_add(dls_async_task_complete, cb_data);
 
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-void msu_upnp_upload(msu_upnp_t *upnp, msu_client_t *client, msu_task_t *task,
-		     msu_upnp_task_complete_t cb)
+void dls_upnp_upload(dls_upnp_t *upnp, dls_client_t *client, dls_task_t *task,
+		     dls_upnp_task_complete_t cb)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_async_upload_t *cb_task_data;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_async_upload_t *cb_task_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -708,24 +712,24 @@ void msu_upnp_upload(msu_upnp_t *upnp, msu_client_t *client, msu_task_t *task,
 	DLEYNA_LOG_DEBUG("MIME Type %s", cb_task_data->mime_type);
 	DLEYNA_LOG_DEBUG("Object class %s", cb_task_data->object_class);
 
-	msu_device_upload(client, task, task->target.id);
+	dls_device_upload(client, task, task->target.id);
 
 on_error:
 
 	if (!cb_data->action)
-		(void) g_idle_add(msu_async_task_complete, cb_data);
+		(void) g_idle_add(dls_async_task_complete, cb_data);
 
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-void msu_upnp_get_upload_status(msu_upnp_t *upnp, msu_task_t *task)
+void dls_upnp_get_upload_status(dls_upnp_t *upnp, dls_task_t *task)
 {
 	GError *error = NULL;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
 	DLEYNA_LOG_DEBUG("Root Path %s Id %s", task->target.root_path,
-		      task->target.id);
+			 task->target.id);
 
 	if (strcmp(task->target.id, "0")) {
 		DLEYNA_LOG_WARNING("Bad path %s", task->target.path);
@@ -735,28 +739,28 @@ void msu_upnp_get_upload_status(msu_upnp_t *upnp, msu_task_t *task)
 		goto on_error;
 	}
 
-	(void) msu_device_get_upload_status(task, &error);
+	(void) dls_device_get_upload_status(task, &error);
 
 on_error:
 
 	if (error) {
-		msu_task_fail(task, error);
+		dls_task_fail(task, error);
 		g_error_free(error);
 	} else {
-		msu_task_complete(task);
+		dls_task_complete(task);
 	}
 
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-void msu_upnp_get_upload_ids(msu_upnp_t *upnp, msu_task_t *task)
+void dls_upnp_get_upload_ids(dls_upnp_t *upnp, dls_task_t *task)
 {
 	GError *error = NULL;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
 	DLEYNA_LOG_DEBUG("Root Path %s Id %s", task->target.root_path,
-		      task->target.id);
+			 task->target.id);
 
 	if (strcmp(task->target.id, "0")) {
 		DLEYNA_LOG_WARNING("Bad path %s", task->target.path);
@@ -766,28 +770,28 @@ void msu_upnp_get_upload_ids(msu_upnp_t *upnp, msu_task_t *task)
 		goto on_error;
 	}
 
-	 msu_device_get_upload_ids(task);
+	 dls_device_get_upload_ids(task);
 
 on_error:
 
 	if (error) {
-		msu_task_fail(task, error);
+		dls_task_fail(task, error);
 		g_error_free(error);
 	} else {
-		msu_task_complete(task);
+		dls_task_complete(task);
 	}
 
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-void msu_upnp_cancel_upload(msu_upnp_t *upnp, msu_task_t *task)
+void dls_upnp_cancel_upload(dls_upnp_t *upnp, dls_task_t *task)
 {
 	GError *error = NULL;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
 	DLEYNA_LOG_DEBUG("Root Path %s Id %s", task->target.root_path,
-		      task->target.id);
+			 task->target.id);
 
 	if (strcmp(task->target.id, "0")) {
 		DLEYNA_LOG_WARNING("Bad path %s", task->target.path);
@@ -797,68 +801,68 @@ void msu_upnp_cancel_upload(msu_upnp_t *upnp, msu_task_t *task)
 		goto on_error;
 	}
 
-	(void) msu_device_cancel_upload(task, &error);
+	(void) dls_device_cancel_upload(task, &error);
 
 on_error:
 
 	if (error) {
-		msu_task_fail(task, error);
+		dls_task_fail(task, error);
 		g_error_free(error);
 	} else {
-		msu_task_complete(task);
+		dls_task_complete(task);
 	}
 
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-void msu_upnp_delete_object(msu_upnp_t *upnp, msu_client_t *client,
-			    msu_task_t *task,
-			    msu_upnp_task_complete_t cb)
+void dls_upnp_delete_object(dls_upnp_t *upnp, dls_client_t *client,
+			    dls_task_t *task,
+			    dls_upnp_task_complete_t cb)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
 	cb_data->cb = cb;
 
 	DLEYNA_LOG_DEBUG("Root Path %s Id %s", task->target.root_path,
-		      task->target.id);
+			 task->target.id);
 
-	msu_device_delete_object(client, task);
+	dls_device_delete_object(client, task);
 
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-void msu_upnp_create_container(msu_upnp_t *upnp, msu_client_t *client,
-			       msu_task_t *task,
-			       msu_upnp_task_complete_t cb)
+void dls_upnp_create_container(dls_upnp_t *upnp, dls_client_t *client,
+			       dls_task_t *task,
+			       dls_upnp_task_complete_t cb)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
 	cb_data->cb = cb;
 
 	DLEYNA_LOG_DEBUG("Root Path %s Id %s", task->target.root_path,
-		      task->target.id);
+			 task->target.id);
 
-	msu_device_create_container(client, task, task->target.id);
+	dls_device_create_container(client, task, task->target.id);
 
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-void msu_upnp_create_container_in_any(msu_upnp_t *upnp, msu_client_t *client,
-				      msu_task_t *task,
-				      msu_upnp_task_complete_t cb)
+void dls_upnp_create_container_in_any(dls_upnp_t *upnp, dls_client_t *client,
+				      dls_task_t *task,
+				      dls_upnp_task_complete_t cb)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
 	cb_data->cb = cb;
 
 	DLEYNA_LOG_DEBUG("Root Path %s Id %s", task->target.root_path,
-		      task->target.id);
+			 task->target.id);
 
 	if (strcmp(task->target.id, "0")) {
 		DLEYNA_LOG_WARNING("Bad path %s", task->target.path);
@@ -869,25 +873,25 @@ void msu_upnp_create_container_in_any(msu_upnp_t *upnp, msu_client_t *client,
 		goto on_error;
 	}
 
-	msu_device_create_container(client, task, "DLNA.ORG_AnyContainer");
+	dls_device_create_container(client, task, "DLNA.ORG_AnyContainer");
 
 on_error:
 
 	if (!cb_data->action)
-		(void) g_idle_add(msu_async_task_complete, cb_data);
+		(void) g_idle_add(dls_async_task_complete, cb_data);
 
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-void msu_upnp_update_object(msu_upnp_t *upnp, msu_client_t *client,
-			    msu_task_t *task,
-			    msu_upnp_task_complete_t cb)
+void dls_upnp_update_object(dls_upnp_t *upnp, dls_client_t *client,
+			    dls_task_t *task,
+			    dls_upnp_task_complete_t cb)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_async_update_t *cb_task_data;
-	msu_upnp_prop_mask mask;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_async_update_t *cb_task_data;
+	dls_upnp_prop_mask mask;
 	gchar *upnp_filter = NULL;
-	msu_task_update_t *task_data;
+	dls_task_update_t *task_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -896,9 +900,9 @@ void msu_upnp_update_object(msu_upnp_t *upnp, msu_client_t *client,
 	task_data = &task->ut.update;
 
 	DLEYNA_LOG_DEBUG("Root Path %s Id %s", task->target.root_path,
-		      task->target.id);
+			 task->target.id);
 
-	if (!msu_props_parse_update_filter(upnp->filter_map,
+	if (!dls_props_parse_update_filter(upnp->filter_map,
 					   task_data->to_add_update,
 					   task_data->to_delete,
 					   &mask, &upnp_filter)) {
@@ -925,24 +929,24 @@ void msu_upnp_update_object(msu_upnp_t *upnp, msu_client_t *client,
 		goto on_error;
 	}
 
-	msu_device_update_object(client, task, upnp_filter);
+	dls_device_update_object(client, task, upnp_filter);
 
 on_error:
 
 	g_free(upnp_filter);
 
 	if (!cb_data->action)
-		(void) g_idle_add(msu_async_task_complete, cb_data);
+		(void) g_idle_add(dls_async_task_complete, cb_data);
 
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-void msu_upnp_create_playlist(msu_upnp_t *upnp, msu_client_t *client,
-			      msu_task_t *task,
-			      msu_upnp_task_complete_t cb)
+void dls_upnp_create_playlist(dls_upnp_t *upnp, dls_client_t *client,
+			      dls_task_t *task,
+			      dls_upnp_task_complete_t cb)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_task_create_playlist_t *task_data;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_task_create_playlist_t *task_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -950,7 +954,7 @@ void msu_upnp_create_playlist(msu_upnp_t *upnp, msu_client_t *client,
 	task_data = &task->ut.playlist;
 
 	DLEYNA_LOG_DEBUG("Root Path: %s - Id: %s", task->target.root_path,
-		      task->target.id);
+			 task->target.id);
 
 	if (!task_data->title || !*task_data->title)
 		goto on_param_error;
@@ -965,7 +969,7 @@ void msu_upnp_create_playlist(msu_upnp_t *upnp, msu_client_t *client,
 	DLEYNA_LOG_DEBUG("Desc = %s", task_data->desc);
 	DLEYNA_LOG_DEBUG_NL();
 
-	msu_device_playlist_upload(client, task, task->target.id);
+	dls_device_playlist_upload(client, task, task->target.id);
 
 	DLEYNA_LOG_DEBUG("Exit");
 
@@ -979,17 +983,17 @@ on_param_error:
 				     DLEYNA_ERROR_OPERATION_FAILED,
 				     "Invalid Parameter");
 
-	(void) g_idle_add(msu_async_task_complete, cb_data);
+	(void) g_idle_add(dls_async_task_complete, cb_data);
 
 	DLEYNA_LOG_DEBUG("Exit failure");
 }
 
-void msu_upnp_create_playlist_in_any(msu_upnp_t *upnp, msu_client_t *client,
-				     msu_task_t *task,
-				     msu_upnp_task_complete_t cb)
+void dls_upnp_create_playlist_in_any(dls_upnp_t *upnp, dls_client_t *client,
+				     dls_task_t *task,
+				     dls_upnp_task_complete_t cb)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_task_create_playlist_t *task_data;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_task_create_playlist_t *task_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -997,12 +1001,13 @@ void msu_upnp_create_playlist_in_any(msu_upnp_t *upnp, msu_client_t *client,
 	task_data = &task->ut.playlist;
 
 	DLEYNA_LOG_DEBUG("Root Path: %s - Id: %s", task->target.root_path,
-		      task->target.id);
+			 task->target.id);
 
 	if (strcmp(task->target.id, "0")) {
 		DLEYNA_LOG_WARNING("Bad path %s", task->target.path);
 
-		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR, DLEYNA_ERROR_BAD_PATH,
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_BAD_PATH,
 					     "CreatePlayListInAny must be executed on a root path");
 
 		goto on_error;
@@ -1021,7 +1026,7 @@ void msu_upnp_create_playlist_in_any(msu_upnp_t *upnp, msu_client_t *client,
 	DLEYNA_LOG_DEBUG("Desc = %s", task_data->desc);
 	DLEYNA_LOG_DEBUG_NL();
 
-	msu_device_playlist_upload(client, task, "DLNA.ORG_AnyContainer");
+	dls_device_playlist_upload(client, task, "DLNA.ORG_AnyContainer");
 
 	DLEYNA_LOG_DEBUG("Exit");
 
@@ -1036,7 +1041,7 @@ on_param_error:
 				     "Invalid Parameter");
 on_error:
 
-	(void) g_idle_add(msu_async_task_complete, cb_data);
+	(void) g_idle_add(dls_async_task_complete, cb_data);
 
 	DLEYNA_LOG_DEBUG("Exit failure");
 }
@@ -1055,13 +1060,13 @@ static gboolean prv_device_find(gpointer key, gpointer value,
 	return (value == user_data) ? TRUE : FALSE;
 }
 
-gboolean msu_upnp_device_context_exist(msu_device_t *device,
-				       msu_device_context_t *context)
+gboolean dls_upnp_device_context_exist(dls_device_t *device,
+				       dls_device_context_t *context)
 {
 	gpointer result;
 	guint i;
 	gboolean found = FALSE;
-	msu_upnp_t *upnp = dls_server_get_upnp();
+	dls_upnp_t *upnp = dls_server_get_upnp();
 
 	if (upnp == NULL)
 		goto on_exit;

@@ -39,412 +39,412 @@
 #include "server.h"
 #include "upnp.h"
 
-typedef struct dleyna_server_context_t_ dleyna_server_context_t;
-struct dleyna_server_context_t_ {
+typedef struct dls_server_context_t_ dls_server_context_t;
+struct dls_server_context_t_ {
 	dleyna_connector_id_t connection;
 	dleyna_task_processor_t *processor;
 	const dleyna_connector_t *connector;
 	dleyna_settings_t *settings;
-	guint msu_id;
+	guint dls_id;
 	GHashTable *watchers;
-	msu_upnp_t *upnp;
+	dls_upnp_t *upnp;
 };
 
-static dleyna_server_context_t g_context;
+static dls_server_context_t g_context;
 
 static const gchar g_root_introspection[] =
 	"<node>"
 	"  <interface name='"DLEYNA_SERVER_INTERFACE_MANAGER"'>"
-	"    <method name='"SERVER_INTERFACE_GET_VERSION"'>"
-	"      <arg type='s' name='"SERVER_INTERFACE_VERSION"'"
+	"    <method name='"DLS_INTERFACE_GET_VERSION"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_VERSION"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <method name='"SERVER_INTERFACE_RELEASE"'>"
+	"    <method name='"DLS_INTERFACE_RELEASE"'>"
 	"    </method>"
-	"    <method name='"SERVER_INTERFACE_GET_SERVERS"'>"
-	"      <arg type='ao' name='"SERVER_INTERFACE_SERVERS"'"
+	"    <method name='"DLS_INTERFACE_GET_SERVERS"'>"
+	"      <arg type='ao' name='"DLS_INTERFACE_SERVERS"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <method name='"SERVER_INTERFACE_SET_PROTOCOL_INFO"'>"
-	"      <arg type='s' name='"SERVER_INTERFACE_PROTOCOL_INFO"'"
+	"    <method name='"DLS_INTERFACE_SET_PROTOCOL_INFO"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_PROTOCOL_INFO"'"
 	"           direction='in'/>"
 	"    </method>"
-	"    <method name='"SERVER_INTERFACE_PREFER_LOCAL_ADDRESSES"'>"
-	"      <arg type='b' name='"SERVER_INTERFACE_PREFER"'"
+	"    <method name='"DLS_INTERFACE_PREFER_LOCAL_ADDRESSES"'>"
+	"      <arg type='b' name='"DLS_INTERFACE_PREFER"'"
 	"           direction='in'/>"
 	"    </method>"
-	"    <signal name='"SERVER_INTERFACE_FOUND_SERVER"'>"
-	"      <arg type='o' name='"SERVER_INTERFACE_PATH"'/>"
+	"    <signal name='"DLS_INTERFACE_FOUND_SERVER"'>"
+	"      <arg type='o' name='"DLS_INTERFACE_PATH"'/>"
 	"    </signal>"
-	"    <signal name='"SERVER_INTERFACE_LOST_SERVER"'>"
-	"      <arg type='o' name='"SERVER_INTERFACE_PATH"'/>"
+	"    <signal name='"DLS_INTERFACE_LOST_SERVER"'>"
+	"      <arg type='o' name='"DLS_INTERFACE_PATH"'/>"
 	"    </signal>"
 	"  </interface>"
 	"</node>";
 
 static const gchar g_server_introspection[] =
 	"<node>"
-	"  <interface name='"SERVER_INTERFACE_PROPERTIES"'>"
-	"    <method name='"SERVER_INTERFACE_GET"'>"
-	"      <arg type='s' name='"SERVER_INTERFACE_INTERFACE_NAME"'"
+	"  <interface name='"DLS_INTERFACE_PROPERTIES"'>"
+	"    <method name='"DLS_INTERFACE_GET"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_INTERFACE_NAME"'"
 	"           direction='in'/>"
-	"      <arg type='s' name='"SERVER_INTERFACE_PROPERTY_NAME"'"
+	"      <arg type='s' name='"DLS_INTERFACE_PROPERTY_NAME"'"
 	"           direction='in'/>"
-	"      <arg type='v' name='"SERVER_INTERFACE_VALUE"'"
+	"      <arg type='v' name='"DLS_INTERFACE_VALUE"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <method name='"SERVER_INTERFACE_GET_ALL"'>"
-	"      <arg type='s' name='"SERVER_INTERFACE_INTERFACE_NAME"'"
+	"    <method name='"DLS_INTERFACE_GET_ALL"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_INTERFACE_NAME"'"
 	"           direction='in'/>"
-	"      <arg type='a{sv}' name='"SERVER_INTERFACE_PROPERTIES_VALUE"'"
+	"      <arg type='a{sv}' name='"DLS_INTERFACE_PROPERTIES_VALUE"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <signal name='"SERVER_INTERFACE_PROPERTIES_CHANGED"'>"
-	"      <arg type='s' name='"SERVER_INTERFACE_INTERFACE_NAME"'/>"
-	"      <arg type='a{sv}' name='"SERVER_INTERFACE_CHANGED_PROPERTIES"'/>"
+	"    <signal name='"DLS_INTERFACE_PROPERTIES_CHANGED"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_INTERFACE_NAME"'/>"
+	"      <arg type='a{sv}' name='"DLS_INTERFACE_CHANGED_PROPERTIES"'/>"
 	"      <arg type='as' name='"
-	SERVER_INTERFACE_INVALIDATED_PROPERTIES"'/>"
+	DLS_INTERFACE_INVALIDATED_PROPERTIES"'/>"
 	"    </signal>"
 	"  </interface>"
-	"  <interface name='"SERVER_INTERFACE_MEDIA_OBJECT"'>"
-	"    <property type='o' name='"SERVER_INTERFACE_PROP_PARENT"'"
+	"  <interface name='"DLS_INTERFACE_MEDIA_OBJECT"'>"
+	"    <property type='o' name='"DLS_INTERFACE_PROP_PARENT"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_TYPE"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_TYPE"'"
 	"       access='read'/>"
-	"    <property type='o' name='"SERVER_INTERFACE_PROP_PATH"'"
+	"    <property type='o' name='"DLS_INTERFACE_PROP_PATH"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_DISPLAY_NAME"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_DISPLAY_NAME"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_CREATOR"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_CREATOR"'"
 	"       access='read'/>"
-	"    <property type='b' name='"SERVER_INTERFACE_PROP_RESTRICTED"'"
+	"    <property type='b' name='"DLS_INTERFACE_PROP_RESTRICTED"'"
 	"       access='read'/>"
-	"    <property type='a{sb}' name='"SERVER_INTERFACE_PROP_DLNA_MANAGED"'"
+	"    <property type='a{sb}' name='"DLS_INTERFACE_PROP_DLNA_MANAGED"'"
 	"       access='read'/>"
-	"    <property type='u' name='"SERVER_INTERFACE_PROP_OBJECT_UPDATE_ID"'"
+	"    <property type='u' name='"DLS_INTERFACE_PROP_OBJECT_UPDATE_ID"'"
 	"       access='read'/>"
-	"    <method name='"SERVER_INTERFACE_DELETE"'>"
+	"    <method name='"DLS_INTERFACE_DELETE"'>"
 	"    </method>"
-	"    <method name='"SERVER_INTERFACE_UPDATE"'>"
-	"      <arg type='a{sv}' name='"SERVER_INTERFACE_TO_ADD_UPDATE"'"
+	"    <method name='"DLS_INTERFACE_UPDATE"'>"
+	"      <arg type='a{sv}' name='"DLS_INTERFACE_TO_ADD_UPDATE"'"
 	"           direction='in'/>"
-	"      <arg type='as' name='"SERVER_INTERFACE_TO_DELETE"'"
+	"      <arg type='as' name='"DLS_INTERFACE_TO_DELETE"'"
 	"           direction='in'/>"
 	"    </method>"
 	"  </interface>"
-	"  <interface name='"SERVER_INTERFACE_MEDIA_CONTAINER"'>"
-	"    <method name='"SERVER_INTERFACE_LIST_CHILDREN"'>"
-	"      <arg type='u' name='"SERVER_INTERFACE_OFFSET"'"
+	"  <interface name='"DLS_INTERFACE_MEDIA_CONTAINER"'>"
+	"    <method name='"DLS_INTERFACE_LIST_CHILDREN"'>"
+	"      <arg type='u' name='"DLS_INTERFACE_OFFSET"'"
 	"           direction='in'/>"
-	"      <arg type='u' name='"SERVER_INTERFACE_MAX"'"
+	"      <arg type='u' name='"DLS_INTERFACE_MAX"'"
 	"           direction='in'/>"
-	"      <arg type='as' name='"SERVER_INTERFACE_FILTER"'"
+	"      <arg type='as' name='"DLS_INTERFACE_FILTER"'"
 	"           direction='in'/>"
-	"      <arg type='aa{sv}' name='"SERVER_INTERFACE_CHILDREN"'"
+	"      <arg type='aa{sv}' name='"DLS_INTERFACE_CHILDREN"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <method name='"SERVER_INTERFACE_LIST_CHILDREN_EX"'>"
-	"      <arg type='u' name='"SERVER_INTERFACE_OFFSET"'"
+	"    <method name='"DLS_INTERFACE_LIST_CHILDREN_EX"'>"
+	"      <arg type='u' name='"DLS_INTERFACE_OFFSET"'"
 	"           direction='in'/>"
-	"      <arg type='u' name='"SERVER_INTERFACE_MAX"'"
+	"      <arg type='u' name='"DLS_INTERFACE_MAX"'"
 	"           direction='in'/>"
-	"      <arg type='as' name='"SERVER_INTERFACE_FILTER"'"
+	"      <arg type='as' name='"DLS_INTERFACE_FILTER"'"
 	"           direction='in'/>"
-	"      <arg type='s' name='"SERVER_INTERFACE_SORT_BY"'"
+	"      <arg type='s' name='"DLS_INTERFACE_SORT_BY"'"
 	"           direction='in'/>"
-	"      <arg type='aa{sv}' name='"SERVER_INTERFACE_CHILDREN"'"
+	"      <arg type='aa{sv}' name='"DLS_INTERFACE_CHILDREN"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <method name='"SERVER_INTERFACE_LIST_CONTAINERS"'>"
-	"      <arg type='u' name='"SERVER_INTERFACE_OFFSET"'"
+	"    <method name='"DLS_INTERFACE_LIST_CONTAINERS"'>"
+	"      <arg type='u' name='"DLS_INTERFACE_OFFSET"'"
 	"           direction='in'/>"
-	"      <arg type='u' name='"SERVER_INTERFACE_MAX"'"
+	"      <arg type='u' name='"DLS_INTERFACE_MAX"'"
 	"           direction='in'/>"
-	"      <arg type='as' name='"SERVER_INTERFACE_FILTER"'"
+	"      <arg type='as' name='"DLS_INTERFACE_FILTER"'"
 	"           direction='in'/>"
-	"      <arg type='aa{sv}' name='"SERVER_INTERFACE_CHILDREN"'"
+	"      <arg type='aa{sv}' name='"DLS_INTERFACE_CHILDREN"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <method name='"SERVER_INTERFACE_LIST_CONTAINERS_EX"'>"
-	"      <arg type='u' name='"SERVER_INTERFACE_OFFSET"'"
+	"    <method name='"DLS_INTERFACE_LIST_CONTAINERS_EX"'>"
+	"      <arg type='u' name='"DLS_INTERFACE_OFFSET"'"
 	"           direction='in'/>"
-	"      <arg type='u' name='"SERVER_INTERFACE_MAX"'"
+	"      <arg type='u' name='"DLS_INTERFACE_MAX"'"
 	"           direction='in'/>"
-	"      <arg type='as' name='"SERVER_INTERFACE_FILTER"'"
+	"      <arg type='as' name='"DLS_INTERFACE_FILTER"'"
 	"           direction='in'/>"
-	"      <arg type='s' name='"SERVER_INTERFACE_SORT_BY"'"
+	"      <arg type='s' name='"DLS_INTERFACE_SORT_BY"'"
 	"           direction='in'/>"
-	"      <arg type='aa{sv}' name='"SERVER_INTERFACE_CHILDREN"'"
+	"      <arg type='aa{sv}' name='"DLS_INTERFACE_CHILDREN"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <method name='"SERVER_INTERFACE_LIST_ITEMS"'>"
-	"      <arg type='u' name='"SERVER_INTERFACE_OFFSET"'"
+	"    <method name='"DLS_INTERFACE_LIST_ITEMS"'>"
+	"      <arg type='u' name='"DLS_INTERFACE_OFFSET"'"
 	"           direction='in'/>"
-	"      <arg type='u' name='"SERVER_INTERFACE_MAX"'"
+	"      <arg type='u' name='"DLS_INTERFACE_MAX"'"
 	"           direction='in'/>"
-	"      <arg type='as' name='"SERVER_INTERFACE_FILTER"'"
+	"      <arg type='as' name='"DLS_INTERFACE_FILTER"'"
 	"           direction='in'/>"
-	"      <arg type='aa{sv}' name='"SERVER_INTERFACE_CHILDREN"'"
+	"      <arg type='aa{sv}' name='"DLS_INTERFACE_CHILDREN"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <method name='"SERVER_INTERFACE_LIST_ITEMS_EX"'>"
-	"      <arg type='u' name='"SERVER_INTERFACE_OFFSET"'"
+	"    <method name='"DLS_INTERFACE_LIST_ITEMS_EX"'>"
+	"      <arg type='u' name='"DLS_INTERFACE_OFFSET"'"
 	"           direction='in'/>"
-	"      <arg type='u' name='"SERVER_INTERFACE_MAX"'"
+	"      <arg type='u' name='"DLS_INTERFACE_MAX"'"
 	"           direction='in'/>"
-	"      <arg type='as' name='"SERVER_INTERFACE_FILTER"'"
+	"      <arg type='as' name='"DLS_INTERFACE_FILTER"'"
 	"           direction='in'/>"
-	"      <arg type='s' name='"SERVER_INTERFACE_SORT_BY"'"
+	"      <arg type='s' name='"DLS_INTERFACE_SORT_BY"'"
 	"           direction='in'/>"
-	"      <arg type='aa{sv}' name='"SERVER_INTERFACE_CHILDREN"'"
+	"      <arg type='aa{sv}' name='"DLS_INTERFACE_CHILDREN"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <method name='"SERVER_INTERFACE_SEARCH_OBJECTS"'>"
-	"      <arg type='s' name='"SERVER_INTERFACE_QUERY"'"
+	"    <method name='"DLS_INTERFACE_SEARCH_OBJECTS"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_QUERY"'"
 	"           direction='in'/>"
-	"      <arg type='u' name='"SERVER_INTERFACE_OFFSET"'"
+	"      <arg type='u' name='"DLS_INTERFACE_OFFSET"'"
 	"           direction='in'/>"
-	"      <arg type='u' name='"SERVER_INTERFACE_MAX"'"
+	"      <arg type='u' name='"DLS_INTERFACE_MAX"'"
 	"           direction='in'/>"
-	"      <arg type='as' name='"SERVER_INTERFACE_FILTER"'"
+	"      <arg type='as' name='"DLS_INTERFACE_FILTER"'"
 	"           direction='in'/>"
-	"      <arg type='aa{sv}' name='"SERVER_INTERFACE_CHILDREN"'"
+	"      <arg type='aa{sv}' name='"DLS_INTERFACE_CHILDREN"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <method name='"SERVER_INTERFACE_SEARCH_OBJECTS_EX"'>"
-	"      <arg type='s' name='"SERVER_INTERFACE_QUERY"'"
+	"    <method name='"DLS_INTERFACE_SEARCH_OBJECTS_EX"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_QUERY"'"
 	"           direction='in'/>"
-	"      <arg type='u' name='"SERVER_INTERFACE_OFFSET"'"
+	"      <arg type='u' name='"DLS_INTERFACE_OFFSET"'"
 	"           direction='in'/>"
-	"      <arg type='u' name='"SERVER_INTERFACE_MAX"'"
+	"      <arg type='u' name='"DLS_INTERFACE_MAX"'"
 	"           direction='in'/>"
-	"      <arg type='as' name='"SERVER_INTERFACE_FILTER"'"
+	"      <arg type='as' name='"DLS_INTERFACE_FILTER"'"
 	"           direction='in'/>"
-	"      <arg type='s' name='"SERVER_INTERFACE_SORT_BY"'"
+	"      <arg type='s' name='"DLS_INTERFACE_SORT_BY"'"
 	"           direction='in'/>"
-	"      <arg type='aa{sv}' name='"SERVER_INTERFACE_CHILDREN"'"
+	"      <arg type='aa{sv}' name='"DLS_INTERFACE_CHILDREN"'"
 	"           direction='out'/>"
-	"      <arg type='u' name='"SERVER_INTERFACE_TOTAL_ITEMS"'"
-	"           direction='out'/>"
-	"    </method>"
-	"    <method name='"SERVER_INTERFACE_UPLOAD"'>"
-	"      <arg type='s' name='"SERVER_INTERFACE_PROP_DISPLAY_NAME"'"
-	"           direction='in'/>"
-	"      <arg type='s' name='"SERVER_INTERFACE_FILE_PATH"'"
-	"           direction='in'/>"
-	"      <arg type='u' name='"SERVER_INTERFACE_UPLOAD_ID"'"
-	"           direction='out'/>"
-	"      <arg type='o' name='"SERVER_INTERFACE_PATH"'"
+	"      <arg type='u' name='"DLS_INTERFACE_TOTAL_ITEMS"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <method name='"SERVER_INTERFACE_CREATE_CONTAINER"'>"
-	"      <arg type='s' name='"SERVER_INTERFACE_PROP_DISPLAY_NAME"'"
+	"    <method name='"DLS_INTERFACE_UPLOAD"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_PROP_DISPLAY_NAME"'"
 	"           direction='in'/>"
-	"      <arg type='s' name='"SERVER_INTERFACE_PROP_TYPE"'"
+	"      <arg type='s' name='"DLS_INTERFACE_FILE_PATH"'"
 	"           direction='in'/>"
-	"      <arg type='as' name='"SERVER_INTERFACE_CHILD_TYPES"'"
-	"           direction='in'/>"
-	"      <arg type='o' name='"SERVER_INTERFACE_PATH"'"
+	"      <arg type='u' name='"DLS_INTERFACE_UPLOAD_ID"'"
+	"           direction='out'/>"
+	"      <arg type='o' name='"DLS_INTERFACE_PATH"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <method name='"SERVER_INTERFACE_CREATE_PLAYLIST"'>"
-	"      <arg type='s' name='"SERVER_INTERFACE_TITLE"'"
+	"    <method name='"DLS_INTERFACE_CREATE_CONTAINER"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_PROP_DISPLAY_NAME"'"
 	"           direction='in'/>"
-	"      <arg type='s' name='"SERVER_INTERFACE_CREATOR"'"
+	"      <arg type='s' name='"DLS_INTERFACE_PROP_TYPE"'"
 	"           direction='in'/>"
-	"      <arg type='s' name='"SERVER_INTERFACE_GENRE"'"
+	"      <arg type='as' name='"DLS_INTERFACE_CHILD_TYPES"'"
 	"           direction='in'/>"
-	"      <arg type='s' name='"SERVER_INTERFACE_DESCRIPTION"'"
-	"           direction='in'/>"
-	"      <arg type='ao' name='"SERVER_INTERFACE_PLAYLIST_ITEMS"'"
-	"           direction='in'/>"
-	"      <arg type='u' name='"SERVER_INTERFACE_UPLOAD_ID"'"
-	"           direction='out'/>"
-	"      <arg type='o' name='"SERVER_INTERFACE_PATH"'"
+	"      <arg type='o' name='"DLS_INTERFACE_PATH"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <property type='u' name='"SERVER_INTERFACE_PROP_CHILD_COUNT"'"
+	"    <method name='"DLS_INTERFACE_CREATE_PLAYLIST"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_TITLE"'"
+	"           direction='in'/>"
+	"      <arg type='s' name='"DLS_INTERFACE_CREATOR"'"
+	"           direction='in'/>"
+	"      <arg type='s' name='"DLS_INTERFACE_GENRE"'"
+	"           direction='in'/>"
+	"      <arg type='s' name='"DLS_INTERFACE_DESCRIPTION"'"
+	"           direction='in'/>"
+	"      <arg type='ao' name='"DLS_INTERFACE_PLAYLIST_ITEMS"'"
+	"           direction='in'/>"
+	"      <arg type='u' name='"DLS_INTERFACE_UPLOAD_ID"'"
+	"           direction='out'/>"
+	"      <arg type='o' name='"DLS_INTERFACE_PATH"'"
+	"           direction='out'/>"
+	"    </method>"
+	"    <property type='u' name='"DLS_INTERFACE_PROP_CHILD_COUNT"'"
 	"       access='read'/>"
-	"    <property type='b' name='"SERVER_INTERFACE_PROP_SEARCHABLE"'"
+	"    <property type='b' name='"DLS_INTERFACE_PROP_SEARCHABLE"'"
 	"       access='read'/>"
 	"    <property type='a(sb)' name='"
-	SERVER_INTERFACE_PROP_CREATE_CLASSES"'"
+	DLS_INTERFACE_PROP_CREATE_CLASSES"'"
 	"       access='read'/>"
 	"    <property type='u' name='"
-	SERVER_INTERFACE_PROP_CONTAINER_UPDATE_ID"'"
+	DLS_INTERFACE_PROP_CONTAINER_UPDATE_ID"'"
 	"       access='read'/>"
 	"    <property type='u' name='"
-	SERVER_INTERFACE_PROP_TOTAL_DELETED_CHILD_COUNT"'"
+	DLS_INTERFACE_PROP_TOTAL_DELETED_CHILD_COUNT"'"
 	"       access='read'/>"
 	"  </interface>"
-	"  <interface name='"SERVER_INTERFACE_MEDIA_ITEM"'>"
-	"    <method name='"SERVER_INTERFACE_GET_COMPATIBLE_RESOURCE"'>"
-	"      <arg type='s' name='"SERVER_INTERFACE_PROTOCOL_INFO"'"
+	"  <interface name='"DLS_INTERFACE_MEDIA_ITEM"'>"
+	"    <method name='"DLS_INTERFACE_GET_COMPATIBLE_RESOURCE"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_PROTOCOL_INFO"'"
 	"           direction='in'/>"
-	"      <arg type='as' name='"SERVER_INTERFACE_FILTER"'"
+	"      <arg type='as' name='"DLS_INTERFACE_FILTER"'"
 	"           direction='in'/>"
-	"      <arg type='a{sv}' name='"SERVER_INTERFACE_PROPERTIES_VALUE"'"
+	"      <arg type='a{sv}' name='"DLS_INTERFACE_PROPERTIES_VALUE"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <property type='as' name='"SERVER_INTERFACE_PROP_URLS"'"
+	"    <property type='as' name='"DLS_INTERFACE_PROP_URLS"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_MIME_TYPE"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_MIME_TYPE"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_ARTIST"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_ARTIST"'"
 	"       access='read'/>"
-	"    <property type='as' name='"SERVER_INTERFACE_PROP_ARTISTS"'"
+	"    <property type='as' name='"DLS_INTERFACE_PROP_ARTISTS"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_ALBUM"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_ALBUM"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_DATE"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_DATE"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_GENRE"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_GENRE"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_DLNA_PROFILE"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_DLNA_PROFILE"'"
 	"       access='read'/>"
-	"    <property type='i' name='"SERVER_INTERFACE_PROP_TRACK_NUMBER"'"
+	"    <property type='i' name='"DLS_INTERFACE_PROP_TRACK_NUMBER"'"
 	"       access='read'/>"
-	"    <property type='x' name='"SERVER_INTERFACE_PROP_SIZE"'"
+	"    <property type='x' name='"DLS_INTERFACE_PROP_SIZE"'"
 	"       access='read'/>"
-	"    <property type='i' name='"SERVER_INTERFACE_PROP_DURATION"'"
+	"    <property type='i' name='"DLS_INTERFACE_PROP_DURATION"'"
 	"       access='read'/>"
-	"    <property type='i' name='"SERVER_INTERFACE_PROP_BITRATE"'"
+	"    <property type='i' name='"DLS_INTERFACE_PROP_BITRATE"'"
 	"       access='read'/>"
-	"    <property type='i' name='"SERVER_INTERFACE_PROP_SAMPLE_RATE"'"
+	"    <property type='i' name='"DLS_INTERFACE_PROP_SAMPLE_RATE"'"
 	"       access='read'/>"
-	"    <property type='i' name='"SERVER_INTERFACE_PROP_BITS_PER_SAMPLE"'"
+	"    <property type='i' name='"DLS_INTERFACE_PROP_BITS_PER_SAMPLE"'"
 	"       access='read'/>"
-	"    <property type='i' name='"SERVER_INTERFACE_PROP_WIDTH"'"
+	"    <property type='i' name='"DLS_INTERFACE_PROP_WIDTH"'"
 	"       access='read'/>"
-	"    <property type='i' name='"SERVER_INTERFACE_PROP_HEIGHT"'"
+	"    <property type='i' name='"DLS_INTERFACE_PROP_HEIGHT"'"
 	"       access='read'/>"
-	"    <property type='i' name='"SERVER_INTERFACE_PROP_COLOR_DEPTH"'"
+	"    <property type='i' name='"DLS_INTERFACE_PROP_COLOR_DEPTH"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_ALBUM_ART_URL"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_ALBUM_ART_URL"'"
 	"       access='read'/>"
-	"    <property type='o' name='"SERVER_INTERFACE_PROP_REFPATH"'"
+	"    <property type='o' name='"DLS_INTERFACE_PROP_REFPATH"'"
 	"       access='read'/>"
-	"    <property type='aa{sv}' name='"SERVER_INTERFACE_PROP_RESOURCES"'"
+	"    <property type='aa{sv}' name='"DLS_INTERFACE_PROP_RESOURCES"'"
 	"       access='read'/>"
 	"  </interface>"
 	"  <interface name='"DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE"'>"
-	"    <method name='"SERVER_INTERFACE_UPLOAD_TO_ANY"'>"
-	"      <arg type='s' name='"SERVER_INTERFACE_PROP_DISPLAY_NAME"'"
+	"    <method name='"DLS_INTERFACE_UPLOAD_TO_ANY"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_PROP_DISPLAY_NAME"'"
 	"           direction='in'/>"
-	"      <arg type='s' name='"SERVER_INTERFACE_FILE_PATH"'"
+	"      <arg type='s' name='"DLS_INTERFACE_FILE_PATH"'"
 	"           direction='in'/>"
-	"      <arg type='u' name='"SERVER_INTERFACE_UPLOAD_ID"'"
+	"      <arg type='u' name='"DLS_INTERFACE_UPLOAD_ID"'"
 	"           direction='out'/>"
-	"      <arg type='o' name='"SERVER_INTERFACE_PATH"'"
-	"           direction='out'/>"
-	"    </method>"
-	"    <method name='"SERVER_INTERFACE_GET_UPLOAD_STATUS"'>"
-	"      <arg type='u' name='"SERVER_INTERFACE_UPLOAD_ID"'"
-	"           direction='in'/>"
-	"      <arg type='s' name='"SERVER_INTERFACE_UPLOAD_STATUS"'"
-	"           direction='out'/>"
-	"      <arg type='t' name='"SERVER_INTERFACE_LENGTH"'"
-	"           direction='out'/>"
-	"      <arg type='t' name='"SERVER_INTERFACE_TOTAL"'"
+	"      <arg type='o' name='"DLS_INTERFACE_PATH"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <method name='"SERVER_INTERFACE_GET_UPLOAD_IDS"'>"
-	"      <arg type='au' name='"SERVER_INTERFACE_TOTAL"'"
+	"    <method name='"DLS_INTERFACE_GET_UPLOAD_STATUS"'>"
+	"      <arg type='u' name='"DLS_INTERFACE_UPLOAD_ID"'"
+	"           direction='in'/>"
+	"      <arg type='s' name='"DLS_INTERFACE_UPLOAD_STATUS"'"
+	"           direction='out'/>"
+	"      <arg type='t' name='"DLS_INTERFACE_LENGTH"'"
+	"           direction='out'/>"
+	"      <arg type='t' name='"DLS_INTERFACE_TOTAL"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <method name='"SERVER_INTERFACE_CANCEL_UPLOAD"'>"
-	"      <arg type='u' name='"SERVER_INTERFACE_UPLOAD_ID"'"
-	"           direction='in'/>"
-	"    </method>"
-	"    <method name='"SERVER_INTERFACE_CREATE_CONTAINER_IN_ANY"'>"
-	"      <arg type='s' name='"SERVER_INTERFACE_PROP_DISPLAY_NAME"'"
-	"           direction='in'/>"
-	"      <arg type='s' name='"SERVER_INTERFACE_PROP_TYPE"'"
-	"           direction='in'/>"
-	"      <arg type='as' name='"SERVER_INTERFACE_CHILD_TYPES"'"
-	"           direction='in'/>"
-	"      <arg type='o' name='"SERVER_INTERFACE_PATH"'"
+	"    <method name='"DLS_INTERFACE_GET_UPLOAD_IDS"'>"
+	"      <arg type='au' name='"DLS_INTERFACE_TOTAL"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <method name='"SERVER_INTERFACE_CANCEL"'>"
+	"    <method name='"DLS_INTERFACE_CANCEL_UPLOAD"'>"
+	"      <arg type='u' name='"DLS_INTERFACE_UPLOAD_ID"'"
+	"           direction='in'/>"
 	"    </method>"
-	"    <method name='"SERVER_INTERFACE_CREATE_PLAYLIST_TO_ANY"'>"
-	"      <arg type='s' name='"SERVER_INTERFACE_TITLE"'"
+	"    <method name='"DLS_INTERFACE_CREATE_CONTAINER_IN_ANY"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_PROP_DISPLAY_NAME"'"
 	"           direction='in'/>"
-	"      <arg type='s' name='"SERVER_INTERFACE_CREATOR"'"
+	"      <arg type='s' name='"DLS_INTERFACE_PROP_TYPE"'"
 	"           direction='in'/>"
-	"      <arg type='s' name='"SERVER_INTERFACE_GENRE"'"
+	"      <arg type='as' name='"DLS_INTERFACE_CHILD_TYPES"'"
 	"           direction='in'/>"
-	"      <arg type='s' name='"SERVER_INTERFACE_DESCRIPTION"'"
-	"           direction='in'/>"
-	"      <arg type='ao' name='"SERVER_INTERFACE_PLAYLIST_ITEMS"'"
-	"           direction='in'/>"
-	"      <arg type='u' name='"SERVER_INTERFACE_UPLOAD_ID"'"
-	"           direction='out'/>"
-	"      <arg type='o' name='"SERVER_INTERFACE_PATH"'"
+	"      <arg type='o' name='"DLS_INTERFACE_PATH"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_LOCATION"'"
+	"    <method name='"DLS_INTERFACE_CANCEL"'>"
+	"    </method>"
+	"    <method name='"DLS_INTERFACE_CREATE_PLAYLIST_TO_ANY"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_TITLE"'"
+	"           direction='in'/>"
+	"      <arg type='s' name='"DLS_INTERFACE_CREATOR"'"
+	"           direction='in'/>"
+	"      <arg type='s' name='"DLS_INTERFACE_GENRE"'"
+	"           direction='in'/>"
+	"      <arg type='s' name='"DLS_INTERFACE_DESCRIPTION"'"
+	"           direction='in'/>"
+	"      <arg type='ao' name='"DLS_INTERFACE_PLAYLIST_ITEMS"'"
+	"           direction='in'/>"
+	"      <arg type='u' name='"DLS_INTERFACE_UPLOAD_ID"'"
+	"           direction='out'/>"
+	"      <arg type='o' name='"DLS_INTERFACE_PATH"'"
+	"           direction='out'/>"
+	"    </method>"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_LOCATION"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_UDN"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_UDN"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_DEVICE_TYPE"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_DEVICE_TYPE"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_FRIENDLY_NAME"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_FRIENDLY_NAME"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_MANUFACTURER"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_MANUFACTURER"'"
 	"       access='read'/>"
 	"    <property type='s' name='"
-	SERVER_INTERFACE_PROP_MANUFACTURER_URL"'"
+	DLS_INTERFACE_PROP_MANUFACTURER_URL"'"
 	"       access='read'/>"
 	"    <property type='s' name='"
-	SERVER_INTERFACE_PROP_MODEL_DESCRIPTION"'"
+	DLS_INTERFACE_PROP_MODEL_DESCRIPTION"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_MODEL_NAME"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_MODEL_NAME"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_MODEL_NUMBER"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_MODEL_NUMBER"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_MODEL_URL"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_MODEL_URL"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_SERIAL_NUMBER"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_SERIAL_NUMBER"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_PRESENTATION_URL"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_PRESENTATION_URL"'"
 	"       access='read'/>"
-	"    <property type='s' name='"SERVER_INTERFACE_PROP_ICON_URL"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_ICON_URL"'"
 	"       access='read'/>"
 	"    <property type='a{sv}'name='"
-	SERVER_INTERFACE_PROP_SV_DLNA_CAPABILITIES"'"
+	DLS_INTERFACE_PROP_SV_DLNA_CAPABILITIES"'"
 	"       access='read'/>"
 	"    <property type='as' name='"
-	SERVER_INTERFACE_PROP_SV_SEARCH_CAPABILITIES"'"
+	DLS_INTERFACE_PROP_SV_SEARCH_CAPABILITIES"'"
 	"       access='read'/>"
 	"    <property type='as' name='"
-	SERVER_INTERFACE_PROP_SV_SORT_CAPABILITIES"'"
+	DLS_INTERFACE_PROP_SV_SORT_CAPABILITIES"'"
 	"       access='read'/>"
 	"    <property type='as' name='"
-	SERVER_INTERFACE_PROP_SV_SORT_EXT_CAPABILITIES"'"
+	DLS_INTERFACE_PROP_SV_SORT_EXT_CAPABILITIES"'"
 	"       access='read'/>"
 	"    <property type='a(ssao)' name='"
-	SERVER_INTERFACE_PROP_SV_FEATURE_LIST"'"
+	DLS_INTERFACE_PROP_SV_FEATURE_LIST"'"
 	"       access='read'/>"
 	"    <property type='u' name='"
-	SERVER_INTERFACE_PROP_ESV_SYSTEM_UPDATE_ID"'"
+	DLS_INTERFACE_PROP_ESV_SYSTEM_UPDATE_ID"'"
 	"       access='read'/>"
 	"    <property type='s' name='"
-	SERVER_INTERFACE_PROP_SV_SERVICE_RESET_TOKEN"'"
+	DLS_INTERFACE_PROP_SV_SERVICE_RESET_TOKEN"'"
 	"       access='read'/>"
-	"    <signal name='"SERVER_INTERFACE_ESV_CONTAINER_UPDATE_IDS"'>"
-	"      <arg type='a(ou)' name='"SERVER_INTERFACE_CONTAINER_PATHS_ID"'/>"
+	"    <signal name='"DLS_INTERFACE_ESV_CONTAINER_UPDATE_IDS"'>"
+	"      <arg type='a(ou)' name='"DLS_INTERFACE_CONTAINER_PATHS_ID"'/>"
 	"    </signal>"
-	"    <signal name='"SERVER_INTERFACE_ESV_LAST_CHANGE"'>"
+	"    <signal name='"DLS_INTERFACE_ESV_LAST_CHANGE"'>"
 	"      <arg type='a(sv)' name='"
-	SERVER_INTERFACE_LAST_CHANGE_STATE_EVENT"'/>"
+	DLS_INTERFACE_LAST_CHANGE_STATE_EVENT"'/>"
 	"    </signal>"
-	"    <signal name='"SERVER_INTERFACE_UPLOAD_UPDATE"'>"
-	"      <arg type='u' name='"SERVER_INTERFACE_UPLOAD_ID"'/>"
-	"      <arg type='s' name='"SERVER_INTERFACE_UPLOAD_STATUS"'/>"
-	"      <arg type='t' name='"SERVER_INTERFACE_LENGTH"'/>"
-	"      <arg type='t' name='"SERVER_INTERFACE_TOTAL"'/>"
+	"    <signal name='"DLS_INTERFACE_UPLOAD_UPDATE"'>"
+	"      <arg type='u' name='"DLS_INTERFACE_UPLOAD_ID"'/>"
+	"      <arg type='s' name='"DLS_INTERFACE_UPLOAD_STATUS"'/>"
+	"      <arg type='t' name='"DLS_INTERFACE_LENGTH"'/>"
+	"      <arg type='t' name='"DLS_INTERFACE_TOTAL"'/>"
 	"    </signal>"
 	"  </interface>"
 	"</node>";
@@ -459,26 +459,26 @@ dleyna_task_processor_t *dls_server_get_task_processor(void)
 	return g_context.processor;
 }
 
-static void prv_sync_task_complete(msu_task_t *task)
+static void prv_sync_task_complete(dls_task_t *task)
 {
-	msu_task_complete(task);
+	dls_task_complete(task);
 	dleyna_task_queue_task_completed(task->atom.queue_id);
 }
 
-static void prv_process_sync_task(msu_task_t *task)
+static void prv_process_sync_task(dls_task_t *task)
 {
-	msu_client_t *client;
+	dls_client_t *client;
 	const gchar *client_name;
 
 	switch (task->type) {
-	case MSU_TASK_GET_VERSION:
+	case DLS_TASK_GET_VERSION:
 		prv_sync_task_complete(task);
 		break;
-	case MSU_TASK_GET_SERVERS:
-		task->result = msu_upnp_get_server_ids(g_context.upnp);
+	case DLS_TASK_GET_SERVERS:
+		task->result = dls_upnp_get_server_ids(g_context.upnp);
 		prv_sync_task_complete(task);
 		break;
-	case MSU_TASK_SET_PROTOCOL_INFO:
+	case DLS_TASK_SET_PROTOCOL_INFO:
 		client_name = dleyna_task_queue_get_source(task->atom.queue_id);
 		client = g_hash_table_lookup(g_context.watchers, client_name);
 		if (client) {
@@ -493,7 +493,7 @@ static void prv_process_sync_task(msu_task_t *task)
 		}
 		prv_sync_task_complete(task);
 		break;
-	case MSU_TASK_SET_PREFER_LOCAL_ADDRESSES:
+	case DLS_TASK_SET_PREFER_LOCAL_ADDRESSES:
 		client_name = dleyna_task_queue_get_source(task->atom.queue_id);
 		client = g_hash_table_lookup(g_context.watchers, client_name);
 		if (client) {
@@ -502,16 +502,16 @@ static void prv_process_sync_task(msu_task_t *task)
 		}
 		prv_sync_task_complete(task);
 		break;
-	case MSU_TASK_GET_UPLOAD_STATUS:
-		msu_upnp_get_upload_status(g_context.upnp, task);
+	case DLS_TASK_GET_UPLOAD_STATUS:
+		dls_upnp_get_upload_status(g_context.upnp, task);
 		dleyna_task_queue_task_completed(task->atom.queue_id);
 		break;
-	case MSU_TASK_GET_UPLOAD_IDS:
-		msu_upnp_get_upload_ids(g_context.upnp, task);
+	case DLS_TASK_GET_UPLOAD_IDS:
+		dls_upnp_get_upload_ids(g_context.upnp, task);
 		dleyna_task_queue_task_completed(task->atom.queue_id);
 		break;
-	case MSU_TASK_CANCEL_UPLOAD:
-		msu_upnp_cancel_upload(g_context.upnp, task);
+	case DLS_TASK_CANCEL_UPLOAD:
+		dls_upnp_cancel_upload(g_context.upnp, task);
 		dleyna_task_queue_task_completed(task->atom.queue_id);
 		break;
 	default:
@@ -519,15 +519,15 @@ static void prv_process_sync_task(msu_task_t *task)
 	}
 }
 
-static void prv_async_task_complete(msu_task_t *task, GError *error)
+static void prv_async_task_complete(dls_task_t *task, GError *error)
 {
 	DLEYNA_LOG_DEBUG("Enter");
 
 	if (error) {
-		msu_task_fail(task, error);
+		dls_task_fail(task, error);
 		g_error_free(error);
 	} else {
-		msu_task_complete(task);
+		dls_task_complete(task);
 	}
 
 	dleyna_task_queue_task_completed(task->atom.queue_id);
@@ -535,10 +535,10 @@ static void prv_async_task_complete(msu_task_t *task, GError *error)
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-static void prv_process_async_task(msu_task_t *task)
+static void prv_process_async_task(dls_task_t *task)
 {
-	msu_async_task_t *async_task = (msu_async_task_t *)task;
-	msu_client_t *client;
+	dls_async_task_t *async_task = (dls_async_task_t *)task;
+	dls_client_t *client;
 	const gchar *client_name;
 
 	DLEYNA_LOG_DEBUG("Enter");
@@ -548,56 +548,56 @@ static void prv_process_async_task(msu_task_t *task)
 	client = g_hash_table_lookup(g_context.watchers, client_name);
 
 	switch (task->type) {
-	case MSU_TASK_GET_CHILDREN:
-		msu_upnp_get_children(g_context.upnp, client, task,
+	case DLS_TASK_GET_CHILDREN:
+		dls_upnp_get_children(g_context.upnp, client, task,
 				      prv_async_task_complete);
 		break;
-	case MSU_TASK_GET_PROP:
-		msu_upnp_get_prop(g_context.upnp, client, task,
+	case DLS_TASK_GET_PROP:
+		dls_upnp_get_prop(g_context.upnp, client, task,
 				  prv_async_task_complete);
 		break;
-	case MSU_TASK_GET_ALL_PROPS:
-		msu_upnp_get_all_props(g_context.upnp, client, task,
+	case DLS_TASK_GET_ALL_PROPS:
+		dls_upnp_get_all_props(g_context.upnp, client, task,
 				       prv_async_task_complete);
 		break;
-	case MSU_TASK_SEARCH:
-		msu_upnp_search(g_context.upnp, client, task,
+	case DLS_TASK_SEARCH:
+		dls_upnp_search(g_context.upnp, client, task,
 				prv_async_task_complete);
 		break;
-	case MSU_TASK_GET_RESOURCE:
-		msu_upnp_get_resource(g_context.upnp, client, task,
+	case DLS_TASK_GET_RESOURCE:
+		dls_upnp_get_resource(g_context.upnp, client, task,
 				      prv_async_task_complete);
 		break;
-	case MSU_TASK_UPLOAD_TO_ANY:
-		msu_upnp_upload_to_any(g_context.upnp, client, task,
+	case DLS_TASK_UPLOAD_TO_ANY:
+		dls_upnp_upload_to_any(g_context.upnp, client, task,
 				       prv_async_task_complete);
 		break;
-	case MSU_TASK_UPLOAD:
-		msu_upnp_upload(g_context.upnp, client, task,
+	case DLS_TASK_UPLOAD:
+		dls_upnp_upload(g_context.upnp, client, task,
 				prv_async_task_complete);
 		break;
-	case MSU_TASK_DELETE_OBJECT:
-		msu_upnp_delete_object(g_context.upnp, client, task,
+	case DLS_TASK_DELETE_OBJECT:
+		dls_upnp_delete_object(g_context.upnp, client, task,
 				       prv_async_task_complete);
 		break;
-	case MSU_TASK_CREATE_CONTAINER:
-		msu_upnp_create_container(g_context.upnp, client, task,
+	case DLS_TASK_CREATE_CONTAINER:
+		dls_upnp_create_container(g_context.upnp, client, task,
 					  prv_async_task_complete);
 		break;
-	case MSU_TASK_CREATE_CONTAINER_IN_ANY:
-		msu_upnp_create_container_in_any(g_context.upnp, client, task,
+	case DLS_TASK_CREATE_CONTAINER_IN_ANY:
+		dls_upnp_create_container_in_any(g_context.upnp, client, task,
 						 prv_async_task_complete);
 		break;
-	case MSU_TASK_UPDATE_OBJECT:
-		msu_upnp_update_object(g_context.upnp, client, task,
+	case DLS_TASK_UPDATE_OBJECT:
+		dls_upnp_update_object(g_context.upnp, client, task,
 				       prv_async_task_complete);
 		break;
-	case MSU_TASK_CREATE_PLAYLIST:
-		msu_upnp_create_playlist(g_context.upnp, client, task,
+	case DLS_TASK_CREATE_PLAYLIST:
+		dls_upnp_create_playlist(g_context.upnp, client, task,
 					 prv_async_task_complete);
 		break;
-	case MSU_TASK_CREATE_PLAYLIST_IN_ANY:
-		msu_upnp_create_playlist_in_any(g_context.upnp, client, task,
+	case DLS_TASK_CREATE_PLAYLIST_IN_ANY:
+		dls_upnp_create_playlist_in_any(g_context.upnp, client, task,
 						prv_async_task_complete);
 		break;
 	default:
@@ -609,7 +609,7 @@ static void prv_process_async_task(msu_task_t *task)
 
 static void prv_process_task(dleyna_task_atom_t *task, gpointer user_data)
 {
-	msu_task_t *client_task = (msu_task_t *)task;
+	dls_task_t *client_task = (dls_task_t *)task;
 
 	if (client_task->synchronous)
 		prv_process_sync_task(client_task);
@@ -619,15 +619,15 @@ static void prv_process_task(dleyna_task_atom_t *task, gpointer user_data)
 
 static void prv_cancel_task(dleyna_task_atom_t *task, gpointer user_data)
 {
-	msu_task_cancel((msu_task_t *)task);
+	dls_task_cancel((dls_task_t *)task);
 }
 
 static void prv_delete_task(dleyna_task_atom_t *task, gpointer user_data)
 {
-	msu_task_delete((msu_task_t *)task);
+	dls_task_delete((dls_task_t *)task);
 }
 
-static void prv_msu_method_call(dleyna_connector_id_t conn,
+static void prv_dls_method_call(dleyna_connector_id_t conn,
 				const gchar *sender,
 				const gchar *object,
 				const gchar *interface,
@@ -676,12 +676,12 @@ static void prv_device_method_call(dleyna_connector_id_t conn,
 				   dleyna_connector_msg_id_t invocation);
 
 static const dleyna_connector_dispatch_cb_t g_root_vtables[1] = {
-	prv_msu_method_call
+	prv_dls_method_call
 };
 
 static const dleyna_connector_dispatch_cb_t
-				g_server_vtables[SERVER_INTERFACE_INFO_MAX] = {
-	/* MUST be in the exact same order as g_msu_server_introspection */
+				g_server_vtables[DLS_INTERFACE_INFO_MAX] = {
+	/* MUST be in the exact same order as g_dls_server_introspection */
 	prv_props_method_call,
 	prv_object_method_call,
 	prv_con_method_call,
@@ -708,14 +708,14 @@ static void prv_lost_client(const gchar *name)
 	prv_remove_client(name);
 }
 
-static void prv_add_task(msu_task_t *task, const gchar *source,
+static void prv_add_task(dls_task_t *task, const gchar *source,
 			 const gchar *sink)
 {
-	msu_client_t *client;
+	dls_client_t *client;
 	const dleyna_task_queue_key_t *queue_id;
 
 	if (!g_hash_table_lookup(g_context.watchers, source)) {
-		client = g_new0(msu_client_t, 1);
+		client = g_new0(dls_client_t, 1);
 		client->prefer_local_addresses = TRUE;
 		g_context.connector->watch_client(source);
 		g_hash_table_insert(g_context.watchers, g_strdup(source),
@@ -737,49 +737,49 @@ static void prv_add_task(msu_task_t *task, const gchar *source,
 	dleyna_task_queue_add_task(queue_id, &task->atom);
 }
 
-static void prv_msu_method_call(dleyna_connector_id_t conn,
+static void prv_dls_method_call(dleyna_connector_id_t conn,
 				const gchar *sender, const gchar *object,
 				const gchar *interface,
 				const gchar *method, GVariant *parameters,
 				dleyna_connector_msg_id_t invocation)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 
-	if (!strcmp(method, SERVER_INTERFACE_RELEASE)) {
+	if (!strcmp(method, DLS_INTERFACE_RELEASE)) {
 		prv_remove_client(sender);
 		g_context.connector->return_response(invocation, NULL);
-	} else if (!strcmp(method, SERVER_INTERFACE_GET_VERSION)) {
-		task = msu_task_get_version_new(invocation);
-		prv_add_task(task, sender, DLEYNA_SERVER_SINK);
-	} else if (!strcmp(method, SERVER_INTERFACE_GET_SERVERS)) {
-		task = msu_task_get_servers_new(invocation);
-		prv_add_task(task, sender, DLEYNA_SERVER_SINK);
-	} else if (!strcmp(method, SERVER_INTERFACE_SET_PROTOCOL_INFO)) {
-		task = msu_task_set_protocol_info_new(invocation,
+	} else if (!strcmp(method, DLS_INTERFACE_GET_VERSION)) {
+		task = dls_task_get_version_new(invocation);
+		prv_add_task(task, sender, DLS_SERVER_SINK);
+	} else if (!strcmp(method, DLS_INTERFACE_GET_SERVERS)) {
+		task = dls_task_get_servers_new(invocation);
+		prv_add_task(task, sender, DLS_SERVER_SINK);
+	} else if (!strcmp(method, DLS_INTERFACE_SET_PROTOCOL_INFO)) {
+		task = dls_task_set_protocol_info_new(invocation,
 						      parameters);
-		prv_add_task(task, sender, DLEYNA_SERVER_SINK);
-	} else if (!strcmp(method, SERVER_INTERFACE_PREFER_LOCAL_ADDRESSES)) {
-		task = msu_task_prefer_local_addresses_new(invocation,
+		prv_add_task(task, sender, DLS_SERVER_SINK);
+	} else if (!strcmp(method, DLS_INTERFACE_PREFER_LOCAL_ADDRESSES)) {
+		task = dls_task_prefer_local_addresses_new(invocation,
 							   parameters);
-		prv_add_task(task, sender, DLEYNA_SERVER_SINK);
+		prv_add_task(task, sender, DLS_SERVER_SINK);
 	}
 }
 
 gboolean dls_server_get_object_info(const gchar *object_path,
 					   gchar **root_path,
 					   gchar **object_id,
-					   msu_device_t **device,
+					   dls_device_t **device,
 					   GError **error)
 {
-	if (!msu_path_get_path_and_id(object_path, root_path, object_id,
+	if (!dls_path_get_path_and_id(object_path, root_path, object_id,
 				      error)) {
 		DLEYNA_LOG_WARNING("Bad object %s", object_path);
 
 		goto on_error;
 	}
 
-	*device = msu_device_from_path(*root_path,
-				msu_upnp_get_server_udn_map(g_context.upnp));
+	*device = dls_device_from_path(*root_path,
+				dls_upnp_get_server_udn_map(g_context.upnp));
 
 	if (*device == NULL) {
 		DLEYNA_LOG_WARNING("Cannot locate device for %s", *root_path);
@@ -804,7 +804,7 @@ on_error:
 
 static const gchar *prv_get_device_id(const gchar *object, GError **error)
 {
-	msu_device_t *device;
+	dls_device_t *device;
 	gchar *root_path;
 	gchar *id;
 
@@ -828,13 +828,13 @@ static void prv_object_method_call(dleyna_connector_id_t conn,
 				   const gchar *method, GVariant *parameters,
 				   dleyna_connector_msg_id_t invocation)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 	GError *error = NULL;
 
-	if (!strcmp(method, SERVER_INTERFACE_DELETE))
-		task = msu_task_delete_new(invocation, object, &error);
-	else if (!strcmp(method, SERVER_INTERFACE_UPDATE))
-		task = msu_task_update_new(invocation, object,
+	if (!strcmp(method, DLS_INTERFACE_DELETE))
+		task = dls_task_delete_new(invocation, object, &error);
+	else if (!strcmp(method, DLS_INTERFACE_UPDATE))
+		task = dls_task_update_new(invocation, object,
 					   parameters, &error);
 	else
 		goto finished;
@@ -859,11 +859,11 @@ static void prv_item_method_call(dleyna_connector_id_t conn,
 				 const gchar *method, GVariant *parameters,
 				 dleyna_connector_msg_id_t invocation)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 	GError *error = NULL;
 
-	if (!strcmp(method, SERVER_INTERFACE_GET_COMPATIBLE_RESOURCE)) {
-		task = msu_task_get_resource_new(invocation, object,
+	if (!strcmp(method, DLS_INTERFACE_GET_COMPATIBLE_RESOURCE)) {
+		task = dls_task_get_resource_new(invocation, object,
 						 parameters, &error);
 
 		if (!task) {
@@ -890,49 +890,49 @@ static void prv_con_method_call(dleyna_connector_id_t conn,
 				GVariant *parameters,
 				dleyna_connector_msg_id_t invocation)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 	GError *error = NULL;
 
-	if (!strcmp(method, SERVER_INTERFACE_LIST_CHILDREN))
-		task = msu_task_get_children_new(invocation, object,
+	if (!strcmp(method, DLS_INTERFACE_LIST_CHILDREN))
+		task = dls_task_get_children_new(invocation, object,
 						 parameters, TRUE,
 						 TRUE, &error);
-	else if (!strcmp(method, SERVER_INTERFACE_LIST_CHILDREN_EX))
-		task = msu_task_get_children_ex_new(invocation, object,
+	else if (!strcmp(method, DLS_INTERFACE_LIST_CHILDREN_EX))
+		task = dls_task_get_children_ex_new(invocation, object,
 						    parameters, TRUE,
 						    TRUE, &error);
-	else if (!strcmp(method, SERVER_INTERFACE_LIST_ITEMS))
-		task = msu_task_get_children_new(invocation, object,
+	else if (!strcmp(method, DLS_INTERFACE_LIST_ITEMS))
+		task = dls_task_get_children_new(invocation, object,
 						 parameters, TRUE,
 						 FALSE, &error);
-	else if (!strcmp(method, SERVER_INTERFACE_LIST_ITEMS_EX))
-		task = msu_task_get_children_ex_new(invocation, object,
+	else if (!strcmp(method, DLS_INTERFACE_LIST_ITEMS_EX))
+		task = dls_task_get_children_ex_new(invocation, object,
 						    parameters, TRUE,
 						    FALSE, &error);
-	else if (!strcmp(method, SERVER_INTERFACE_LIST_CONTAINERS))
-		task = msu_task_get_children_new(invocation, object,
+	else if (!strcmp(method, DLS_INTERFACE_LIST_CONTAINERS))
+		task = dls_task_get_children_new(invocation, object,
 						 parameters, FALSE,
 						 TRUE, &error);
-	else if (!strcmp(method, SERVER_INTERFACE_LIST_CONTAINERS_EX))
-		task = msu_task_get_children_ex_new(invocation, object,
+	else if (!strcmp(method, DLS_INTERFACE_LIST_CONTAINERS_EX))
+		task = dls_task_get_children_ex_new(invocation, object,
 						    parameters, FALSE,
 						    TRUE, &error);
-	else if (!strcmp(method, SERVER_INTERFACE_SEARCH_OBJECTS))
-		task = msu_task_search_new(invocation, object,
+	else if (!strcmp(method, DLS_INTERFACE_SEARCH_OBJECTS))
+		task = dls_task_search_new(invocation, object,
 					   parameters, &error);
-	else if (!strcmp(method, SERVER_INTERFACE_SEARCH_OBJECTS_EX))
-		task = msu_task_search_ex_new(invocation, object,
+	else if (!strcmp(method, DLS_INTERFACE_SEARCH_OBJECTS_EX))
+		task = dls_task_search_ex_new(invocation, object,
 					      parameters, &error);
-	else if (!strcmp(method, SERVER_INTERFACE_UPLOAD))
-		task = msu_task_upload_new(invocation, object,
+	else if (!strcmp(method, DLS_INTERFACE_UPLOAD))
+		task = dls_task_upload_new(invocation, object,
 					   parameters, &error);
-	else if (!strcmp(method, SERVER_INTERFACE_CREATE_CONTAINER))
-		task = msu_task_create_container_new_generic(invocation,
-						MSU_TASK_CREATE_CONTAINER,
+	else if (!strcmp(method, DLS_INTERFACE_CREATE_CONTAINER))
+		task = dls_task_create_container_new_generic(invocation,
+						DLS_TASK_CREATE_CONTAINER,
 						object, parameters, &error);
-	else if (!strcmp(method, SERVER_INTERFACE_CREATE_PLAYLIST))
-		task = msu_task_create_playlist_new(invocation,
-						    MSU_TASK_CREATE_PLAYLIST,
+	else if (!strcmp(method, DLS_INTERFACE_CREATE_PLAYLIST))
+		task = dls_task_create_playlist_new(invocation,
+						    DLS_TASK_CREATE_PLAYLIST,
 						    object, parameters, &error);
 	else
 		goto finished;
@@ -959,14 +959,14 @@ static void prv_props_method_call(dleyna_connector_id_t conn,
 				  GVariant *parameters,
 				  dleyna_connector_msg_id_t invocation)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 	GError *error = NULL;
 
-	if (!strcmp(method, SERVER_INTERFACE_GET_ALL))
-		task = msu_task_get_props_new(invocation, object,
+	if (!strcmp(method, DLS_INTERFACE_GET_ALL))
+		task = dls_task_get_props_new(invocation, object,
 					      parameters, &error);
-	else if (!strcmp(method, SERVER_INTERFACE_GET))
-		task = msu_task_get_prop_new(invocation, object,
+	else if (!strcmp(method, DLS_INTERFACE_GET))
+		task = dls_task_get_prop_new(invocation, object,
 					     parameters, &error);
 	else
 		goto finished;
@@ -991,35 +991,35 @@ static void prv_device_method_call(dleyna_connector_id_t conn,
 				   const gchar *method, GVariant *parameters,
 				   dleyna_connector_msg_id_t invocation)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 	GError *error = NULL;
 	const gchar *device_id;
 	const dleyna_task_queue_key_t *queue_id;
 
-	if (!strcmp(method, SERVER_INTERFACE_UPLOAD_TO_ANY)) {
-		task = msu_task_upload_to_any_new(invocation,
+	if (!strcmp(method, DLS_INTERFACE_UPLOAD_TO_ANY)) {
+		task = dls_task_upload_to_any_new(invocation,
 						  object, parameters, &error);
-	} else if (!strcmp(method, SERVER_INTERFACE_CREATE_CONTAINER_IN_ANY)) {
-		task = msu_task_create_container_new_generic(
+	} else if (!strcmp(method, DLS_INTERFACE_CREATE_CONTAINER_IN_ANY)) {
+		task = dls_task_create_container_new_generic(
 					invocation,
-					MSU_TASK_CREATE_CONTAINER_IN_ANY,
+					DLS_TASK_CREATE_CONTAINER_IN_ANY,
 					object, parameters, &error);
-	} else if (!strcmp(method, SERVER_INTERFACE_GET_UPLOAD_STATUS)) {
-		task = msu_task_get_upload_status_new(invocation,
+	} else if (!strcmp(method, DLS_INTERFACE_GET_UPLOAD_STATUS)) {
+		task = dls_task_get_upload_status_new(invocation,
 						      object, parameters,
 						      &error);
-	} else if (!strcmp(method, SERVER_INTERFACE_GET_UPLOAD_IDS)) {
-		task = msu_task_get_upload_ids_new(invocation, object,
+	} else if (!strcmp(method, DLS_INTERFACE_GET_UPLOAD_IDS)) {
+		task = dls_task_get_upload_ids_new(invocation, object,
 						   &error);
-	} else if (!strcmp(method, SERVER_INTERFACE_CANCEL_UPLOAD)) {
-		task = msu_task_cancel_upload_new(invocation, object,
+	} else if (!strcmp(method, DLS_INTERFACE_CANCEL_UPLOAD)) {
+		task = dls_task_cancel_upload_new(invocation, object,
 						  parameters, &error);
-	} else if (!strcmp(method, SERVER_INTERFACE_CREATE_PLAYLIST_TO_ANY)) {
-		task = msu_task_create_playlist_new(
+	} else if (!strcmp(method, DLS_INTERFACE_CREATE_PLAYLIST_TO_ANY)) {
+		task = dls_task_create_playlist_new(
 						invocation,
-						MSU_TASK_CREATE_PLAYLIST_IN_ANY,
+						DLS_TASK_CREATE_PLAYLIST_IN_ANY,
 						object, parameters, &error);
-	} else if (!strcmp(method, SERVER_INTERFACE_CANCEL)) {
+	} else if (!strcmp(method, DLS_INTERFACE_CANCEL)) {
 		task = NULL;
 
 		device_id = prv_get_device_id(object, &error);
@@ -1061,7 +1061,7 @@ static void prv_found_media_server(const gchar *path, void *user_data)
 	(void) g_context.connector->notify(g_context.connection,
 					   DLEYNA_SERVER_OBJECT,
 					   DLEYNA_SERVER_INTERFACE_MANAGER,
-					   SERVER_INTERFACE_FOUND_SERVER,
+					   DLS_INTERFACE_FOUND_SERVER,
 					   g_variant_new("(o)", path),
 					   NULL);
 }
@@ -1071,7 +1071,7 @@ static void prv_lost_media_server(const gchar *path, void *user_data)
 	(void) g_context.connector->notify(g_context.connection,
 					   DLEYNA_SERVER_OBJECT,
 					   DLEYNA_SERVER_INTERFACE_MANAGER,
-					   SERVER_INTERFACE_LOST_SERVER,
+					   DLS_INTERFACE_LOST_SERVER,
 					   g_variant_new("(o)", path),
 					   NULL);
 
@@ -1080,7 +1080,7 @@ static void prv_lost_media_server(const gchar *path, void *user_data)
 
 static void prv_unregister_client(gpointer user_data)
 {
-	msu_client_t *client = user_data;
+	dls_client_t *client = user_data;
 
 	if (client) {
 		g_free(client->protocol_info);
@@ -1088,7 +1088,7 @@ static void prv_unregister_client(gpointer user_data)
 	}
 }
 
-msu_upnp_t *dls_server_get_upnp(void)
+dls_upnp_t *dls_server_get_upnp(void)
 {
 	return g_context.upnp;
 }
@@ -1100,18 +1100,18 @@ static gboolean prv_control_point_start_service(
 
 	g_context.connection = connection;
 
-	g_context.msu_id = g_context.connector->publish_object(
+	g_context.dls_id = g_context.connector->publish_object(
 							connection,
 							DLEYNA_SERVER_OBJECT,
 							TRUE,
 							0,
 							g_root_vtables);
 
-	if (!g_context.msu_id) {
+	if (!g_context.dls_id) {
 		retval = FALSE;
 		goto out;
 	} else {
-		g_context.upnp = msu_upnp_new(connection,
+		g_context.upnp = dls_upnp_new(connection,
 					      g_server_vtables,
 					      prv_found_media_server,
 					      prv_lost_media_server,
@@ -1141,16 +1141,16 @@ static void prv_control_point_initialize(const dleyna_connector_t *connector,
 
 static void prv_control_point_free(void)
 {
-	msu_upnp_delete(g_context.upnp);
+	dls_upnp_delete(g_context.upnp);
 
 	if (g_context.watchers)
 		g_hash_table_unref(g_context.watchers);
 
 	if (g_context.connection) {
-		if (g_context.msu_id)
+		if (g_context.dls_id)
 			g_context.connector->unpublish_object(
 							g_context.connection,
-							g_context.msu_id);
+							g_context.dls_id);
 	}
 }
 

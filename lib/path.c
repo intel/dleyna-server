@@ -1,5 +1,5 @@
 /*
- * dleyna
+ * dLeyna
  *
  * Copyright (C) 2012-2013 Intel Corporation. All rights reserved.
  *
@@ -28,7 +28,7 @@
 #include "path.h"
 #include "server.h"
 
-gboolean msu_path_get_non_root_id(const gchar *object_path,
+gboolean dls_path_get_non_root_id(const gchar *object_path,
 				  const gchar **slash_before_id)
 {
 	gboolean retval = FALSE;
@@ -87,13 +87,13 @@ on_error:
 	return NULL;
 }
 
-gboolean msu_path_get_path_and_id(const gchar *object_path, gchar **root_path,
+gboolean dls_path_get_path_and_id(const gchar *object_path, gchar **root_path,
 				  gchar **id, GError **error)
 {
 	const gchar *slash;
 	gchar *coded_id;
 
-	if (!msu_path_get_non_root_id(object_path, &slash))
+	if (!dls_path_get_non_root_id(object_path, &slash))
 		goto on_error;
 
 	if (!slash) {
@@ -137,7 +137,7 @@ static gchar *prv_id_to_object_name(const gchar *id)
 	return retval;
 }
 
-gchar *msu_path_from_id(const gchar *root_path, const gchar *id)
+gchar *dls_path_from_id(const gchar *root_path, const gchar *id)
 {
 	gchar *coded_id;
 	gchar *path;

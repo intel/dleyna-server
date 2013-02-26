@@ -20,11 +20,11 @@
  *
  */
 
-#ifndef CONTROL_POINT_SERVER_H__
-#define CONTROL_POINT_SERVER_H__
+#ifndef DLEYNA_CONTROL_POINT_SERVER_H__
+#define DLEYNA_CONTROL_POINT_SERVER_H__
 
 #include <libdleyna/core/control-point.h>
 
 const dleyna_control_point_t *dleyna_control_point_get_server(void);
 
-#endif /* CONTROL_POINT_SERVER_H__ */
+#endif /* DLEYNA_CONTROL_POINT_SERVER_H__ */

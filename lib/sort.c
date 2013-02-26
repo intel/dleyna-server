@@ -1,5 +1,5 @@
 /*
- * dleyna
+ * dLeyna
  *
  * Copyright (C) 2012-2013 Intel Corporation. All rights reserved.
  *
@@ -25,7 +25,7 @@
 #include "props.h"
 #include "sort.h"
 
-gchar *msu_sort_translate_sort_string(GHashTable *filter_map,
+gchar *dls_sort_translate_sort_string(GHashTable *filter_map,
 				      const gchar *sort_string)
 {
 	GRegex *reg;
@@ -33,7 +33,7 @@ gchar *msu_sort_translate_sort_string(GHashTable *filter_map,
 	GMatchInfo *match_info = NULL;
 	gchar *prop = NULL;
 	gchar *op = NULL;
-	msu_prop_map_t *prop_map;
+	dls_prop_map_t *prop_map;
 	GString *str;
 
 	if (!g_regex_match_simple(

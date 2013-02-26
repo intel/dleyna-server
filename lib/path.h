@@ -1,5 +1,5 @@
 /*
- * dleyna
+ * dLeyna
  *
  * Copyright (C) 2012-2013 Intel Corporation. All rights reserved.
  *
@@ -20,15 +20,17 @@
  *
  */
 
-#ifndef MSU_PATH_H__
-#define MSU_PATH_H__
+#ifndef DLS_PATH_H__
+#define DLS_PATH_H__
 
 #include <glib.h>
 
-gboolean msu_path_get_non_root_id(const gchar *object_path,
+gboolean dls_path_get_non_root_id(const gchar *object_path,
 				  const gchar **slash_before_id);
-gboolean msu_path_get_path_and_id(const gchar *object_path, gchar **root_path,
-				  gchar **id, GError **error);
-gchar *msu_path_from_id(const gchar *root_path, const gchar *id);
 
-#endif
+gboolean dls_path_get_path_and_id(const gchar *object_path, gchar **root_path,
+				  gchar **id, GError **error);
+
+gchar *dls_path_from_id(const gchar *root_path, const gchar *id);
+
+#endif /* DLS_PATH_H__ */

@@ -20,25 +20,28 @@
  *
  */
 
-#ifndef SERVER_H__
-#define SERVER_H__
+#ifndef DLS_SERVER_H__
+#define DLS_SERVER_H__
 
 #include <libdleyna/core/connector.h>
 #include <libdleyna/core/task-processor.h>
 
-#define DLEYNA_SERVER_SINK "dleyna-server"
+#define DLS_SERVER_SINK "dleyna-server"
 
-typedef struct msu_device_t_ msu_device_t;
-typedef struct msu_device_context_t_ msu_device_context_t;
-typedef struct msu_upnp_t_ msu_upnp_t;
+typedef struct dls_device_t_ dls_device_t;
+typedef struct dls_device_context_t_ dls_device_context_t;
+typedef struct dls_upnp_t_ dls_upnp_t;
 
 gboolean dls_server_get_object_info(const gchar *object_path,
 				    gchar **root_path,
 				    gchar **object_id,
-				    msu_device_t **device,
+				    dls_device_t **device,
 				    GError **error);
-msu_upnp_t *dls_server_get_upnp(void);
+
+dls_upnp_t *dls_server_get_upnp(void);
+
 dleyna_task_processor_t *dls_server_get_task_processor(void);
+
 const dleyna_connector_t *dls_server_get_connector(void);
 
-#endif /* SERVER_H__ */
+#endif /* DLS_SERVER_H__ */

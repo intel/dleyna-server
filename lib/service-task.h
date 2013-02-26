@@ -1,5 +1,5 @@
 /*
- * dleyna
+ * dLeyna
  *
  * Copyright (C) 2012-2013 Intel Corporation. All rights reserved.
  *
@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef MSU_SERVICE_TASK_H__
-#define MSU_SERVICE_TASK_H__
+#ifndef DLS_SERVICE_TASK_H__
+#define DLS_SERVICE_TASK_H__
 
 #include <glib.h>
 #include <libgupnp/gupnp-service-proxy.h>
@@ -31,31 +31,35 @@
 
 #include "server.h"
 
-typedef struct msu_service_task_t_ msu_service_task_t;
+typedef struct dls_service_task_t_ dls_service_task_t;
 
-typedef GUPnPServiceProxyAction *(*msu_service_task_action)
-						(msu_service_task_t *task,
+typedef GUPnPServiceProxyAction *(*dls_service_task_action)
+						(dls_service_task_t *task,
 						 GUPnPServiceProxy *proxy,
 						 gboolean *failed);
 
-const char *msu_service_task_create_source(void);
+const char *dls_service_task_create_source(void);
 
-void msu_service_task_add(const dleyna_task_queue_key_t *queue_id,
-			  msu_service_task_action action,
-			  msu_device_t *device,
+void dls_service_task_add(const dleyna_task_queue_key_t *queue_id,
+			  dls_service_task_action action,
+			  dls_device_t *device,
 			  GUPnPServiceProxy *proxy,
 			  GUPnPServiceProxyActionCallback action_cb,
 			  GDestroyNotify free_func,
 			  gpointer cb_user_data);
 
-void msu_service_task_begin_action_cb(GUPnPServiceProxy *proxy,
+void dls_service_task_begin_action_cb(GUPnPServiceProxy *proxy,
 				      GUPnPServiceProxyAction *action,
 				      gpointer user_data);
-void msu_service_task_process_cb(dleyna_task_atom_t *atom, gpointer user_data);
-void msu_service_task_cancel_cb(dleyna_task_atom_t *atom, gpointer user_data);
-void msu_service_task_delete_cb(dleyna_task_atom_t *atom, gpointer user_data);
 
-msu_device_t *msu_service_task_get_device(msu_service_task_t *task);
-gpointer *msu_service_task_get_user_data(msu_service_task_t *task);
+void dls_service_task_process_cb(dleyna_task_atom_t *atom, gpointer user_data);
 
-#endif /* MSU_SERVICE_TASK_H__ */
+void dls_service_task_cancel_cb(dleyna_task_atom_t *atom, gpointer user_data);
+
+void dls_service_task_delete_cb(dleyna_task_atom_t *atom, gpointer user_data);
+
+dls_device_t *dls_service_task_get_device(dls_service_task_t *task);
+
+gpointer *dls_service_task_get_user_data(dls_service_task_t *task);
+
+#endif /* DLS_SERVICE_TASK_H__ */
