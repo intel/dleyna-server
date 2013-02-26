@@ -39,6 +39,13 @@
 #include "server.h"
 #include "upnp.h"
 
+#ifdef UA_PREFIX
+	#define DLS_PRG_NAME UA_PREFIX " dLeyna/" VERSION
+#else
+	#define DLS_PRG_NAME "dLeyna/" VERSION
+#endif
+
+
 typedef struct dls_server_context_t_ dls_server_context_t;
 struct dls_server_context_t_ {
 	dleyna_connector_id_t connection;
@@ -1137,6 +1144,8 @@ static void prv_control_point_initialize(const dleyna_connector_t *connector,
 
 	g_context.watchers = g_hash_table_new_full(g_str_hash, g_str_equal,
 						 g_free, prv_unregister_client);
+
+	g_set_prgname(DLS_PRG_NAME);
 }
 
 static void prv_control_point_free(void)

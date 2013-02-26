@@ -168,6 +168,15 @@ AC_ARG_WITH(log-type,
 DLEYNA_LOG_TYPE_CHECK([${with_log_type}])
 
 
+AC_ARG_WITH(ua-prefix,
+		AS_HELP_STRING(
+			[--with-ua-prefix],
+			[Specify a user agent prefix]),
+		[with_ua_prefix = "$withval"; AC_DEFINE_UNQUOTED([UA_PREFIX], "$with_ua_prefix", [User Agent prefix])],
+		[])
+		
+		
+
 AC_ARG_ENABLE(lib-only,
 		AS_HELP_STRING(
 			[--enable-lib-only],
@@ -236,6 +245,7 @@ CFLAGS    : '${CFLAGS}'
 	- disable-optimization: ${disable_optimization}
 	- with-log-level      : ${with_log_level}
 	- with-log-type       : ${with_log_type}
+	- with-ua-prefix      : ${with_ua_prefix}
 	- enable-lib-only     : ${enable_lib_only}
 
 --------------------------------------------------"])
