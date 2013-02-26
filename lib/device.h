@@ -63,6 +63,8 @@ dls_device_context_t *dls_device_append_new_context(dls_device_t *device,
 						    GUPnPDeviceProxy *proxy);
 void dls_device_delete(void *device);
 
+void dls_device_unsubscribe(void *device);
+
 dls_device_t *dls_device_new(
 			dleyna_connector_id_t connection,
 			GUPnPDeviceProxy *proxy,

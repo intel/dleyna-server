@@ -145,34 +145,43 @@ static void prv_count_data_new(dls_async_task_t *cb_data,
 	*count_data = cd;
 }
 
+static void prv_context_unsubscribe(dls_device_context_t *ctx)
+{
+	if (ctx->timeout_id) {
+		(void) g_source_remove(ctx->timeout_id);
+		ctx->timeout_id = 0;
+	}
+
+	if (ctx->subscribed) {
+		gupnp_service_proxy_remove_notify(
+					ctx->service_proxy,
+					DLS_SYSTEM_UPDATE_VAR,
+					prv_system_update_cb,
+					ctx->device);
+		gupnp_service_proxy_remove_notify(
+					ctx->service_proxy,
+					DLS_CONTAINER_UPDATE_VAR,
+					prv_container_update_cb,
+					ctx->device);
+		gupnp_service_proxy_remove_notify(
+					ctx->service_proxy,
+					DLS_LAST_CHANGE_VAR,
+					prv_last_change_cb,
+					ctx->device);
+
+		gupnp_service_proxy_set_subscribed(ctx->service_proxy,
+						   FALSE);
+
+		ctx->subscribed = FALSE;
+	}
+}
+
 static void prv_context_delete(gpointer context)
 {
 	dls_device_context_t *ctx = context;
 
 	if (ctx) {
-		if (ctx->timeout_id)
-			(void) g_source_remove(ctx->timeout_id);
-
-		if (ctx->subscribed) {
-			gupnp_service_proxy_remove_notify(
-						ctx->service_proxy,
-						DLS_SYSTEM_UPDATE_VAR,
-						prv_system_update_cb,
-						ctx->device);
-			gupnp_service_proxy_remove_notify(
-						ctx->service_proxy,
-						DLS_CONTAINER_UPDATE_VAR,
-						prv_container_update_cb,
-						ctx->device);
-			gupnp_service_proxy_remove_notify(
-						ctx->service_proxy,
-						DLS_LAST_CHANGE_VAR,
-						prv_last_change_cb,
-						ctx->device);
-
-			gupnp_service_proxy_set_subscribed(ctx->service_proxy,
-							   FALSE);
-		}
+		prv_context_unsubscribe(ctx);
 
 		if (ctx->device_proxy)
 			g_object_unref(ctx->device_proxy);
@@ -230,6 +239,20 @@ void dls_device_delete(void *device)
 		g_variant_unref(dev->sort_ext_caps);
 		g_variant_unref(dev->feature_list);
 		g_free(dev);
+	}
+}
+
+void dls_device_unsubscribe(void *device)
+{
+	unsigned int i;
+	dls_device_t *dev = device;
+	dls_device_context_t *context;
+
+	if (dev) {
+		for (i = 0; i < dev->contexts->len; ++i) {
+			context = g_ptr_array_index(dev->contexts, i);
+			prv_context_unsubscribe(context);
+		}
 	}
 }
 

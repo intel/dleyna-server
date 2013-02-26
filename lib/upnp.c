@@ -1046,6 +1046,23 @@ on_error:
 	DLEYNA_LOG_DEBUG("Exit failure");
 }
 
+void dls_upnp_unsubscribe(dls_upnp_t *upnp)
+{
+	GHashTableIter iter;
+	gpointer value;
+	dls_device_t *device;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	g_hash_table_iter_init(&iter, upnp->server_udn_map);
+	while (g_hash_table_iter_next(&iter, NULL, &value)) {
+		device = value;
+		dls_device_unsubscribe(device);
+	}
+
+	DLEYNA_LOG_DEBUG("Exit");
+}
+
 static gboolean prv_device_uc_find(gpointer key, gpointer value,
 				   gpointer user_data)
 {

@@ -1148,12 +1148,11 @@ static void prv_control_point_initialize(const dleyna_connector_t *connector,
 	g_set_prgname(DLS_PRG_NAME);
 }
 
-static void prv_control_point_free(void)
+static void prv_control_point_finalize(void)
 {
-	dls_upnp_delete(g_context.upnp);
+	dls_upnp_unsubscribe(g_context.upnp);
 
-	if (g_context.watchers)
-		g_hash_table_unref(g_context.watchers);
+	dls_upnp_delete(g_context.upnp);
 
 	if (g_context.connection) {
 		if (g_context.dls_id)
@@ -1161,6 +1160,12 @@ static void prv_control_point_free(void)
 							g_context.connection,
 							g_context.dls_id);
 	}
+}
+
+static void prv_control_point_free(void)
+{
+	if (g_context.watchers)
+		g_hash_table_unref(g_context.watchers);
 }
 
 static const gchar *prv_control_point_server_name(void)
@@ -1180,6 +1185,7 @@ static const gchar *prv_control_point_root_introspection(void)
 
 static const dleyna_control_point_t g_control_point = {
 	prv_control_point_initialize,
+	prv_control_point_finalize,
 	prv_control_point_free,
 	prv_control_point_server_name,
 	prv_control_point_server_introspection,
