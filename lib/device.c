@@ -4028,7 +4028,7 @@ static void prv_create_didls_item_browse_cb(GUPnPServiceProxy *proxy,
 					     DLEYNA_ERROR_OPERATION_FAILED,
 					     "Browse operation failed: %s",
 					     error->message);
-		goto on_error;
+		goto on_exit;
 	}
 
 	DLEYNA_LOG_DEBUG_NL();
@@ -4042,7 +4042,7 @@ static void prv_create_didls_item_browse_cb(GUPnPServiceProxy *proxy,
 			 cb_data->ut.playlist.collection);
 
 	if (gupnp_didl_lite_parser_parse_didl(parser, result, &error))
-		goto on_error; /* Exit with success */
+		goto on_exit;
 
 	if (error->code == GUPNP_XML_ERROR_EMPTY_NODE) {
 		DLEYNA_LOG_WARNING("Property not defined for object");
@@ -4060,7 +4060,7 @@ static void prv_create_didls_item_browse_cb(GUPnPServiceProxy *proxy,
 					     error->message);
 	}
 
-on_error:
+on_exit:
 
 	if (cb_data->error != NULL)
 		dleyna_task_processor_cancel_queue(
