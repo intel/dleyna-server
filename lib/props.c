@@ -38,6 +38,7 @@ static const gchar gUPnPAudioItem[] = "object.item.audioItem";
 static const gchar gUPnPVideoItem[] = "object.item.videoItem";
 static const gchar gUPnPImageItem[] = "object.item.imageItem";
 static const gchar gUPnPPlaylistItem[] = "object.item.playlistItem";
+static const gchar gUPnPItem[] = "object.item";
 
 static const unsigned int gUPnPContainerLen =
 	(sizeof(gUPnPContainer) / sizeof(gchar)) - 1;
@@ -55,6 +56,8 @@ static const unsigned int gUPnPImageItemLen =
 	(sizeof(gUPnPImageItem) / sizeof(gchar)) - 1;
 static const unsigned int gUPnPPlaylistItemLen =
 	(sizeof(gUPnPPlaylistItem) / sizeof(gchar)) - 1;
+static const unsigned int gUPnPItemLen =
+	(sizeof(gUPnPItem) / sizeof(gchar)) - 1;
 
 static const gchar gUPnPPhotoAlbum[] = "object.container.album.photoAlbum";
 static const gchar gUPnPMusicAlbum[] = "object.container.album.musicAlbum";
@@ -92,6 +95,7 @@ static const gchar gMediaSpec2Video[] = "video";
 static const gchar gMediaSpec2ImagePhoto[] = "image.photo";
 static const gchar gMediaSpec2Image[] = "image";
 static const gchar gMediaSpec2Playlist[] = "playlist";
+static const gchar gMediaSpec2Item[] = "item";
 
 static dls_prop_map_t *prv_prop_map_new(const gchar *prop_name,
 					    dls_upnp_prop_mask type,
@@ -1074,6 +1078,8 @@ const gchar *dls_props_media_spec_to_upnp_class(const gchar *m2spec_class)
 		retval = gUPnPImageItem;
 	else if (!strcmp(m2spec_class, gMediaSpec2Playlist))
 		retval = gUPnPPlaylistItem;
+	else if (!strcmp(m2spec_class, gMediaSpec2Item))
+		retval = gUPnPItem;
 
 	return retval;
 }
@@ -1138,6 +1144,10 @@ const gchar *dls_props_upnp_class_to_media_spec(const gchar *upnp_class)
 	}  else if (!strncmp(upnp_class, gUPnPPlaylistItem,
 			     gUPnPPlaylistItemLen)) {
 		retval = gMediaSpec2Playlist;
+	} else if (!strncmp(upnp_class, gUPnPItem, gUPnPItemLen)) {
+		ptr = upnp_class + gUPnPItemLen;
+		if (!*ptr || *ptr == '.')
+			retval = gMediaSpec2Item;
 	}
 
 	return retval;
