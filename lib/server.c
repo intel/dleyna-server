@@ -627,7 +627,7 @@ static void prv_delete_task(dleyna_task_atom_t *task, gpointer user_data)
 	dls_task_delete((dls_task_t *)task);
 }
 
-static void prv_dls_method_call(dleyna_connector_id_t conn,
+static void prv_method_call(dleyna_connector_id_t conn,
 				const gchar *sender,
 				const gchar *object,
 				const gchar *interface,
@@ -676,7 +676,7 @@ static void prv_device_method_call(dleyna_connector_id_t conn,
 				   dleyna_connector_msg_id_t invocation);
 
 static const dleyna_connector_dispatch_cb_t g_root_vtables[1] = {
-	prv_dls_method_call
+	prv_method_call
 };
 
 static const dleyna_connector_dispatch_cb_t
@@ -737,7 +737,7 @@ static void prv_add_task(dls_task_t *task, const gchar *source,
 	dleyna_task_queue_add_task(queue_id, &task->atom);
 }
 
-static void prv_dls_method_call(dleyna_connector_id_t conn,
+static void prv_method_call(dleyna_connector_id_t conn,
 				const gchar *sender, const gchar *object,
 				const gchar *interface,
 				const gchar *method, GVariant *parameters,

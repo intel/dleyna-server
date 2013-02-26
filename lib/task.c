@@ -49,7 +49,7 @@ dls_task_t *dls_task_get_servers_new(dleyna_connector_msg_id_t invocation)
 	return task;
 }
 
-static void prv_dls_task_delete(dls_task_t *task)
+static void prv_delete(dls_task_t *task)
 {
 	if (!task->synchronous)
 		dls_async_task_delete((dls_async_task_t *)task);
@@ -150,7 +150,7 @@ static dls_task_t *prv_m2spec_task_new(dls_task_type_t type,
 	}
 
 	if (!prv_set_task_target_info(task, path, error)) {
-		prv_dls_task_delete(task);
+		prv_delete(task);
 		task = NULL;
 
 		goto finished;
@@ -610,7 +610,7 @@ void dls_task_delete(dls_task_t *task)
 		g_error_free(error);
 	}
 
-	prv_dls_task_delete(task);
+	prv_delete(task);
 
 finished:
 
