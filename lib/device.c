@@ -1,5 +1,5 @@
 /*
- * dleyna
+ * dLeyna
  *
  * Copyright (C) 2012-2013 Intel Corporation. All rights reserved.
  *
@@ -37,34 +37,34 @@
 #include "server.h"
 #include "service-task.h"
 
-#define MSU_SYSTEM_UPDATE_VAR "SystemUpdateID"
-#define MSU_CONTAINER_UPDATE_VAR "ContainerUpdateIDs"
-#define MSU_LAST_CHANGE_VAR "LastChange"
-#define MEDIA_SERVER_DEVICE_TYPE "urn:schemas-upnp-org:device:MediaServer:"
+#define DLS_SYSTEM_UPDATE_VAR "SystemUpdateID"
+#define DLS_CONTAINER_UPDATE_VAR "ContainerUpdateIDs"
+#define DLS_LAST_CHANGE_VAR "LastChange"
+#define DLS_DMS_DEVICE_TYPE "urn:schemas-upnp-org:device:MediaServer:"
 
-#define MSU_UPLOAD_STATUS_IN_PROGRESS "IN_PROGRESS"
-#define MSU_UPLOAD_STATUS_CANCELLED "CANCELLED"
-#define MSU_UPLOAD_STATUS_ERROR "ERROR"
-#define MSU_UPLOAD_STATUS_COMPLETED "COMPLETED"
+#define DLS_UPLOAD_STATUS_IN_PROGRESS "IN_PROGRESS"
+#define DLS_UPLOAD_STATUS_CANCELLED "CANCELLED"
+#define DLS_UPLOAD_STATUS_ERROR "ERROR"
+#define DLS_UPLOAD_STATUS_COMPLETED "COMPLETED"
 
-typedef gboolean(*msu_device_count_cb_t)(msu_async_task_t *cb_data,
+typedef gboolean(*dls_device_count_cb_t)(dls_async_task_t *cb_data,
 					 gint count);
 
-typedef struct msu_device_count_data_t_ msu_device_count_data_t;
-struct msu_device_count_data_t_ {
-	msu_device_count_cb_t cb;
-	msu_async_task_t *cb_data;
+typedef struct dls_device_count_data_t_ dls_device_count_data_t;
+struct dls_device_count_data_t_ {
+	dls_device_count_cb_t cb;
+	dls_async_task_t *cb_data;
 };
 
-typedef struct msu_device_object_builder_t_ msu_device_object_builder_t;
-struct msu_device_object_builder_t_ {
+typedef struct dls_device_object_builder_t_ dls_device_object_builder_t;
+struct dls_device_object_builder_t_ {
 	GVariantBuilder *vb;
 	gchar *id;
 	gboolean needs_child_count;
 };
 
-typedef struct msu_device_upload_t_ msu_device_upload_t;
-struct msu_device_upload_t_ {
+typedef struct dls_device_upload_t_ dls_device_upload_t;
+struct dls_device_upload_t_ {
 	SoupSession *soup_session;
 	SoupMessage *msg;
 	GMappedFile *mapped_file;
@@ -75,17 +75,17 @@ struct msu_device_upload_t_ {
 	guint64 bytes_to_upload;
 };
 
-typedef struct msu_device_upload_job_t_ msu_device_upload_job_t;
-struct msu_device_upload_job_t_ {
+typedef struct dls_device_upload_job_t_ dls_device_upload_job_t;
+struct dls_device_upload_job_t_ {
 	gint upload_id;
-	msu_device_t *device;
+	dls_device_t *device;
 	guint remove_idle;
 };
 
 /* Private structure used in chain task */
 typedef struct prv_new_device_ct_t_ prv_new_device_ct_t;
 struct prv_new_device_ct_t_ {
-	msu_device_t *dev;
+	dls_device_t *dev;
 	dleyna_connector_id_t connection;
 	const dleyna_connector_dispatch_cb_t *vtable;
 	GHashTable *property_map;
@@ -93,14 +93,14 @@ struct prv_new_device_ct_t_ {
 
 typedef struct prv_new_playlist_ct_t_ prv_new_playlist_ct_t;
 struct prv_new_playlist_ct_t_ {
-	msu_async_task_t *cb_data;
+	dls_async_task_t *cb_data;
 	gchar *id;
 	gchar *parent_id;
 };
 
-static void prv_get_child_count(msu_async_task_t *cb_data,
-				msu_device_count_cb_t cb, const gchar *id);
-static void prv_retrieve_child_count_for_list(msu_async_task_t *cb_data);
+static void prv_get_child_count(dls_async_task_t *cb_data,
+				dls_device_count_cb_t cb, const gchar *id);
+static void prv_retrieve_child_count_for_list(dls_async_task_t *cb_data);
 static void prv_container_update_cb(GUPnPServiceProxy *proxy,
 				const char *variable,
 				GValue *value,
@@ -113,15 +113,15 @@ static void prv_last_change_cb(GUPnPServiceProxy *proxy,
 				const char *variable,
 				GValue *value,
 				gpointer user_data);
-static void prv_msu_device_upload_delete(gpointer up);
-static void prv_msu_upload_job_delete(gpointer up);
+static void prv_upload_delete(gpointer up);
+static void prv_upload_job_delete(gpointer up);
 static void prv_get_sr_token_for_props(GUPnPServiceProxy *proxy,
-			     const msu_device_t *device,
-			     msu_async_task_t *cb_data);
+			     const dls_device_t *device,
+			     dls_async_task_t *cb_data);
 
-static void prv_msu_device_object_builder_delete(void *dob)
+static void prv_object_builder_delete(void *dob)
 {
-	msu_device_object_builder_t *builder = dob;
+	dls_device_object_builder_t *builder = dob;
 
 	if (builder) {
 		if (builder->vb)
@@ -132,22 +132,22 @@ static void prv_msu_device_object_builder_delete(void *dob)
 	}
 }
 
-static void prv_msu_device_count_data_new(msu_async_task_t *cb_data,
-					  msu_device_count_cb_t cb,
-					  msu_device_count_data_t **count_data)
+static void prv_count_data_new(dls_async_task_t *cb_data,
+					  dls_device_count_cb_t cb,
+					  dls_device_count_data_t **count_data)
 {
-	msu_device_count_data_t *cd;
+	dls_device_count_data_t *cd;
 
-	cd = g_new(msu_device_count_data_t, 1);
+	cd = g_new(dls_device_count_data_t, 1);
 	cd->cb = cb;
 	cd->cb_data = cb_data;
 
 	*count_data = cd;
 }
 
-static void prv_msu_context_delete(gpointer context)
+static void prv_context_delete(gpointer context)
 {
-	msu_device_context_t *ctx = context;
+	dls_device_context_t *ctx = context;
 
 	if (ctx) {
 		if (ctx->timeout_id)
@@ -156,17 +156,17 @@ static void prv_msu_context_delete(gpointer context)
 		if (ctx->subscribed) {
 			gupnp_service_proxy_remove_notify(
 						ctx->service_proxy,
-						MSU_SYSTEM_UPDATE_VAR,
+						DLS_SYSTEM_UPDATE_VAR,
 						prv_system_update_cb,
 						ctx->device);
 			gupnp_service_proxy_remove_notify(
 						ctx->service_proxy,
-						MSU_CONTAINER_UPDATE_VAR,
+						DLS_CONTAINER_UPDATE_VAR,
 						prv_container_update_cb,
 						ctx->device);
 			gupnp_service_proxy_remove_notify(
 						ctx->service_proxy,
-						MSU_LAST_CHANGE_VAR,
+						DLS_LAST_CHANGE_VAR,
 						prv_last_change_cb,
 						ctx->device);
 
@@ -185,14 +185,14 @@ static void prv_msu_context_delete(gpointer context)
 	}
 }
 
-static void prv_msu_context_new(const gchar *ip_address,
+static void prv_context_new(const gchar *ip_address,
 				GUPnPDeviceProxy *proxy,
-				msu_device_t *device,
-				msu_device_context_t **context)
+				dls_device_t *device,
+				dls_device_context_t **context)
 {
 	const gchar *service_type =
 		"urn:schemas-upnp-org:service:ContentDirectory";
-	msu_device_context_t *ctx = g_new(msu_device_context_t, 1);
+	dls_device_context_t *ctx = g_new(dls_device_context_t, 1);
 
 	ctx->ip_address = g_strdup(ip_address);
 	ctx->device_proxy = proxy;
@@ -207,9 +207,9 @@ static void prv_msu_context_new(const gchar *ip_address,
 	*context = ctx;
 }
 
-void msu_device_delete(void *device)
+void dls_device_delete(void *device)
 {
-	msu_device_t *dev = device;
+	dls_device_t *dev = device;
 
 	if (dev) {
 		dev->shutting_down = TRUE;
@@ -255,7 +255,7 @@ static void prv_last_change_decode(GUPnPCDSLastChangeEntry *entry,
 
 	sub_update = gupnp_cds_last_change_entry_is_subtree_update(entry);
 	update_id = gupnp_cds_last_change_entry_get_update_id(entry);
-	path = msu_path_from_id(root_path, object_id);
+	path = dls_path_from_id(root_path, object_id);
 	event = gupnp_cds_last_change_entry_get_event(entry);
 
 	switch (event) {
@@ -268,11 +268,11 @@ static void prv_last_change_decode(GUPnPCDSLastChangeEntry *entry,
 		if (!mclass)
 			goto on_error;
 
-		media_class = msu_props_upnp_class_to_media_spec(mclass);
+		media_class = dls_props_upnp_class_to_media_spec(mclass);
 		if (!media_class)
 			goto on_error;
 
-		parent_path = msu_path_from_id(root_path, parent_id);
+		parent_path = dls_path_from_id(root_path, parent_id);
 		state = g_variant_new("(oubos)", path, update_id, sub_update,
 				      parent_path, media_class);
 		g_free(parent_path);
@@ -305,7 +305,7 @@ static void prv_last_change_cb(GUPnPServiceProxy *proxy,
 	const gchar *last_change;
 	GVariantBuilder array;
 	GVariant *val;
-	msu_device_t *device = user_data;
+	dls_device_t *device = user_data;
 	GUPnPCDSLastChangeParser *parser;
 	GList *list;
 	GList *next;
@@ -340,7 +340,7 @@ static void prv_last_change_cb(GUPnPServiceProxy *proxy,
 	(void) dls_server_get_connector()->notify(device->connection,
 					   device->path,
 					   DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE,
-					   SERVER_INTERFACE_ESV_LAST_CHANGE,
+					   DLS_INTERFACE_ESV_LAST_CHANGE,
 					   val,
 					   NULL);
 
@@ -367,11 +367,11 @@ static void prv_build_container_update_array(const gchar *root_path,
 	DLEYNA_LOG_DEBUG_NL();
 
 	while (str_array[pos] && str_array[pos + 1]) {
-		path = msu_path_from_id(root_path, str_array[pos++]);
+		path = dls_path_from_id(root_path, str_array[pos++]);
 		id = atoi(str_array[pos++]);
 		g_variant_builder_add(builder, "(ou)", path, id);
 		DLEYNA_LOG_DEBUG("@Id [%s] - Path [%s] - id[%d]",
-			      str_array[pos-2], path, id);
+				 str_array[pos-2], path, id);
 		g_free(path);
 	}
 
@@ -385,7 +385,7 @@ static void prv_container_update_cb(GUPnPServiceProxy *proxy,
 				    GValue *value,
 				    gpointer user_data)
 {
-	msu_device_t *device = user_data;
+	dls_device_t *device = user_data;
 	GVariantBuilder array;
 
 	g_variant_builder_init(&array, G_VARIANT_TYPE("a(ou)"));
@@ -398,7 +398,7 @@ static void prv_container_update_cb(GUPnPServiceProxy *proxy,
 				device->connection,
 				device->path,
 				DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE,
-				SERVER_INTERFACE_ESV_CONTAINER_UPDATE_IDS,
+				DLS_INTERFACE_ESV_CONTAINER_UPDATE_IDS,
 				g_variant_new("(@a(ou))",
 					      g_variant_builder_end(&array)),
 				NULL);
@@ -411,7 +411,7 @@ static void prv_system_update_cb(GUPnPServiceProxy *proxy,
 {
 	GVariantBuilder *array;
 	GVariant *val;
-	msu_device_t *device = user_data;
+	dls_device_t *device = user_data;
 	guint suid = g_value_get_uint(value);
 
 	DLEYNA_LOG_DEBUG("System Update %u", suid);
@@ -420,7 +420,7 @@ static void prv_system_update_cb(GUPnPServiceProxy *proxy,
 
 	array = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 	g_variant_builder_add(array, "{sv}",
-			      SERVER_INTERFACE_PROP_ESV_SYSTEM_UPDATE_ID,
+			      DLS_INTERFACE_PROP_ESV_SYSTEM_UPDATE_ID,
 			      g_variant_new_uint32(suid));
 	val = g_variant_new("(s@a{sv}as)", DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE,
 			    g_variant_builder_end(array),
@@ -428,8 +428,8 @@ static void prv_system_update_cb(GUPnPServiceProxy *proxy,
 
 	(void) dls_server_get_connector()->notify(device->connection,
 					   device->path,
-					   SERVER_INTERFACE_PROPERTIES,
-					   SERVER_INTERFACE_PROPERTIES_CHANGED,
+					   DLS_INTERFACE_PROPERTIES,
+					   DLS_INTERFACE_PROPERTIES_CHANGED,
 					   val,
 					   NULL);
 
@@ -438,7 +438,7 @@ static void prv_system_update_cb(GUPnPServiceProxy *proxy,
 
 static gboolean prv_re_enable_subscription(gpointer user_data)
 {
-	msu_device_context_t *context = user_data;
+	dls_device_context_t *context = user_data;
 
 	context->timeout_id = 0;
 
@@ -449,7 +449,7 @@ static void prv_subscription_lost_cb(GUPnPServiceProxy *proxy,
 				     const GError *reason,
 				     gpointer user_data)
 {
-	msu_device_context_t *context = user_data;
+	dls_device_context_t *context = user_data;
 
 	if (!context->timeout_id) {
 		gupnp_service_proxy_set_subscribed(context->service_proxy,
@@ -461,15 +461,15 @@ static void prv_subscription_lost_cb(GUPnPServiceProxy *proxy,
 	} else {
 		g_source_remove(context->timeout_id);
 		gupnp_service_proxy_remove_notify(context->service_proxy,
-						  MSU_SYSTEM_UPDATE_VAR,
+						  DLS_SYSTEM_UPDATE_VAR,
 						  prv_system_update_cb,
 						  context->device);
 		gupnp_service_proxy_remove_notify(context->service_proxy,
-						  MSU_CONTAINER_UPDATE_VAR,
+						  DLS_CONTAINER_UPDATE_VAR,
 						  prv_container_update_cb,
 						  context->device);
 		gupnp_service_proxy_remove_notify(context->service_proxy,
-						  MSU_LAST_CHANGE_VAR,
+						  DLS_LAST_CHANGE_VAR,
 						  prv_last_change_cb,
 						  context->device);
 
@@ -478,29 +478,29 @@ static void prv_subscription_lost_cb(GUPnPServiceProxy *proxy,
 	}
 }
 
-void msu_device_subscribe_to_contents_change(msu_device_t *device)
+void dls_device_subscribe_to_contents_change(dls_device_t *device)
 {
-	msu_device_context_t *context;
+	dls_device_context_t *context;
 
-	context = msu_device_get_context(device, NULL);
+	context = dls_device_get_context(device, NULL);
 
 	DLEYNA_LOG_DEBUG("Subscribe for events on context: %s",
-		      context->ip_address);
+			 context->ip_address);
 
 	gupnp_service_proxy_add_notify(context->service_proxy,
-				       MSU_SYSTEM_UPDATE_VAR,
+				       DLS_SYSTEM_UPDATE_VAR,
 				       G_TYPE_UINT,
 				       prv_system_update_cb,
 				       device);
 
 	gupnp_service_proxy_add_notify(context->service_proxy,
-				       MSU_CONTAINER_UPDATE_VAR,
+				       DLS_CONTAINER_UPDATE_VAR,
 				       G_TYPE_STRING,
 				       prv_container_update_cb,
 				       device);
 
 	gupnp_service_proxy_add_notify(context->service_proxy,
-				       MSU_LAST_CHANGE_VAR,
+				       DLS_LAST_CHANGE_VAR,
 				       G_TYPE_STRING,
 				       prv_last_change_cb,
 				       device);
@@ -538,7 +538,7 @@ static void prv_feature_list_add_feature(gchar *root_path,
 		saved = obj;
 
 		while (obj && *obj) {
-			path = msu_path_from_id(root_path, *obj);
+			path = dls_path_from_id(root_path, *obj);
 			g_variant_builder_add(&vbo, "o", path);
 			g_free(path);
 			obj++;
@@ -551,7 +551,7 @@ static void prv_feature_list_add_feature(gchar *root_path,
 	g_variant_builder_add(vb, "(ss@ao)", name, version, var_obj);
 }
 
-static void prv_get_feature_list_analyze(msu_device_t *device, gchar *result)
+static void prv_get_feature_list_analyze(dls_device_t *device, gchar *result)
 {
 	GUPnPFeatureListParser *parser;
 	GUPnPFeature *feature;
@@ -567,7 +567,7 @@ static void prv_get_feature_list_analyze(msu_device_t *device, gchar *result)
 
 	if (error != NULL) {
 		DLEYNA_LOG_WARNING("GetFeatureList parsing failed: %s",
-				error->message);
+				   error->message);
 		goto on_exit;
 	}
 
@@ -585,7 +585,7 @@ static void prv_get_feature_list_analyze(msu_device_t *device, gchar *result)
 
 #if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
 	str = g_variant_print(device->feature_list, FALSE);
-	DLEYNA_LOG_DEBUG("%s = %s", SERVER_INTERFACE_PROP_SV_FEATURE_LIST, str);
+	DLEYNA_LOG_DEBUG("%s = %s", DLS_INTERFACE_PROP_SV_FEATURE_LIST, str);
 	g_free(str);
 #endif
 
@@ -609,7 +609,7 @@ static void prv_get_feature_list_cb(GUPnPServiceProxy *proxy,
 					    "FeatureList", G_TYPE_STRING,
 					    &result, NULL)) {
 		DLEYNA_LOG_WARNING("GetFeatureList operation failed: %s",
-				error->message);
+				   error->message);
 		goto on_error;
 	}
 
@@ -625,7 +625,7 @@ on_error:
 }
 
 static GUPnPServiceProxyAction *prv_get_feature_list(
-						msu_service_task_t *task,
+						dls_service_task_t *task,
 						GUPnPServiceProxy *proxy,
 						gboolean *failed)
 {
@@ -633,11 +633,11 @@ static GUPnPServiceProxyAction *prv_get_feature_list(
 
 	return gupnp_service_proxy_begin_action(
 					proxy, "GetFeatureList",
-					msu_service_task_begin_action_cb,
+					dls_service_task_begin_action_cb,
 					task, NULL);
 }
 
-static void prv_get_sort_ext_capabilities_analyze(msu_device_t *device,
+static void prv_get_sort_ext_capabilities_analyze(dls_device_t *device,
 						  gchar *result)
 {
 	gchar **caps;
@@ -664,8 +664,8 @@ static void prv_get_sort_ext_capabilities_analyze(msu_device_t *device,
 
 #if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
 	props = g_variant_print(device->sort_ext_caps, FALSE);
-	DLEYNA_LOG_DEBUG("%s = %s", SERVER_INTERFACE_PROP_SV_SORT_EXT_CAPABILITIES,
-		      props);
+	DLEYNA_LOG_DEBUG("%s = %s",
+			 DLS_INTERFACE_PROP_SV_SORT_EXT_CAPABILITIES, props);
 	g_free(props);
 #endif
 }
@@ -700,7 +700,7 @@ on_error:
 }
 
 static GUPnPServiceProxyAction *prv_get_sort_ext_capabilities(
-						msu_service_task_t *task,
+						dls_service_task_t *task,
 						GUPnPServiceProxy *proxy,
 						gboolean *failed)
 {
@@ -709,7 +709,7 @@ static GUPnPServiceProxyAction *prv_get_sort_ext_capabilities(
 	return gupnp_service_proxy_begin_action(
 					proxy,
 					"GetSortExtensionCapabilities",
-					msu_service_task_begin_action_cb,
+					dls_service_task_begin_action_cb,
 					task, NULL);
 }
 
@@ -758,7 +758,7 @@ static void prv_get_sort_capabilities_cb(GUPnPServiceProxy *proxy,
 	if (!gupnp_service_proxy_end_action(proxy, action, &error, "SortCaps",
 					    G_TYPE_STRING, &result, NULL)) {
 		DLEYNA_LOG_WARNING("GetSortCapabilities operation failed: %s",
-				error->message);
+				   error->message);
 		goto on_error;
 	}
 
@@ -776,7 +776,7 @@ on_error:
 }
 
 static GUPnPServiceProxyAction *prv_get_sort_capabilities(
-					msu_service_task_t *task,
+					dls_service_task_t *task,
 					GUPnPServiceProxy *proxy,
 					gboolean *failed)
 {
@@ -785,7 +785,7 @@ static GUPnPServiceProxyAction *prv_get_sort_capabilities(
 	return gupnp_service_proxy_begin_action(
 					proxy,
 					"GetSortCapabilities",
-					msu_service_task_begin_action_cb,
+					dls_service_task_begin_action_cb,
 					task, NULL);
 }
 
@@ -800,7 +800,7 @@ static void prv_get_search_capabilities_cb(GUPnPServiceProxy *proxy,
 	if (!gupnp_service_proxy_end_action(proxy, action, &error, "SearchCaps",
 					    G_TYPE_STRING, &result, NULL)) {
 		DLEYNA_LOG_WARNING("GetSearchCapabilities operation failed: %s",
-				error->message);
+				   error->message);
 		goto on_error;
 	}
 
@@ -818,7 +818,7 @@ on_error:
 }
 
 static GUPnPServiceProxyAction *prv_get_search_capabilities(
-					msu_service_task_t *task,
+					dls_service_task_t *task,
 					GUPnPServiceProxy *proxy,
 					gboolean *failed)
 {
@@ -826,18 +826,18 @@ static GUPnPServiceProxyAction *prv_get_search_capabilities(
 
 	return gupnp_service_proxy_begin_action(
 					proxy, "GetSearchCapabilities",
-					msu_service_task_begin_action_cb,
+					dls_service_task_begin_action_cb,
 					task, NULL);
 }
 
-static GUPnPServiceProxyAction *prv_subscribe(msu_service_task_t *task,
+static GUPnPServiceProxyAction *prv_subscribe(dls_service_task_t *task,
 					      GUPnPServiceProxy *proxy,
 					      gboolean *failed)
 {
-	msu_device_t *device;
+	dls_device_t *device;
 
-	device = msu_service_task_get_device(task);
-	msu_device_subscribe_to_contents_change(device);
+	device = dls_service_task_get_device(task);
+	dls_device_subscribe_to_contents_change(device);
 
 	*failed = FALSE;
 
@@ -867,33 +867,34 @@ static gboolean prv_subtree_interface_filter(const gchar *object_path,
 	   interface.
 	*/
 
-	if (msu_path_get_non_root_id(object_path, &slash))
+	if (dls_path_get_non_root_id(object_path, &slash))
 		root_object = !slash;
 
-	if (root_object && !strcmp(interface, SERVER_INTERFACE_MEDIA_ITEM))
+	if (root_object && !strcmp(interface, DLS_INTERFACE_MEDIA_ITEM))
 		retval = FALSE;
-	else if (!root_object && !strcmp(interface, DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE))
+	else if (!root_object && !strcmp(interface,
+					 DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE))
 		retval = FALSE;
 
 	return retval;
 }
 
-static GUPnPServiceProxyAction *prv_declare(msu_service_task_t *task,
+static GUPnPServiceProxyAction *prv_declare(dls_service_task_t *task,
 					    GUPnPServiceProxy *proxy,
 					    gboolean *failed)
 {
 	guint id;
-	msu_device_t *device;
+	dls_device_t *device;
 	prv_new_device_ct_t *priv_t;
 
-	device = msu_service_task_get_device(task);
+	device = dls_service_task_get_device(task);
 
-	priv_t = (prv_new_device_ct_t *)msu_service_task_get_user_data(task);
+	priv_t = (prv_new_device_ct_t *)dls_service_task_get_user_data(task);
 
 	id = dls_server_get_connector()->publish_subtree(priv_t->connection,
 						  device->path,
 						  priv_t->vtable,
-						  SERVER_INTERFACE_INFO_MAX,
+						  DLS_INTERFACE_INFO_MAX,
 						  prv_subtree_interface_filter);
 	if (id) {
 		device->id = id;
@@ -902,12 +903,12 @@ static GUPnPServiceProxyAction *prv_declare(msu_service_task_t *task,
 						g_int_hash,
 						g_int_equal,
 						g_free,
-						prv_msu_device_upload_delete);
+						prv_upload_delete);
 		device->upload_jobs = g_hash_table_new_full(
 						g_int_hash,
 						g_int_equal,
 						g_free,
-						prv_msu_upload_job_delete);
+						prv_upload_job_delete);
 
 	} else {
 		DLEYNA_LOG_WARNING("dleyna_connector_publish_subtree FAILED");
@@ -918,7 +919,7 @@ static GUPnPServiceProxyAction *prv_declare(msu_service_task_t *task,
 	return NULL;
 }
 
-msu_device_t *msu_device_new(
+dls_device_t *dls_device_new(
 			dleyna_connector_id_t connection,
 			GUPnPDeviceProxy *proxy,
 			const gchar *ip_address,
@@ -927,10 +928,10 @@ msu_device_t *msu_device_new(
 			guint counter,
 			const dleyna_task_queue_key_t *queue_id)
 {
-	msu_device_t *dev;
+	dls_device_t *dev;
 	prv_new_device_ct_t *priv_t;
 	gchar *new_path;
-	msu_device_context_t *context;
+	dls_device_context_t *context;
 	GUPnPServiceProxy *s_proxy;
 
 	DLEYNA_LOG_DEBUG("New Device on %s", ip_address);
@@ -938,11 +939,11 @@ msu_device_t *msu_device_new(
 	new_path = g_strdup_printf("%s/%u", DLEYNA_SERVER_PATH, counter);
 	DLEYNA_LOG_DEBUG("Server Path %s", new_path);
 
-	dev = g_new0(msu_device_t, 1);
+	dev = g_new0(dls_device_t, 1);
 	priv_t = g_new0(prv_new_device_ct_t, 1);
 
 	dev->connection = connection;
-	dev->contexts = g_ptr_array_new_with_free_func(prv_msu_context_delete);
+	dev->contexts = g_ptr_array_new_with_free_func(prv_context_delete);
 	dev->path = new_path;
 
 	priv_t->dev = dev;
@@ -950,28 +951,28 @@ msu_device_t *msu_device_new(
 	priv_t->vtable = dispatch_table;
 	priv_t->property_map = property_map;
 
-	context = msu_device_append_new_context(dev, ip_address, proxy);
+	context = dls_device_append_new_context(dev, ip_address, proxy);
 	s_proxy = context->service_proxy;
 
-	msu_service_task_add(queue_id, prv_get_search_capabilities,
+	dls_service_task_add(queue_id, prv_get_search_capabilities,
 			     dev, s_proxy,
 			     prv_get_search_capabilities_cb, NULL, priv_t);
 
-	msu_service_task_add(queue_id, prv_get_sort_capabilities,
+	dls_service_task_add(queue_id, prv_get_sort_capabilities,
 			     dev, s_proxy,
 			     prv_get_sort_capabilities_cb, NULL, priv_t);
 
-	msu_service_task_add(queue_id, prv_get_sort_ext_capabilities,
+	dls_service_task_add(queue_id, prv_get_sort_ext_capabilities,
 			     dev, s_proxy,
 			     prv_get_sort_ext_capabilities_cb, NULL, priv_t);
 
-	msu_service_task_add(queue_id, prv_get_feature_list, dev, s_proxy,
+	dls_service_task_add(queue_id, prv_get_feature_list, dev, s_proxy,
 			     prv_get_feature_list_cb, NULL, priv_t);
 
-	msu_service_task_add(queue_id, prv_subscribe, dev, s_proxy,
+	dls_service_task_add(queue_id, prv_subscribe, dev, s_proxy,
 			     NULL, NULL, NULL);
 
-	msu_service_task_add(queue_id, prv_declare, dev, s_proxy,
+	dls_service_task_add(queue_id, prv_declare, dev, s_proxy,
 			     NULL, g_free, priv_t);
 
 	dleyna_task_queue_start(queue_id);
@@ -979,24 +980,24 @@ msu_device_t *msu_device_new(
 	return dev;
 }
 
-msu_device_context_t *msu_device_append_new_context(msu_device_t *device,
+dls_device_context_t *dls_device_append_new_context(dls_device_t *device,
 						    const gchar *ip_address,
 						    GUPnPDeviceProxy *proxy)
 {
-	msu_device_context_t *context;
+	dls_device_context_t *context;
 
-	prv_msu_context_new(ip_address, proxy, device, &context);
+	prv_context_new(ip_address, proxy, device, &context);
 	g_ptr_array_add(device->contexts, context);
 
 	return context;
 }
 
-msu_device_t *msu_device_from_path(const gchar *path, GHashTable *device_list)
+dls_device_t *dls_device_from_path(const gchar *path, GHashTable *device_list)
 {
 	GHashTableIter iter;
 	gpointer value;
-	msu_device_t *device;
-	msu_device_t *retval = NULL;
+	dls_device_t *device;
+	dls_device_t *retval = NULL;
 
 	g_hash_table_iter_init(&iter, device_list);
 
@@ -1012,10 +1013,10 @@ msu_device_t *msu_device_from_path(const gchar *path, GHashTable *device_list)
 	return retval;
 }
 
-msu_device_context_t *msu_device_get_context(const msu_device_t *device,
-					     msu_client_t *client)
+dls_device_context_t *dls_device_get_context(const dls_device_t *device,
+					     dls_client_t *client)
 {
-	msu_device_context_t *context;
+	dls_device_context_t *context;
 	unsigned int i;
 	const char ip4_local_prefix[] = "127.0.0.";
 	gboolean prefer_local;
@@ -1045,16 +1046,16 @@ static void prv_found_child(GUPnPDIDLLiteParser *parser,
 			    GUPnPDIDLLiteObject *object,
 			    gpointer user_data)
 {
-	msu_async_task_t *cb_data = user_data;
-	msu_task_t *task = &cb_data->task;
-	msu_task_get_children_t *task_data = &task->ut.get_children;
-	msu_async_bas_t *cb_task_data = &cb_data->ut.bas;
-	msu_device_object_builder_t *builder;
+	dls_async_task_t *cb_data = user_data;
+	dls_task_t *task = &cb_data->task;
+	dls_task_get_children_t *task_data = &task->ut.get_children;
+	dls_async_bas_t *cb_task_data = &cb_data->ut.bas;
+	dls_device_object_builder_t *builder;
 	gboolean have_child_count;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	builder = g_new0(msu_device_object_builder_t, 1);
+	builder = g_new0(dls_device_object_builder_t, 1);
 
 	if (GUPNP_IS_DIDL_LITE_CONTAINER(object)) {
 		if (!task_data->containers)
@@ -1066,25 +1067,25 @@ static void prv_found_child(GUPnPDIDLLiteParser *parser,
 
 	builder->vb = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 
-	if (!msu_props_add_object(builder->vb, object, task->target.root_path,
+	if (!dls_props_add_object(builder->vb, object, task->target.root_path,
 				  task->target.path, cb_task_data->filter_mask))
 		goto on_error;
 
 	if (GUPNP_IS_DIDL_LITE_CONTAINER(object)) {
-		msu_props_add_container(builder->vb,
+		dls_props_add_container(builder->vb,
 					(GUPnPDIDLLiteContainer *)object,
 					cb_task_data->filter_mask,
 					&have_child_count);
 
 		if (!have_child_count && (cb_task_data->filter_mask &
-					  MSU_UPNP_MASK_PROP_CHILD_COUNT)) {
+					  DLS_UPNP_MASK_PROP_CHILD_COUNT)) {
 			builder->needs_child_count = TRUE;
 			builder->id = g_strdup(
 				gupnp_didl_lite_object_get_id(object));
 			cb_task_data->need_child_count = TRUE;
 		}
 	} else {
-		msu_props_add_item(builder->vb, object,
+		dls_props_add_item(builder->vb, object,
 				   task->target.root_path,
 				   cb_task_data->filter_mask,
 				   cb_task_data->protocol_info);
@@ -1098,16 +1099,16 @@ static void prv_found_child(GUPnPDIDLLiteParser *parser,
 
 on_error:
 
-	prv_msu_device_object_builder_delete(builder);
+	prv_object_builder_delete(builder);
 
 	DLEYNA_LOG_DEBUG("Exit with FAIL");
 }
 
-static GVariant *prv_children_result_to_variant(msu_async_task_t *cb_data)
+static GVariant *prv_children_result_to_variant(dls_async_task_t *cb_data)
 {
 	guint i;
-	msu_device_object_builder_t *builder;
-	msu_async_bas_t *cb_task_data = &cb_data->ut.bas;
+	dls_device_object_builder_t *builder;
+	dls_async_bas_t *cb_task_data = &cb_data->ut.bas;
 	GVariantBuilder vb;
 
 	g_variant_builder_init(&vb, G_VARIANT_TYPE("aa{sv}"));
@@ -1121,10 +1122,10 @@ static GVariant *prv_children_result_to_variant(msu_async_task_t *cb_data)
 	return  g_variant_builder_end(&vb);
 }
 
-static void prv_get_search_ex_result(msu_async_task_t *cb_data)
+static void prv_get_search_ex_result(dls_async_task_t *cb_data)
 {
 	GVariant *out_params[2];
-	msu_async_bas_t *cb_task_data = &cb_data->ut.bas;
+	dls_async_bas_t *cb_task_data = &cb_data->ut.bas;
 
 	out_params[0] = prv_children_result_to_variant(cb_data);
 	out_params[1] = g_variant_new_uint32(cb_task_data->max_count);
@@ -1133,30 +1134,30 @@ static void prv_get_search_ex_result(msu_async_task_t *cb_data)
 					g_variant_new_tuple(out_params, 2));
 }
 
-static void prv_get_children_result(msu_async_task_t *cb_data)
+static void prv_get_children_result(dls_async_task_t *cb_data)
 {
 	GVariant *retval = prv_children_result_to_variant(cb_data);
 	cb_data->task.result =  g_variant_ref_sink(retval);
 }
 
-static gboolean prv_child_count_for_list_cb(msu_async_task_t *cb_data,
+static gboolean prv_child_count_for_list_cb(dls_async_task_t *cb_data,
 					    gint count)
 {
-	msu_async_bas_t *cb_task_data = &cb_data->ut.bas;
-	msu_device_object_builder_t *builder;
+	dls_async_bas_t *cb_task_data = &cb_data->ut.bas;
+	dls_device_object_builder_t *builder;
 
 	builder = g_ptr_array_index(cb_task_data->vbs, cb_task_data->retrieved);
-	msu_props_add_child_count(builder->vb, count);
+	dls_props_add_child_count(builder->vb, count);
 	cb_task_data->retrieved++;
 	prv_retrieve_child_count_for_list(cb_data);
 
 	return cb_task_data->retrieved >= cb_task_data->vbs->len;
 }
 
-static void prv_retrieve_child_count_for_list(msu_async_task_t *cb_data)
+static void prv_retrieve_child_count_for_list(dls_async_task_t *cb_data)
 {
-	msu_async_bas_t *cb_task_data = &cb_data->ut.bas;
-	msu_device_object_builder_t *builder;
+	dls_async_bas_t *cb_task_data = &cb_data->ut.bas;
+	dls_device_object_builder_t *builder;
 	guint i;
 
 	for (i = cb_task_data->retrieved; i < cb_task_data->vbs->len; ++i) {
@@ -1182,8 +1183,8 @@ static void prv_get_children_cb(GUPnPServiceProxy *proxy,
 	gchar *result = NULL;
 	GUPnPDIDLLiteParser *parser = NULL;
 	GError *upnp_error = NULL;
-	msu_async_task_t *cb_data = user_data;
-	msu_async_bas_t *cb_task_data = &cb_data->ut.bas;
+	dls_async_task_t *cb_data = user_data;
+	dls_async_bas_t *cb_task_data = &cb_data->ut.bas;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -1192,7 +1193,7 @@ static void prv_get_children_cb(GUPnPServiceProxy *proxy,
 					    "Result", G_TYPE_STRING,
 					    &result, NULL)) {
 		DLEYNA_LOG_WARNING("Browse operation failed: %s",
-				upnp_error->message);
+				   upnp_error->message);
 
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_OPERATION_FAILED,
@@ -1209,12 +1210,12 @@ static void prv_get_children_cb(GUPnPServiceProxy *proxy,
 			 G_CALLBACK(prv_found_child), cb_data);
 
 	cb_task_data->vbs = g_ptr_array_new_with_free_func(
-		prv_msu_device_object_builder_delete);
+		prv_object_builder_delete);
 
 	if (!gupnp_didl_lite_parser_parse_didl(parser, result, &upnp_error) &&
 	    upnp_error->code != GUPNP_XML_ERROR_EMPTY_NODE) {
 		DLEYNA_LOG_WARNING("Unable to parse results of browse: %s",
-				upnp_error->message);
+				   upnp_error->message);
 
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_OPERATION_FAILED,
@@ -1235,7 +1236,7 @@ static void prv_get_children_cb(GUPnPServiceProxy *proxy,
 
 on_error:
 
-	(void) g_idle_add(msu_async_task_complete, cb_data);
+	(void) g_idle_add(dls_async_task_complete, cb_data);
 	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
 
 no_complete:
@@ -1251,16 +1252,16 @@ no_complete:
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-void msu_device_get_children(msu_client_t *client,
-			     msu_task_t *task,
+void dls_device_get_children(dls_client_t *client,
+			     dls_task_t *task,
 			     const gchar *upnp_filter, const gchar *sort_by)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_device_context_t *context;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_device_context_t *context;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	context = msu_device_get_context(task->target.device, client);
+	context = dls_device_get_context(task->target.device, client);
 
 	cb_data->action =
 		gupnp_service_proxy_begin_action(context->service_proxy,
@@ -1291,7 +1292,7 @@ void msu_device_get_children(msu_client_t *client,
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
-					G_CALLBACK(msu_async_task_cancelled_cb),
+					G_CALLBACK(dls_async_task_cancelled_cb),
 					cb_data, NULL);
 
 	DLEYNA_LOG_DEBUG("Exit");
@@ -1301,13 +1302,13 @@ static void prv_get_item(GUPnPDIDLLiteParser *parser,
 			 GUPnPDIDLLiteObject *object,
 			 gpointer user_data)
 {
-	msu_async_task_t *cb_data = user_data;
-	msu_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
+	dls_async_task_t *cb_data = user_data;
+	dls_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
 
 	if (!GUPNP_IS_DIDL_LITE_CONTAINER(object))
-		msu_props_add_item(cb_task_data->vb, object,
+		dls_props_add_item(cb_task_data->vb, object,
 				   cb_data->task.target.root_path,
-				   MSU_UPNP_MASK_ALL_PROPS,
+				   DLS_UPNP_MASK_ALL_PROPS,
 				   cb_task_data->protocol_info);
 	else
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
@@ -1319,14 +1320,14 @@ static void prv_get_container(GUPnPDIDLLiteParser *parser,
 		       GUPnPDIDLLiteObject *object,
 		       gpointer user_data)
 {
-	msu_async_task_t *cb_data = user_data;
-	msu_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
+	dls_async_task_t *cb_data = user_data;
+	dls_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
 	gboolean have_child_count;
 
 	if (GUPNP_IS_DIDL_LITE_CONTAINER(object)) {
-		msu_props_add_container(cb_task_data->vb,
+		dls_props_add_container(cb_task_data->vb,
 					(GUPnPDIDLLiteContainer *)object,
-					MSU_UPNP_MASK_ALL_PROPS,
+					DLS_UPNP_MASK_ALL_PROPS,
 					&have_child_count);
 		if (!have_child_count)
 			cb_task_data->need_child_count = TRUE;
@@ -1341,8 +1342,8 @@ static void prv_get_object(GUPnPDIDLLiteParser *parser,
 			   GUPnPDIDLLiteObject *object,
 			   gpointer user_data)
 {
-	msu_async_task_t *cb_data = user_data;
-	msu_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
+	dls_async_task_t *cb_data = user_data;
+	dls_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
 	const char *id;
 	const char *parent_path;
 	gchar *path = NULL;
@@ -1352,14 +1353,15 @@ static void prv_get_object(GUPnPDIDLLiteParser *parser,
 	if (!id || !strcmp(id, "-1") || !strcmp(id, "")) {
 		parent_path = cb_data->task.target.root_path;
 	} else {
-		path = msu_path_from_id(cb_data->task.target.root_path, id);
+		path = dls_path_from_id(cb_data->task.target.root_path, id);
 		parent_path = path;
 	}
 
-	if (!msu_props_add_object(cb_task_data->vb, object,
+	if (!dls_props_add_object(cb_task_data->vb, object,
 				  cb_data->task.target.root_path,
-				  parent_path, MSU_UPNP_MASK_ALL_PROPS))
-		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR, DLEYNA_ERROR_BAD_RESULT,
+				  parent_path, DLS_UPNP_MASK_ALL_PROPS))
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_BAD_RESULT,
 					     "Unable to retrieve mandatory object properties");
 	g_free(path);
 }
@@ -1368,34 +1370,34 @@ static void prv_get_all(GUPnPDIDLLiteParser *parser,
 			GUPnPDIDLLiteObject *object,
 			gpointer user_data)
 {
-	msu_async_task_t *cb_data = user_data;
-	msu_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
+	dls_async_task_t *cb_data = user_data;
+	dls_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
 	gboolean have_child_count;
 
 	prv_get_object(parser, object, user_data);
 
 	if (!cb_data->error) {
 		if (GUPNP_IS_DIDL_LITE_CONTAINER(object)) {
-			msu_props_add_container(
+			dls_props_add_container(
 				cb_task_data->vb,
 				(GUPnPDIDLLiteContainer *)
-				object, MSU_UPNP_MASK_ALL_PROPS,
+				object, DLS_UPNP_MASK_ALL_PROPS,
 				&have_child_count);
 			if (!have_child_count)
 				cb_task_data->need_child_count = TRUE;
 		} else {
-			msu_props_add_item(cb_task_data->vb,
+			dls_props_add_item(cb_task_data->vb,
 					   object,
 					   cb_data->task.target.root_path,
-					   MSU_UPNP_MASK_ALL_PROPS,
+					   DLS_UPNP_MASK_ALL_PROPS,
 					   cb_task_data->protocol_info);
 		}
 	}
 }
 
-static gboolean prv_device_subscribed(const msu_device_t *device)
+static gboolean prv_subscribed(const dls_device_t *device)
 {
-	msu_device_context_t *context;
+	dls_device_context_t *context;
 	unsigned int i;
 	gboolean subscribed = FALSE;
 
@@ -1416,7 +1418,7 @@ static void prv_system_update_id_for_prop_cb(GUPnPServiceProxy *proxy,
 {
 	GError *upnp_error = NULL;
 	guint id;
-	msu_async_task_t *cb_data = user_data;
+	dls_async_task_t *cb_data = user_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -1425,14 +1427,14 @@ static void prv_system_update_id_for_prop_cb(GUPnPServiceProxy *proxy,
 					    &id,
 					    NULL)) {
 		DLEYNA_LOG_WARNING("Unable to retrieve ServiceUpdateID: %s %s",
-				g_quark_to_string(upnp_error->domain),
-				upnp_error->message);
+				   g_quark_to_string(upnp_error->domain),
+				   upnp_error->message);
 
 		cb_data->error = g_error_new(
-				DLEYNA_SERVER_ERROR,
-				   DLEYNA_ERROR_OPERATION_FAILED,
-				   "Unable to retrieve ServiceUpdateID: %s",
-				   upnp_error->message);
+					DLEYNA_SERVER_ERROR,
+					DLEYNA_ERROR_OPERATION_FAILED,
+					"Unable to retrieve ServiceUpdateID: %s",
+					upnp_error->message);
 
 		goto on_complete;
 	}
@@ -1441,7 +1443,7 @@ static void prv_system_update_id_for_prop_cb(GUPnPServiceProxy *proxy,
 
 on_complete:
 
-	(void) g_idle_add(msu_async_task_complete, cb_data);
+	(void) g_idle_add(dls_async_task_complete, cb_data);
 	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
 
 	if (upnp_error)
@@ -1451,20 +1453,20 @@ on_complete:
 }
 
 static void prv_get_system_update_id_for_prop(GUPnPServiceProxy *proxy,
-				     const msu_device_t *device,
-				     msu_async_task_t *cb_data)
+				     const dls_device_t *device,
+				     dls_async_task_t *cb_data)
 {
 	guint suid;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	if (prv_device_subscribed(device)) {
+	if (prv_subscribed(device)) {
 		suid = device->system_update_id;
 
 		cb_data->task.result = g_variant_ref_sink(
 						g_variant_new_uint32(suid));
 
-		(void) g_idle_add(msu_async_task_complete, cb_data);
+		(void) g_idle_add(dls_async_task_complete, cb_data);
 
 		goto on_complete;
 	}
@@ -1481,7 +1483,7 @@ static void prv_get_system_update_id_for_prop(GUPnPServiceProxy *proxy,
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
-					G_CALLBACK(msu_async_task_cancelled_cb),
+					G_CALLBACK(dls_async_task_cancelled_cb),
 					cb_data, NULL);
 
 on_complete:
@@ -1495,8 +1497,8 @@ static void prv_system_update_id_for_props_cb(GUPnPServiceProxy *proxy,
 {
 	GError *upnp_error = NULL;
 	guint id;
-	msu_async_task_t *cb_data = user_data;
-	msu_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
+	dls_async_task_t *cb_data = user_data;
+	dls_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -1505,19 +1507,20 @@ static void prv_system_update_id_for_props_cb(GUPnPServiceProxy *proxy,
 					    &id,
 					    NULL)) {
 		DLEYNA_LOG_WARNING("Unable to retrieve ServiceUpdateID: %s %s",
-				g_quark_to_string(upnp_error->domain),
-				upnp_error->message);
-
-		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
-				   DLEYNA_ERROR_OPERATION_FAILED,
-				   "Unable to retrieve ServiceUpdateID: %s",
+				   g_quark_to_string(upnp_error->domain),
 				   upnp_error->message);
+
+		cb_data->error = g_error_new(
+					DLEYNA_SERVER_ERROR,
+					DLEYNA_ERROR_OPERATION_FAILED,
+					"Unable to retrieve ServiceUpdateID: %s",
+					upnp_error->message);
 
 		goto on_complete;
 	}
 
 	g_variant_builder_add(cb_task_data->vb, "{sv}",
-			      MSU_SYSTEM_UPDATE_VAR,
+			      DLS_SYSTEM_UPDATE_VAR,
 			      g_variant_new_uint32(id));
 
 	cb_data->task.result = g_variant_ref_sink(g_variant_builder_end(
@@ -1529,7 +1532,7 @@ on_complete:
 		prv_get_sr_token_for_props(proxy, cb_data->task.target.device,
 					   cb_data);
 	else {
-		(void) g_idle_add(msu_async_task_complete, cb_data);
+		(void) g_idle_add(dls_async_task_complete, cb_data);
 		g_cancellable_disconnect(cb_data->cancellable,
 					 cb_data->cancel_id);
 	}
@@ -1541,21 +1544,21 @@ on_complete:
 }
 
 static void prv_get_system_update_id_for_props(GUPnPServiceProxy *proxy,
-				     const msu_device_t *device,
-				     msu_async_task_t *cb_data)
+				     const dls_device_t *device,
+				     dls_async_task_t *cb_data)
 {
-	msu_async_get_all_t *cb_task_data;
+	dls_async_get_all_t *cb_task_data;
 	guint suid;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	if (prv_device_subscribed(device)) {
+	if (prv_subscribed(device)) {
 		suid = device->system_update_id;
 
 		cb_task_data = &cb_data->ut.get_all;
 
 		g_variant_builder_add(cb_task_data->vb, "{sv}",
-				      MSU_SYSTEM_UPDATE_VAR,
+				      DLS_SYSTEM_UPDATE_VAR,
 				      g_variant_new_uint32(suid));
 
 		prv_get_sr_token_for_props(proxy, device, cb_data);
@@ -1575,7 +1578,7 @@ static void prv_get_system_update_id_for_props(GUPnPServiceProxy *proxy,
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
-					G_CALLBACK(msu_async_task_cancelled_cb),
+					G_CALLBACK(dls_async_task_cancelled_cb),
 					cb_data, NULL);
 
 on_complete:
@@ -1583,21 +1586,20 @@ on_complete:
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-static int prv_get_media_server_version(const msu_device_t *device)
+static int prv_get_media_server_version(const dls_device_t *device)
 {
-	msu_device_context_t *context;
+	dls_device_context_t *context;
 	const char *device_type;
 	const char *version;
 
-	context = msu_device_get_context(device, NULL);
+	context = dls_device_get_context(device, NULL);
 	device_type = gupnp_device_info_get_device_type((GUPnPDeviceInfo *)
 							context->device_proxy);
 
-	if (strncmp(device_type, MEDIA_SERVER_DEVICE_TYPE,
-		    sizeof(MEDIA_SERVER_DEVICE_TYPE) - 1))
+	if (!g_str_has_prefix(device_type, DLS_DMS_DEVICE_TYPE))
 		goto on_error;
 
-	version = device_type + sizeof(MEDIA_SERVER_DEVICE_TYPE) - 1;
+	version = device_type + sizeof(DLS_DMS_DEVICE_TYPE) - 1;
 
 	return atoi(version);
 
@@ -1612,7 +1614,7 @@ static void prv_service_reset_for_prop_cb(GUPnPServiceProxy *proxy,
 {
 	GError *upnp_error = NULL;
 	gchar *token = NULL;
-	msu_async_task_t *cb_data = user_data;
+	dls_async_task_t *cb_data = user_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -1620,9 +1622,10 @@ static void prv_service_reset_for_prop_cb(GUPnPServiceProxy *proxy,
 					    "ResetToken", G_TYPE_STRING,
 					    &token,
 					    NULL)) {
-		DLEYNA_LOG_WARNING("Unable to retrieve ServiceResetToken: %s %s",
-				g_quark_to_string(upnp_error->domain),
-				upnp_error->message);
+		DLEYNA_LOG_WARNING(
+			"Unable to retrieve ServiceResetToken: %s %s",
+			g_quark_to_string(upnp_error->domain),
+			upnp_error->message);
 
 
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
@@ -1641,7 +1644,7 @@ static void prv_service_reset_for_prop_cb(GUPnPServiceProxy *proxy,
 
 on_complete:
 
-	(void) g_idle_add(msu_async_task_complete, cb_data);
+	(void) g_idle_add(dls_async_task_complete, cb_data);
 	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
 
 	if (upnp_error)
@@ -1651,8 +1654,8 @@ on_complete:
 }
 
 static void prv_get_sr_token_for_prop(GUPnPServiceProxy *proxy,
-			     const msu_device_t *device,
-			     msu_async_task_t *cb_data)
+			     const dls_device_t *device,
+			     dls_async_task_t *cb_data)
 {
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -1661,7 +1664,7 @@ static void prv_get_sr_token_for_prop(GUPnPServiceProxy *proxy,
 					     DLEYNA_ERROR_UNKNOWN_PROPERTY,
 					     "Unknown property");
 
-		(void) g_idle_add(msu_async_task_complete, cb_data);
+		(void) g_idle_add(dls_async_task_complete, cb_data);
 
 		goto on_error;
 	}
@@ -1678,7 +1681,7 @@ static void prv_get_sr_token_for_prop(GUPnPServiceProxy *proxy,
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
-					G_CALLBACK(msu_async_task_cancelled_cb),
+					G_CALLBACK(dls_async_task_cancelled_cb),
 					cb_data, NULL);
 
 on_error:
@@ -1692,8 +1695,8 @@ static void prv_service_reset_for_props_cb(GUPnPServiceProxy *proxy,
 {
 	GError *upnp_error = NULL;
 	gchar *token = NULL;
-	msu_async_task_t *cb_data = user_data;
-	msu_async_get_all_t *cb_task_data;
+	dls_async_task_t *cb_data = user_data;
+	dls_async_get_all_t *cb_task_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -1701,9 +1704,10 @@ static void prv_service_reset_for_props_cb(GUPnPServiceProxy *proxy,
 					    "ResetToken", G_TYPE_STRING,
 					    &token,
 					    NULL)) {
-		DLEYNA_LOG_WARNING("Unable to retrieve ServiceResetToken: %s %s",
-				g_quark_to_string(upnp_error->domain),
-				upnp_error->message);
+		DLEYNA_LOG_WARNING(
+			"Unable to retrieve ServiceResetToken: %s %s",
+			g_quark_to_string(upnp_error->domain),
+			upnp_error->message);
 
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_OPERATION_FAILED,
@@ -1715,7 +1719,7 @@ static void prv_service_reset_for_props_cb(GUPnPServiceProxy *proxy,
 
 	cb_task_data = &cb_data->ut.get_all;
 	g_variant_builder_add(cb_task_data->vb, "{sv}",
-			      SERVER_INTERFACE_PROP_SV_SERVICE_RESET_TOKEN,
+			      DLS_INTERFACE_PROP_SV_SERVICE_RESET_TOKEN,
 			      g_variant_new_string(token));
 
 	cb_data->task.result = g_variant_ref_sink(g_variant_builder_end(
@@ -1727,7 +1731,7 @@ static void prv_service_reset_for_props_cb(GUPnPServiceProxy *proxy,
 
 on_complete:
 
-	(void) g_idle_add(msu_async_task_complete, cb_data);
+	(void) g_idle_add(dls_async_task_complete, cb_data);
 	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
 
 	if (upnp_error)
@@ -1737,10 +1741,10 @@ on_complete:
 }
 
 static void prv_get_sr_token_for_props(GUPnPServiceProxy *proxy,
-			     const msu_device_t *device,
-			     msu_async_task_t *cb_data)
+			     const dls_device_t *device,
+			     dls_async_task_t *cb_data)
 {
-	msu_async_get_all_t *cb_task_data;
+	dls_async_get_all_t *cb_task_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -1765,7 +1769,7 @@ static void prv_get_sr_token_for_props(GUPnPServiceProxy *proxy,
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
-					G_CALLBACK(msu_async_task_cancelled_cb),
+					G_CALLBACK(dls_async_task_cancelled_cb),
 					cb_data, NULL);
 
 	DLEYNA_LOG_DEBUG("Exit");
@@ -1774,17 +1778,17 @@ static void prv_get_sr_token_for_props(GUPnPServiceProxy *proxy,
 
 on_complete:
 
-	(void) g_idle_add(msu_async_task_complete, cb_data);
+	(void) g_idle_add(dls_async_task_complete, cb_data);
 
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-static gboolean prv_get_all_child_count_cb(msu_async_task_t *cb_data,
+static gboolean prv_get_all_child_count_cb(dls_async_task_t *cb_data,
 				       gint count)
 {
-	msu_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
+	dls_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
 
-	msu_props_add_child_count(cb_task_data->vb, count);
+	dls_props_add_child_count(cb_task_data->vb, count);
 	if (cb_task_data->device_object)
 		prv_get_system_update_id_for_props(cb_data->proxy,
 						   cb_data->task.target.device,
@@ -1803,8 +1807,8 @@ static void prv_get_all_ms2spec_props_cb(GUPnPServiceProxy *proxy,
 	GError *upnp_error = NULL;
 	gchar *result = NULL;
 	GUPnPDIDLLiteParser *parser = NULL;
-	msu_async_task_t *cb_data = user_data;
-	msu_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
+	dls_async_task_t *cb_data = user_data;
+	dls_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -1813,7 +1817,7 @@ static void prv_get_all_ms2spec_props_cb(GUPnPServiceProxy *proxy,
 					    "Result", G_TYPE_STRING,
 					    &result, NULL)) {
 		DLEYNA_LOG_WARNING("Browse operation failed: %s",
-				upnp_error->message);
+				   upnp_error->message);
 
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_OPERATION_FAILED,
@@ -1838,8 +1842,9 @@ static void prv_get_all_ms2spec_props_cb(GUPnPServiceProxy *proxy,
 					    DLEYNA_ERROR_UNKNOWN_PROPERTY,
 					    "Property not defined for object");
 		} else {
-			DLEYNA_LOG_WARNING("Unable to parse results of browse: %s",
-					upnp_error->message);
+			DLEYNA_LOG_WARNING(
+				"Unable to parse results of browse: %s",
+				upnp_error->message);
 
 			cb_data->error =
 				g_error_new(DLEYNA_SERVER_ERROR,
@@ -1860,7 +1865,7 @@ static void prv_get_all_ms2spec_props_cb(GUPnPServiceProxy *proxy,
 				    cb_data->task.target.id);
 
 		goto no_complete;
-	} else if (cb_data->task.type == MSU_TASK_GET_ALL_PROPS &&
+	} else if (cb_data->task.type == DLS_TASK_GET_ALL_PROPS &&
 						cb_task_data->device_object) {
 		prv_get_system_update_id_for_props(proxy,
 						   cb_data->task.target.device,
@@ -1874,7 +1879,7 @@ static void prv_get_all_ms2spec_props_cb(GUPnPServiceProxy *proxy,
 
 on_error:
 
-	(void) g_idle_add(msu_async_task_complete, cb_data);
+	(void) g_idle_add(dls_async_task_complete, cb_data);
 	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
 
 no_complete:
@@ -1890,21 +1895,21 @@ no_complete:
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-static void prv_get_all_ms2spec_props(msu_device_context_t *context,
-				      msu_async_task_t *cb_data)
+static void prv_get_all_ms2spec_props(dls_device_context_t *context,
+				      dls_async_task_t *cb_data)
 {
-	msu_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
-	msu_task_t *task = &cb_data->task;
-	msu_task_get_props_t *task_data = &task->ut.get_props;
+	dls_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
+	dls_task_t *task = &cb_data->task;
+	dls_task_get_props_t *task_data = &task->ut.get_props;
 
 	DLEYNA_LOG_DEBUG("Enter called");
 
-	if (!strcmp(SERVER_INTERFACE_MEDIA_CONTAINER, task_data->interface_name)) {
+	if (!strcmp(DLS_INTERFACE_MEDIA_CONTAINER, task_data->interface_name)) {
 		cb_task_data->prop_func = G_CALLBACK(prv_get_container);
-	} else if (!strcmp(SERVER_INTERFACE_MEDIA_ITEM,
+	} else if (!strcmp(DLS_INTERFACE_MEDIA_ITEM,
 		   task_data->interface_name)) {
 		cb_task_data->prop_func = G_CALLBACK(prv_get_item);
-	} else if (!strcmp(SERVER_INTERFACE_MEDIA_OBJECT,
+	} else if (!strcmp(DLS_INTERFACE_MEDIA_OBJECT,
 		   task_data->interface_name)) {
 		cb_task_data->prop_func = G_CALLBACK(prv_get_object);
 	} else  if (!strcmp("", task_data->interface_name)) {
@@ -1913,7 +1918,8 @@ static void prv_get_all_ms2spec_props(msu_device_context_t *context,
 		DLEYNA_LOG_WARNING("Interface is unknown.");
 
 		cb_data->error =
-			g_error_new(DLEYNA_SERVER_ERROR, DLEYNA_ERROR_UNKNOWN_INTERFACE,
+			g_error_new(DLEYNA_SERVER_ERROR,
+				    DLEYNA_ERROR_UNKNOWN_INTERFACE,
 				    "Interface is unknown.");
 		goto on_error;
 	}
@@ -1936,7 +1942,7 @@ static void prv_get_all_ms2spec_props(msu_device_context_t *context,
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
-					G_CALLBACK(msu_async_task_cancelled_cb),
+					G_CALLBACK(dls_async_task_cancelled_cb),
 					cb_data, NULL);
 
 	DLEYNA_LOG_DEBUG("Exit with SUCCESS");
@@ -1945,33 +1951,34 @@ static void prv_get_all_ms2spec_props(msu_device_context_t *context,
 
 on_error:
 
-	(void) g_idle_add(msu_async_task_complete, cb_data);
+	(void) g_idle_add(dls_async_task_complete, cb_data);
 
 	DLEYNA_LOG_DEBUG("Exit with FAIL");
 
 	return;
 }
 
-void msu_device_get_all_props(msu_client_t *client,
-			      msu_task_t *task,
+void dls_device_get_all_props(dls_client_t *client,
+			      dls_task_t *task,
 			      gboolean root_object)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_async_get_all_t *cb_task_data;
-	msu_task_get_props_t *task_data = &task->ut.get_props;
-	msu_device_context_t *context;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_async_get_all_t *cb_task_data;
+	dls_task_get_props_t *task_data = &task->ut.get_props;
+	dls_device_context_t *context;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	context = msu_device_get_context(task->target.device, client);
+	context = dls_device_get_context(task->target.device, client);
 	cb_task_data = &cb_data->ut.get_all;
 
 	cb_task_data->vb = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 	cb_task_data->device_object = root_object;
 
-	if (!strcmp(task_data->interface_name, DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE)) {
+	if (!strcmp(task_data->interface_name,
+		    DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE)) {
 		if (root_object) {
-			msu_props_add_device(
+			dls_props_add_device(
 				(GUPnPDeviceInfo *)context->device_proxy,
 				task->target.device,
 				cb_task_data->vb);
@@ -1986,7 +1993,7 @@ void msu_device_get_all_props(msu_client_t *client,
 					    DLEYNA_ERROR_UNKNOWN_INTERFACE,
 					    "Interface is only valid on root objects.");
 
-			(void) g_idle_add(msu_async_task_complete, cb_data);
+			(void) g_idle_add(dls_async_task_complete, cb_data);
 		}
 
 	} else if (strcmp(task_data->interface_name, "")) {
@@ -1994,7 +2001,7 @@ void msu_device_get_all_props(msu_client_t *client,
 		prv_get_all_ms2spec_props(context, cb_data);
 	} else {
 		if (root_object)
-			msu_props_add_device(
+			dls_props_add_device(
 				(GUPnPDeviceInfo *)context->device_proxy,
 				task->target.device,
 				cb_task_data->vb);
@@ -2009,14 +2016,14 @@ static void prv_get_object_property(GUPnPDIDLLiteParser *parser,
 				    GUPnPDIDLLiteObject *object,
 				    gpointer user_data)
 {
-	msu_async_task_t *cb_data = user_data;
-	msu_task_t *task = &cb_data->task;
-	msu_task_get_prop_t *task_data = &task->ut.get_prop;
+	dls_async_task_t *cb_data = user_data;
+	dls_task_t *task = &cb_data->task;
+	dls_task_get_prop_t *task_data = &task->ut.get_prop;
 
 	if (cb_data->task.result)
 		goto on_error;
 
-	cb_data->task.result = msu_props_get_object_prop(task_data->prop_name,
+	cb_data->task.result = dls_props_get_object_prop(task_data->prop_name,
 							 task->target.root_path,
 							 object);
 
@@ -2029,15 +2036,15 @@ static void prv_get_item_property(GUPnPDIDLLiteParser *parser,
 				  GUPnPDIDLLiteObject *object,
 				  gpointer user_data)
 {
-	msu_async_task_t *cb_data = user_data;
-	msu_task_t *task = &cb_data->task;
-	msu_task_get_prop_t *task_data = &task->ut.get_prop;
-	msu_async_get_prop_t *cb_task_data = &cb_data->ut.get_prop;
+	dls_async_task_t *cb_data = user_data;
+	dls_task_t *task = &cb_data->task;
+	dls_task_get_prop_t *task_data = &task->ut.get_prop;
+	dls_async_get_prop_t *cb_task_data = &cb_data->ut.get_prop;
 
 	if (cb_data->task.result)
 		goto on_error;
 
-	cb_data->task.result = msu_props_get_item_prop(
+	cb_data->task.result = dls_props_get_item_prop(
 						task_data->prop_name,
 						task->target.root_path,
 						object,
@@ -2052,14 +2059,14 @@ static void prv_get_container_property(GUPnPDIDLLiteParser *parser,
 				       GUPnPDIDLLiteObject *object,
 				       gpointer user_data)
 {
-	msu_async_task_t *cb_data = user_data;
-	msu_task_t *task = &cb_data->task;
-	msu_task_get_prop_t *task_data = &task->ut.get_prop;
+	dls_async_task_t *cb_data = user_data;
+	dls_task_t *task = &cb_data->task;
+	dls_task_get_prop_t *task_data = &task->ut.get_prop;
 
 	if (cb_data->task.result)
 		goto on_error;
 
-	cb_data->task.result = msu_props_get_container_prop(
+	cb_data->task.result = dls_props_get_container_prop(
 							task_data->prop_name,
 							object);
 
@@ -2072,7 +2079,7 @@ static void prv_get_all_property(GUPnPDIDLLiteParser *parser,
 				 GUPnPDIDLLiteObject *object,
 				 gpointer user_data)
 {
-	msu_async_task_t *cb_data = user_data;
+	dls_async_task_t *cb_data = user_data;
 
 	prv_get_object_property(parser, object, user_data);
 
@@ -2089,7 +2096,7 @@ on_error:
 	return;
 }
 
-static gboolean prv_get_child_count_cb(msu_async_task_t *cb_data,
+static gboolean prv_get_child_count_cb(dls_async_task_t *cb_data,
 				   gint count)
 {
 	DLEYNA_LOG_DEBUG("Enter");
@@ -2108,8 +2115,8 @@ static void prv_count_children_cb(GUPnPServiceProxy *proxy,
 				  GUPnPServiceProxyAction *action,
 				  gpointer user_data)
 {
-	msu_device_count_data_t *count_data = user_data;
-	msu_async_task_t *cb_data = count_data->cb_data;
+	dls_device_count_data_t *count_data = user_data;
+	dls_async_task_t *cb_data = count_data->cb_data;
 	GError *upnp_error = NULL;
 	gint count;
 	gboolean complete = FALSE;
@@ -2122,7 +2129,7 @@ static void prv_count_children_cb(GUPnPServiceProxy *proxy,
 					    &count,
 					    NULL)) {
 		DLEYNA_LOG_WARNING("Browse operation failed: %s",
-				upnp_error->message);
+				   upnp_error->message);
 
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_OPERATION_FAILED,
@@ -2138,7 +2145,7 @@ on_error:
 	g_free(user_data);
 
 	if (cb_data->error || complete) {
-		(void) g_idle_add(msu_async_task_complete, cb_data);
+		(void) g_idle_add(dls_async_task_complete, cb_data);
 		g_cancellable_disconnect(cb_data->cancellable,
 					 cb_data->cancel_id);
 	}
@@ -2149,14 +2156,14 @@ on_error:
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-static void prv_get_child_count(msu_async_task_t *cb_data,
-				msu_device_count_cb_t cb, const gchar *id)
+static void prv_get_child_count(dls_async_task_t *cb_data,
+				dls_device_count_cb_t cb, const gchar *id)
 {
-	msu_device_count_data_t *count_data;
+	dls_device_count_data_t *count_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	prv_msu_device_count_data_new(cb_data, cb, &count_data);
+	prv_count_data_new(cb_data, cb, &count_data);
 	cb_data->action =
 		gupnp_service_proxy_begin_action(cb_data->proxy,
 						 "Browse",
@@ -2190,9 +2197,9 @@ static void prv_get_ms2spec_prop_cb(GUPnPServiceProxy *proxy,
 	GError *upnp_error = NULL;
 	gchar *result = NULL;
 	GUPnPDIDLLiteParser *parser = NULL;
-	msu_async_task_t *cb_data = user_data;
-	msu_async_get_prop_t *cb_task_data = &cb_data->ut.get_prop;
-	msu_task_get_prop_t *task_data = &cb_data->task.ut.get_prop;
+	dls_async_task_t *cb_data = user_data;
+	dls_async_get_prop_t *cb_task_data = &cb_data->ut.get_prop;
+	dls_task_get_prop_t *task_data = &cb_data->task.ut.get_prop;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -2201,7 +2208,7 @@ static void prv_get_ms2spec_prop_cb(GUPnPServiceProxy *proxy,
 					    "Result", G_TYPE_STRING,
 					    &result, NULL)) {
 		DLEYNA_LOG_WARNING("Browse operation failed: %s",
-				upnp_error->message);
+				   upnp_error->message);
 
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_OPERATION_FAILED,
@@ -2226,8 +2233,9 @@ static void prv_get_ms2spec_prop_cb(GUPnPServiceProxy *proxy,
 					    DLEYNA_ERROR_UNKNOWN_PROPERTY,
 					    "Property not defined for object");
 		} else {
-			DLEYNA_LOG_WARNING("Unable to parse results of browse: %s",
-					upnp_error->message);
+			DLEYNA_LOG_WARNING(
+				"Unable to parse results of browse: %s",
+				upnp_error->message);
 
 			cb_data->error =
 				g_error_new(DLEYNA_SERVER_ERROR,
@@ -2249,7 +2257,7 @@ static void prv_get_ms2spec_prop_cb(GUPnPServiceProxy *proxy,
 on_error:
 
 	if (cb_data->error && !strcmp(task_data->prop_name,
-				      SERVER_INTERFACE_PROP_CHILD_COUNT)) {
+				      DLS_INTERFACE_PROP_CHILD_COUNT)) {
 		DLEYNA_LOG_DEBUG("ChildCount not supported by server");
 
 		g_error_free(cb_data->error);
@@ -2257,7 +2265,7 @@ on_error:
 		prv_get_child_count(cb_data, prv_get_child_count_cb,
 				    cb_data->task.target.id);
 	} else {
-		(void) g_idle_add(msu_async_task_complete, cb_data);
+		(void) g_idle_add(dls_async_task_complete, cb_data);
 		g_cancellable_disconnect(cb_data->cancellable,
 					 cb_data->cancel_id);
 	}
@@ -2273,12 +2281,12 @@ on_error:
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-static void prv_get_ms2spec_prop(msu_device_context_t *context,
-				 msu_prop_map_t *prop_map,
-				 msu_task_get_prop_t *task_data,
-				 msu_async_task_t *cb_data)
+static void prv_get_ms2spec_prop(dls_device_context_t *context,
+				 dls_prop_map_t *prop_map,
+				 dls_task_get_prop_t *task_data,
+				 dls_async_task_t *cb_data)
 {
-	msu_async_get_prop_t *cb_task_data;
+	dls_async_get_prop_t *cb_task_data;
 	const gchar *filter;
 
 	DLEYNA_LOG_DEBUG("Enter");
@@ -2294,20 +2302,20 @@ static void prv_get_ms2spec_prop(msu_device_context_t *context,
 
 	filter = prop_map->filter ? prop_map->upnp_prop_name : "";
 
-	if (!strcmp(SERVER_INTERFACE_MEDIA_CONTAINER, task_data->interface_name)) {
+	if (!strcmp(DLS_INTERFACE_MEDIA_CONTAINER, task_data->interface_name)) {
 		cb_task_data->prop_func =
 			G_CALLBACK(prv_get_container_property);
-	} else if (!strcmp(SERVER_INTERFACE_MEDIA_ITEM,
+	} else if (!strcmp(DLS_INTERFACE_MEDIA_ITEM,
 			   task_data->interface_name)) {
 		cb_task_data->prop_func = G_CALLBACK(prv_get_item_property);
-	} else if (!strcmp(SERVER_INTERFACE_MEDIA_OBJECT,
+	} else if (!strcmp(DLS_INTERFACE_MEDIA_OBJECT,
 			   task_data->interface_name)) {
 		cb_task_data->prop_func = G_CALLBACK(prv_get_object_property);
 	} else  if (!strcmp("", task_data->interface_name)) {
 		cb_task_data->prop_func = G_CALLBACK(prv_get_all_property);
 	} else {
 		DLEYNA_LOG_WARNING("Interface is unknown.%s",
-				task_data->interface_name);
+				   task_data->interface_name);
 
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_UNKNOWN_INTERFACE,
@@ -2336,7 +2344,7 @@ static void prv_get_ms2spec_prop(msu_device_context_t *context,
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
-					G_CALLBACK(msu_async_task_cancelled_cb),
+					G_CALLBACK(dls_async_task_cancelled_cb),
 					cb_data, NULL);
 
 	DLEYNA_LOG_DEBUG("Exit with SUCCESS");
@@ -2345,45 +2353,46 @@ static void prv_get_ms2spec_prop(msu_device_context_t *context,
 
 on_error:
 
-	(void) g_idle_add(msu_async_task_complete, cb_data);
+	(void) g_idle_add(dls_async_task_complete, cb_data);
 
 	DLEYNA_LOG_DEBUG("Exit with FAIL");
 
 	return;
 }
 
-void msu_device_get_prop(msu_client_t *client,
-			 msu_task_t *task,
-			 msu_prop_map_t *prop_map, gboolean root_object)
+void dls_device_get_prop(dls_client_t *client,
+			 dls_task_t *task,
+			 dls_prop_map_t *prop_map, gboolean root_object)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_task_get_prop_t *task_data = &task->ut.get_prop;
-	msu_device_context_t *context;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_task_get_prop_t *task_data = &task->ut.get_prop;
+	dls_device_context_t *context;
 	gboolean complete = FALSE;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	context = msu_device_get_context(task->target.device, client);
+	context = dls_device_get_context(task->target.device, client);
 
-	if (!strcmp(task_data->interface_name, DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE)) {
+	if (!strcmp(task_data->interface_name,
+		    DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE)) {
 		if (root_object) {
 			if (!strcmp(
 				task_data->prop_name,
-				SERVER_INTERFACE_PROP_ESV_SYSTEM_UPDATE_ID)) {
+				DLS_INTERFACE_PROP_ESV_SYSTEM_UPDATE_ID)) {
 				prv_get_system_update_id_for_prop(
 							context->service_proxy,
 							task->target.device,
 							cb_data);
 			} else if (!strcmp(
-				  task_data->prop_name,
-				  SERVER_INTERFACE_PROP_SV_SERVICE_RESET_TOKEN)) {
+				task_data->prop_name,
+				DLS_INTERFACE_PROP_SV_SERVICE_RESET_TOKEN)) {
 				prv_get_sr_token_for_prop(
 							context->service_proxy,
 							task->target.device,
 							cb_data);
 			} else {
 				cb_data->task.result =
-					msu_props_get_device_prop(
+					dls_props_get_device_prop(
 						(GUPnPDeviceInfo *)
 						context->device_proxy,
 						task->target.device,
@@ -2395,7 +2404,7 @@ void msu_device_get_prop(msu_client_t *client,
 						DLEYNA_ERROR_UNKNOWN_PROPERTY,
 						"Unknown property");
 
-				(void) g_idle_add(msu_async_task_complete,
+				(void) g_idle_add(dls_async_task_complete,
 						  cb_data);
 			}
 
@@ -2405,7 +2414,7 @@ void msu_device_get_prop(msu_client_t *client,
 					    DLEYNA_ERROR_UNKNOWN_INTERFACE,
 					    "Interface is unknown.");
 
-			(void) g_idle_add(msu_async_task_complete, cb_data);
+			(void) g_idle_add(dls_async_task_complete, cb_data);
 		}
 
 	} else if (strcmp(task_data->interface_name, "")) {
@@ -2415,15 +2424,15 @@ void msu_device_get_prop(msu_client_t *client,
 		if (root_object) {
 			if (!strcmp(
 				task_data->prop_name,
-				SERVER_INTERFACE_PROP_ESV_SYSTEM_UPDATE_ID)) {
+				DLS_INTERFACE_PROP_ESV_SYSTEM_UPDATE_ID)) {
 				prv_get_system_update_id_for_prop(
 							context->service_proxy,
 							task->target.device,
 							cb_data);
 				complete = TRUE;
 			} else if (!strcmp(
-				  task_data->prop_name,
-				  SERVER_INTERFACE_PROP_SV_SERVICE_RESET_TOKEN)) {
+				task_data->prop_name,
+				DLS_INTERFACE_PROP_SV_SERVICE_RESET_TOKEN)) {
 				prv_get_sr_token_for_prop(
 							context->service_proxy,
 							task->target.device,
@@ -2431,14 +2440,14 @@ void msu_device_get_prop(msu_client_t *client,
 				complete = TRUE;
 			} else {
 				cb_data->task.result =
-						msu_props_get_device_prop(
+						dls_props_get_device_prop(
 							(GUPnPDeviceInfo *)
 							context->device_proxy,
 							task->target.device,
 							task_data->prop_name);
 				if (cb_data->task.result) {
 					(void) g_idle_add(
-							msu_async_task_complete,
+							dls_async_task_complete,
 							cb_data);
 					complete = TRUE;
 				}
@@ -2458,49 +2467,49 @@ static void prv_found_target(GUPnPDIDLLiteParser *parser,
 			     GUPnPDIDLLiteObject *object,
 			     gpointer user_data)
 {
-	msu_async_task_t *cb_data = user_data;
-	msu_async_bas_t *cb_task_data = &cb_data->ut.bas;
+	dls_async_task_t *cb_data = user_data;
+	dls_async_bas_t *cb_task_data = &cb_data->ut.bas;
 	const char *id;
 	const char *parent_path;
 	gchar *path = NULL;
 	gboolean have_child_count;
-	msu_device_object_builder_t *builder;
+	dls_device_object_builder_t *builder;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	builder = g_new0(msu_device_object_builder_t, 1);
+	builder = g_new0(dls_device_object_builder_t, 1);
 
 	id = gupnp_didl_lite_object_get_parent_id(object);
 
 	if (!id || !strcmp(id, "-1") || !strcmp(id, "")) {
 		parent_path = cb_data->task.target.root_path;
 	} else {
-		path = msu_path_from_id(cb_data->task.target.root_path, id);
+		path = dls_path_from_id(cb_data->task.target.root_path, id);
 		parent_path = path;
 	}
 
 	builder->vb = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 
-	if (!msu_props_add_object(builder->vb, object,
+	if (!dls_props_add_object(builder->vb, object,
 				  cb_data->task.target.root_path,
 				  parent_path, cb_task_data->filter_mask))
 		goto on_error;
 
 	if (GUPNP_IS_DIDL_LITE_CONTAINER(object)) {
-		msu_props_add_container(builder->vb,
+		dls_props_add_container(builder->vb,
 					(GUPnPDIDLLiteContainer *)object,
 					cb_task_data->filter_mask,
 					&have_child_count);
 
 		if (!have_child_count && (cb_task_data->filter_mask &
-					  MSU_UPNP_MASK_PROP_CHILD_COUNT)) {
+					  DLS_UPNP_MASK_PROP_CHILD_COUNT)) {
 			builder->needs_child_count = TRUE;
 			builder->id = g_strdup(
 				gupnp_didl_lite_object_get_id(object));
 			cb_task_data->need_child_count = TRUE;
 		}
 	} else {
-		msu_props_add_item(builder->vb,
+		dls_props_add_item(builder->vb,
 				   object,
 				   cb_data->task.target.root_path,
 				   cb_task_data->filter_mask,
@@ -2517,7 +2526,7 @@ static void prv_found_target(GUPnPDIDLLiteParser *parser,
 on_error:
 
 	g_free(path);
-	prv_msu_device_object_builder_delete(builder);
+	prv_object_builder_delete(builder);
 
 	DLEYNA_LOG_DEBUG("Exit with FAIL");
 }
@@ -2529,8 +2538,8 @@ static void prv_search_cb(GUPnPServiceProxy *proxy,
 	gchar *result = NULL;
 	GUPnPDIDLLiteParser *parser = NULL;
 	GError *upnp_error = NULL;
-	msu_async_task_t *cb_data = user_data;
-	msu_async_bas_t *cb_task_data = &cb_data->ut.bas;
+	dls_async_task_t *cb_data = user_data;
+	dls_async_bas_t *cb_task_data = &cb_data->ut.bas;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -2543,7 +2552,7 @@ static void prv_search_cb(GUPnPServiceProxy *proxy,
 					    NULL)) {
 
 		DLEYNA_LOG_WARNING("Search operation failed %s",
-				upnp_error->message);
+				   upnp_error->message);
 
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_OPERATION_FAILED,
@@ -2555,7 +2564,7 @@ static void prv_search_cb(GUPnPServiceProxy *proxy,
 	parser = gupnp_didl_lite_parser_new();
 
 	cb_task_data->vbs = g_ptr_array_new_with_free_func(
-		prv_msu_device_object_builder_delete);
+		prv_object_builder_delete);
 
 	g_signal_connect(parser, "object-available" ,
 			 G_CALLBACK(prv_found_target), cb_data);
@@ -2565,7 +2574,7 @@ static void prv_search_cb(GUPnPServiceProxy *proxy,
 	if (!gupnp_didl_lite_parser_parse_didl(parser, result, &upnp_error) &&
 	    upnp_error->code != GUPNP_XML_ERROR_EMPTY_NODE) {
 		DLEYNA_LOG_WARNING("Unable to parse results of search: %s",
-				upnp_error->message);
+				   upnp_error->message);
 
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_OPERATION_FAILED,
@@ -2593,7 +2602,7 @@ static void prv_search_cb(GUPnPServiceProxy *proxy,
 
 on_error:
 
-	(void) g_idle_add(msu_async_task_complete, cb_data);
+	(void) g_idle_add(dls_async_task_complete, cb_data);
 	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
 
 no_complete:
@@ -2609,17 +2618,17 @@ no_complete:
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-void msu_device_search(msu_client_t *client,
-		       msu_task_t *task,
+void dls_device_search(dls_client_t *client,
+		       dls_task_t *task,
 		       const gchar *upnp_filter, const gchar *upnp_query,
 		       const gchar *sort_by)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_device_context_t *context;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_device_context_t *context;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	context = msu_device_get_context(task->target.device, client);
+	context = dls_device_get_context(task->target.device, client);
 
 	cb_data->action = gupnp_service_proxy_begin_action(
 			context->service_proxy, "Search",
@@ -2640,7 +2649,7 @@ void msu_device_search(msu_client_t *client,
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
-					G_CALLBACK(msu_async_task_cancelled_cb),
+					G_CALLBACK(dls_async_task_cancelled_cb),
 					cb_data, NULL);
 
 	DLEYNA_LOG_DEBUG("Exit");
@@ -2650,27 +2659,27 @@ static void prv_get_resource(GUPnPDIDLLiteParser *parser,
 			     GUPnPDIDLLiteObject *object,
 			     gpointer user_data)
 {
-	msu_async_task_t *cb_data = user_data;
-	msu_task_t *task = &cb_data->task;
-	msu_task_get_resource_t *task_data = &task->ut.resource;
-	msu_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
+	dls_async_task_t *cb_data = user_data;
+	dls_task_t *task = &cb_data->task;
+	dls_task_get_resource_t *task_data = &task->ut.resource;
+	dls_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	msu_props_add_resource(cb_task_data->vb, object,
+	dls_props_add_resource(cb_task_data->vb, object,
 			       cb_task_data->filter_mask,
 			       task_data->protocol_info);
 }
 
-void msu_device_get_resource(msu_client_t *client,
-			     msu_task_t *task,
+void dls_device_get_resource(dls_client_t *client,
+			     dls_task_t *task,
 			     const gchar *upnp_filter)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_async_get_all_t *cb_task_data;
-	msu_device_context_t *context;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_async_get_all_t *cb_task_data;
+	dls_device_context_t *context;
 
-	context = msu_device_get_context(task->target.device, client);
+	context = dls_device_get_context(task->target.device, client);
 	cb_task_data = &cb_data->ut.get_all;
 
 	cb_task_data->vb = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
@@ -2695,14 +2704,14 @@ void msu_device_get_resource(msu_client_t *client,
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
-					G_CALLBACK(msu_async_task_cancelled_cb),
+					G_CALLBACK(dls_async_task_cancelled_cb),
 					cb_data, NULL);
 
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
 static gchar *prv_create_new_container_didl(const gchar *parent_id,
-					    msu_task_t *task)
+					    dls_task_t *task)
 {
 	GUPnPDIDLLiteWriter *writer;
 	GUPnPDIDLLiteObject *item;
@@ -2722,7 +2731,7 @@ static gchar *prv_create_new_container_didl(const gchar *parent_id,
 					item,
 					task->ut.create_container.display_name);
 	gupnp_didl_lite_object_set_parent_id(item, parent_id);
-	actual_type = msu_props_media_spec_to_upnp_class(
+	actual_type = dls_props_media_spec_to_upnp_class(
 						task->ut.create_container.type);
 	gupnp_didl_lite_object_set_upnp_class(item, actual_type);
 	gupnp_didl_lite_object_set_restricted(item, FALSE);
@@ -2730,7 +2739,7 @@ static gchar *prv_create_new_container_didl(const gchar *parent_id,
 
 	g_variant_iter_init(&iter, task->ut.create_container.child_types);
 	while ((child_type = g_variant_iter_next_value(&iter))) {
-		actual_type = msu_props_media_spec_to_upnp_class(
+		actual_type = dls_props_media_spec_to_upnp_class(
 					g_variant_get_string(child_type, NULL));
 		if (actual_type != NULL)
 			gupnp_didl_lite_container_add_create_class(container,
@@ -2798,7 +2807,7 @@ on_error:
 	return profile_name;
 }
 
-static gchar *prv_create_upload_didl(const gchar *parent_id, msu_task_t *task,
+static gchar *prv_create_upload_didl(const gchar *parent_id, dls_task_t *task,
 				     const gchar *object_class,
 				     const gchar *mime_type)
 {
@@ -2873,21 +2882,21 @@ static void prv_upload_delete_cb(GUPnPServiceProxy *proxy,
 				 GUPnPServiceProxyAction *action,
 				 gpointer user_data)
 {
-	msu_async_task_t *cb_data = user_data;
+	dls_async_task_t *cb_data = user_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
 	(void) gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
 					      NULL, NULL);
-	(void) g_idle_add(msu_async_task_complete, cb_data);
+	(void) g_idle_add(dls_async_task_complete, cb_data);
 	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
 
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-static void prv_msu_upload_job_delete(gpointer up_job)
+static void prv_upload_job_delete(gpointer up_job)
 {
-	msu_device_upload_job_t *upload_job = up_job;
+	dls_device_upload_job_t *upload_job = up_job;
 
 	if (up_job) {
 		if (upload_job->remove_idle)
@@ -2899,8 +2908,8 @@ static void prv_msu_upload_job_delete(gpointer up_job)
 
 static gboolean prv_remove_update_job(gpointer user_data)
 {
-	msu_device_upload_job_t *upload_job = user_data;
-	msu_device_upload_t *upload;
+	dls_device_upload_job_t *upload_job = user_data;
+	dls_device_upload_t *upload;
 
 	upload = g_hash_table_lookup(upload_job->device->uploads,
 				     &upload_job->upload_id);
@@ -2909,7 +2918,7 @@ static gboolean prv_remove_update_job(gpointer user_data)
 				    &upload_job->upload_id);
 
 		DLEYNA_LOG_DEBUG("Removing Upload Object: %d",
-			      upload_job->upload_id);
+				 upload_job->upload_id);
 	}
 
 	upload_job->remove_idle = 0;
@@ -2919,8 +2928,8 @@ static gboolean prv_remove_update_job(gpointer user_data)
 	return FALSE;
 }
 
-static void prv_generate_upload_update(msu_device_upload_job_t *upload_job,
-				       msu_device_upload_t *upload)
+static void prv_generate_upload_update(dls_device_upload_job_t *upload_job,
+				       dls_device_upload_t *upload)
 {
 	GVariant *args;
 
@@ -2930,30 +2939,31 @@ static void prv_generate_upload_update(msu_device_upload_job_t *upload_job,
 	DLEYNA_LOG_DEBUG(
 		"Emitting: %s (%u %s %"G_GUINT64_FORMAT" %"G_GUINT64_FORMAT")"
 		" on %s",
-		SERVER_INTERFACE_UPLOAD_UPDATE, upload_job->upload_id,
+		DLS_INTERFACE_UPLOAD_UPDATE, upload_job->upload_id,
 		upload->status, upload->bytes_uploaded,
 		upload->bytes_to_upload, upload_job->device->path);
 
-	(void) dls_server_get_connector()->notify(upload_job->device->connection,
-					   upload_job->device->path,
-					   DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE,
-					   SERVER_INTERFACE_UPLOAD_UPDATE,
-					   args,
-					   NULL);
+	(void) dls_server_get_connector()->notify(
+					upload_job->device->connection,
+					upload_job->device->path,
+					DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE,
+					DLS_INTERFACE_UPLOAD_UPDATE,
+					args,
+					NULL);
 }
 
 static void prv_post_finished(SoupSession *session, SoupMessage *msg,
 			      gpointer user_data)
 {
-	msu_device_upload_job_t *upload_job = user_data;
-	msu_device_upload_t *upload;
+	dls_device_upload_job_t *upload_job = user_data;
+	dls_device_upload_t *upload;
 	gint *upload_id;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
 	DLEYNA_LOG_DEBUG("Upload %u finished.  Code %u Message %s",
-		      upload_job->upload_id, msg->status_code,
-		      msg->reason_phrase);
+			 upload_job->upload_id, msg->status_code,
+			 msg->reason_phrase);
 
 	/* This is clumsy but we need to distinguish between two cases:
 	   1. We cancel because the process is exitting.
@@ -2979,12 +2989,12 @@ static void prv_post_finished(SoupSession *session, SoupMessage *msg,
 			g_timeout_add(30000, prv_remove_update_job, user_data);
 
 		if (SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
-			upload->status = MSU_UPLOAD_STATUS_COMPLETED;
+			upload->status = DLS_UPLOAD_STATUS_COMPLETED;
 			upload->bytes_uploaded = upload->bytes_to_upload;
 		} else if (msg->status_code == SOUP_STATUS_CANCELLED) {
-			upload->status = MSU_UPLOAD_STATUS_CANCELLED;
+			upload->status = DLS_UPLOAD_STATUS_CANCELLED;
 		} else {
-			upload->status = MSU_UPLOAD_STATUS_ERROR;
+			upload->status = DLS_UPLOAD_STATUS_ERROR;
 		}
 
 		DLEYNA_LOG_DEBUG("Upload Status: %s", upload->status);
@@ -3014,14 +3024,14 @@ static void prv_post_finished(SoupSession *session, SoupMessage *msg,
 
 on_error:
 
-	prv_msu_upload_job_delete(upload_job);
+	prv_upload_job_delete(upload_job);
 
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-static void prv_msu_device_upload_delete(gpointer up)
+static void prv_upload_delete(gpointer up)
 {
-	msu_device_upload_t *upload = up;
+	dls_device_upload_t *upload = up;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -3050,21 +3060,21 @@ static void prv_msu_device_upload_delete(gpointer up)
 static void prv_post_bytes_written(SoupMessage *msg, SoupBuffer *chunk,
 				   gpointer user_data)
 {
-	msu_device_upload_t *upload = user_data;
+	dls_device_upload_t *upload = user_data;
 
 	upload->bytes_uploaded += chunk->length;
 	if (upload->bytes_uploaded > upload->bytes_to_upload)
 		upload->bytes_uploaded = upload->bytes_to_upload;
 }
 
-static msu_device_upload_t *prv_upload_data_new(const gchar *file_path,
+static dls_device_upload_t *prv_upload_data_new(const gchar *file_path,
 						gchar *body,
 						gsize body_length,
 						const gchar *import_uri,
 						const gchar *mime_type,
 						GError **error)
 {
-	msu_device_upload_t *upload = NULL;
+	dls_device_upload_t *upload = NULL;
 	GMappedFile *mapped_file = NULL;
 	gchar *up_body = body;
 	gsize up_body_length = body_length;
@@ -3075,9 +3085,10 @@ static msu_device_upload_t *prv_upload_data_new(const gchar *file_path,
 		mapped_file = g_mapped_file_new(file_path, FALSE, NULL);
 		if (!mapped_file) {
 			DLEYNA_LOG_WARNING("Unable to map %s into memory",
-					file_path);
+					   file_path);
 
-			*error = g_error_new(DLEYNA_SERVER_ERROR, DLEYNA_ERROR_IO,
+			*error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_IO,
 					     "Unable to map %s into memory",
 					     file_path);
 			goto on_error;
@@ -3087,7 +3098,7 @@ static msu_device_upload_t *prv_upload_data_new(const gchar *file_path,
 		up_body_length = g_mapped_file_get_length(mapped_file);
 	}
 
-	upload = g_new0(msu_device_upload_t, 1);
+	upload = g_new0(dls_device_upload_t, 1);
 
 	upload->soup_session = soup_session_async_new();
 	upload->msg = soup_message_new("POST", import_uri);
@@ -3098,12 +3109,13 @@ static msu_device_upload_t *prv_upload_data_new(const gchar *file_path,
 	if (!upload->msg) {
 		DLEYNA_LOG_WARNING("Invalid URI %s", import_uri);
 
-		*error = g_error_new(DLEYNA_SERVER_ERROR, DLEYNA_ERROR_BAD_RESULT,
+		*error = g_error_new(DLEYNA_SERVER_ERROR,
+				     DLEYNA_ERROR_BAD_RESULT,
 				     "Invalid URI %s", import_uri);
 		goto on_error;
 	}
 
-	upload->status = MSU_UPLOAD_STATUS_IN_PROGRESS;
+	upload->status = DLS_UPLOAD_STATUS_IN_PROGRESS;
 	upload->bytes_to_upload = up_body_length;
 
 	soup_message_headers_set_expectations(upload->msg->request_headers,
@@ -3120,7 +3132,7 @@ static msu_device_upload_t *prv_upload_data_new(const gchar *file_path,
 
 on_error:
 
-	prv_msu_device_upload_delete(upload);
+	prv_upload_delete(upload);
 
 	DLEYNA_LOG_WARNING("Exit with Fail");
 
@@ -3131,7 +3143,7 @@ static void prv_create_container_cb(GUPnPServiceProxy *proxy,
 		 GUPnPServiceProxyAction *action,
 		 gpointer user_data)
 {
-	msu_async_task_t *cb_data = user_data;
+	dls_async_task_t *cb_data = user_data;
 	GError *upnp_error = NULL;
 	gchar *result = NULL;
 	gchar *object_id = NULL;
@@ -3147,7 +3159,7 @@ static void prv_create_container_cb(GUPnPServiceProxy *proxy,
 					    &result,
 					    NULL)) {
 		DLEYNA_LOG_WARNING("Create Object operation failed: %s",
-				upnp_error->message);
+				   upnp_error->message);
 
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_OPERATION_FAILED,
@@ -3156,7 +3168,7 @@ static void prv_create_container_cb(GUPnPServiceProxy *proxy,
 		goto on_error;
 	}
 
-	object_path = msu_path_from_id(cb_data->task.target.root_path,
+	object_path = dls_path_from_id(cb_data->task.target.root_path,
 				       object_id);
 	cb_data->task.result = g_variant_ref_sink(g_variant_new_object_path(
 								object_path));
@@ -3164,7 +3176,7 @@ static void prv_create_container_cb(GUPnPServiceProxy *proxy,
 
 on_error:
 
-	(void) g_idle_add(msu_async_task_complete, cb_data);
+	(void) g_idle_add(dls_async_task_complete, cb_data);
 	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
 
 	if (object_id)
@@ -3179,7 +3191,7 @@ on_error:
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-static void prv_generic_upload_cb(msu_async_task_t *cb_data,
+static void prv_generic_upload_cb(dls_async_task_t *cb_data,
 				  char *file_path,
 				  gchar *body,
 				  gsize body_length,
@@ -3194,8 +3206,8 @@ static void prv_generic_upload_cb(msu_async_task_t *cb_data,
 	gint *upload_id;
 	GUPnPDIDLLiteParser *parser = NULL;
 	GVariant *out_p[2];
-	msu_device_upload_t *upload;
-	msu_device_upload_job_t *upload_job;
+	dls_device_upload_t *upload;
+	dls_device_upload_job_t *upload_job;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -3207,7 +3219,7 @@ static void prv_generic_upload_cb(msu_async_task_t *cb_data,
 					    &result,
 					    NULL)) {
 		DLEYNA_LOG_WARNING("Create Object operation failed: %s",
-				error->message);
+				   error->message);
 
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_OPERATION_FAILED,
@@ -3231,7 +3243,8 @@ static void prv_generic_upload_cb(msu_async_task_t *cb_data,
 	if (!gupnp_didl_lite_parser_parse_didl(parser, result, &error) &&
 	    error->code != GUPNP_XML_ERROR_EMPTY_NODE) {
 
-		DLEYNA_LOG_WARNING("Unable to parse results of CreateObject: %s",
+		DLEYNA_LOG_WARNING(
+				"Unable to parse results of CreateObject: %s",
 				error->message);
 
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
@@ -3258,7 +3271,7 @@ static void prv_generic_upload_cb(msu_async_task_t *cb_data,
 	if (!upload)
 		goto on_error;
 
-	upload_job = g_new0(msu_device_upload_job_t, 1);
+	upload_job = g_new0(dls_device_upload_job_t, 1);
 	upload_job->device = cb_data->task.target.device;
 	upload_job->upload_id = (gint) cb_data->task.target.device->upload_id;
 
@@ -3271,7 +3284,7 @@ static void prv_generic_upload_cb(msu_async_task_t *cb_data,
 	g_hash_table_insert(cb_data->task.target.device->uploads, upload_id,
 			    upload);
 
-	object_path = msu_path_from_id(cb_data->task.target.root_path,
+	object_path = dls_path_from_id(cb_data->task.target.root_path,
 				       object_id);
 
 	DLEYNA_LOG_DEBUG("Upload ID %u", *upload_id);
@@ -3302,7 +3315,7 @@ on_error:
 					"ObjectID", G_TYPE_STRING, object_id,
 					NULL);
 	} else {
-		(void) g_idle_add(msu_async_task_complete, cb_data);
+		(void) g_idle_add(dls_async_task_complete, cb_data);
 		g_cancellable_disconnect(cb_data->cancellable,
 					 cb_data->cancel_id);
 	}
@@ -3325,7 +3338,7 @@ static void prv_create_object_upload_cb(GUPnPServiceProxy *proxy,
 					GUPnPServiceProxyAction *action,
 					gpointer user_data)
 {
-	msu_async_task_t *cb_data = user_data;
+	dls_async_task_t *cb_data = user_data;
 
 	prv_generic_upload_cb(cb_data,
 			      cb_data->task.ut.upload.file_path,
@@ -3333,18 +3346,18 @@ static void prv_create_object_upload_cb(GUPnPServiceProxy *proxy,
 			      cb_data->ut.upload.mime_type);
 }
 
-void msu_device_upload(msu_client_t *client,
-		       msu_task_t *task, const gchar *parent_id)
+void dls_device_upload(dls_client_t *client,
+		       dls_task_t *task, const gchar *parent_id)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_device_context_t *context;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_device_context_t *context;
 	gchar *didl;
-	msu_async_upload_t *cb_task_data;
+	dls_async_upload_t *cb_task_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 	DLEYNA_LOG_DEBUG("Uploading file to %s", parent_id);
 
-	context = msu_device_get_context(task->target.device, client);
+	context = dls_device_get_context(task->target.device, client);
 	cb_task_data = &cb_data->ut.upload;
 
 	didl = prv_create_upload_didl(parent_id, task,
@@ -3369,7 +3382,7 @@ void msu_device_upload(msu_client_t *client,
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
-					G_CALLBACK(msu_async_task_cancelled_cb),
+					G_CALLBACK(dls_async_task_cancelled_cb),
 					cb_data, NULL);
 
 	g_free(didl);
@@ -3377,9 +3390,9 @@ void msu_device_upload(msu_client_t *client,
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-gboolean msu_device_get_upload_status(msu_task_t *task, GError **error)
+gboolean dls_device_get_upload_status(dls_task_t *task, GError **error)
 {
-	msu_device_upload_t *upload;
+	dls_device_upload_t *upload;
 	gboolean retval = FALSE;
 	GVariant *out_params[3];
 	guint upload_id;
@@ -3390,7 +3403,8 @@ gboolean msu_device_get_upload_status(msu_task_t *task, GError **error)
 
 	upload = g_hash_table_lookup(task->target.device->uploads, &upload_id);
 	if (!upload) {
-		*error = g_error_new(DLEYNA_SERVER_ERROR, DLEYNA_ERROR_OBJECT_NOT_FOUND,
+		*error = g_error_new(DLEYNA_SERVER_ERROR,
+				     DLEYNA_ERROR_OBJECT_NOT_FOUND,
 				     "Unknown Upload ID %u ", upload_id);
 		goto on_error;
 	}
@@ -3399,9 +3413,10 @@ gboolean msu_device_get_upload_status(msu_task_t *task, GError **error)
 	out_params[1] = g_variant_new_uint64(upload->bytes_uploaded);
 	out_params[2] = g_variant_new_uint64(upload->bytes_to_upload);
 
-	DLEYNA_LOG_DEBUG("Upload ( %s %"G_GUINT64_FORMAT" %"G_GUINT64_FORMAT" )",
-		      upload->status, upload->bytes_uploaded,
-		      upload->bytes_to_upload);
+	DLEYNA_LOG_DEBUG(
+		"Upload ( %s %"G_GUINT64_FORMAT" %"G_GUINT64_FORMAT" )",
+		upload->status, upload->bytes_uploaded,
+		upload->bytes_to_upload);
 
 	task->result = g_variant_ref_sink(g_variant_new_tuple(out_params, 3));
 
@@ -3414,7 +3429,7 @@ on_error:
 	return retval;
 }
 
-void msu_device_get_upload_ids(msu_task_t *task)
+void dls_device_get_upload_ids(dls_task_t *task)
 {
 	GVariantBuilder vb;
 	GHashTableIter iter;
@@ -3433,9 +3448,9 @@ void msu_device_get_upload_ids(msu_task_t *task)
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-gboolean msu_device_cancel_upload(msu_task_t *task, GError **error)
+gboolean dls_device_cancel_upload(dls_task_t *task, GError **error)
 {
-	msu_device_upload_t *upload;
+	dls_device_upload_t *upload;
 	gboolean retval = FALSE;
 	guint upload_id;
 
@@ -3445,7 +3460,8 @@ gboolean msu_device_cancel_upload(msu_task_t *task, GError **error)
 
 	upload = g_hash_table_lookup(task->target.device->uploads, &upload_id);
 	if (!upload) {
-		*error = g_error_new(DLEYNA_SERVER_ERROR, DLEYNA_ERROR_OBJECT_NOT_FOUND,
+		*error = g_error_new(DLEYNA_SERVER_ERROR,
+				     DLEYNA_ERROR_OBJECT_NOT_FOUND,
 				     "Unknown Upload ID %u ", upload_id);
 		goto on_error;
 	}
@@ -3470,7 +3486,7 @@ static void prv_destroy_object_cb(GUPnPServiceProxy *proxy,
 				  gpointer user_data)
 {
 	GError *upnp_error = NULL;
-	msu_async_task_t *cb_data = user_data;
+	dls_async_task_t *cb_data = user_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -3478,7 +3494,7 @@ static void prv_destroy_object_cb(GUPnPServiceProxy *proxy,
 					    &upnp_error,
 					    NULL)) {
 		DLEYNA_LOG_WARNING("Destroy Object operation failed: %s",
-				upnp_error->message);
+				   upnp_error->message);
 
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_OPERATION_FAILED,
@@ -3486,7 +3502,7 @@ static void prv_destroy_object_cb(GUPnPServiceProxy *proxy,
 					     upnp_error->message);
 	}
 
-	(void) g_idle_add(msu_async_task_complete, cb_data);
+	(void) g_idle_add(dls_async_task_complete, cb_data);
 	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
 
 	if (upnp_error)
@@ -3495,15 +3511,15 @@ static void prv_destroy_object_cb(GUPnPServiceProxy *proxy,
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-void msu_device_delete_object(msu_client_t *client,
-			      msu_task_t *task)
+void dls_device_delete_object(dls_client_t *client,
+			      dls_task_t *task)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_device_context_t *context;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_device_context_t *context;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	context = msu_device_get_context(task->target.device, client);
+	context = dls_device_get_context(task->target.device, client);
 
 	cb_data->action = gupnp_service_proxy_begin_action(
 				context->service_proxy, "DestroyObject",
@@ -3517,23 +3533,23 @@ void msu_device_delete_object(msu_client_t *client,
 				  (gpointer *)&cb_data->proxy);
 
 	cb_data->cancel_id = g_cancellable_connect(cb_data->cancellable,
-					G_CALLBACK(msu_async_task_cancelled_cb),
+					G_CALLBACK(dls_async_task_cancelled_cb),
 					cb_data, NULL);
 
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-void msu_device_create_container(msu_client_t *client,
-				 msu_task_t *task,
+void dls_device_create_container(dls_client_t *client,
+				 dls_task_t *task,
 				 const gchar *parent_id)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_device_context_t *context;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_device_context_t *context;
 	gchar *didl;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	context = msu_device_get_context(task->target.device, client);
+	context = dls_device_get_context(task->target.device, client);
 
 	didl = prv_create_new_container_didl(parent_id, task);
 
@@ -3553,7 +3569,7 @@ void msu_device_create_container(msu_client_t *client,
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
-					G_CALLBACK(msu_async_task_cancelled_cb),
+					G_CALLBACK(dls_async_task_cancelled_cb),
 					cb_data, NULL);
 
 	g_free(didl);
@@ -3566,7 +3582,7 @@ static void prv_update_object_update_cb(GUPnPServiceProxy *proxy,
 					gpointer user_data)
 {
 	GError *upnp_error = NULL;
-	msu_async_task_t *cb_data = user_data;
+	dls_async_task_t *cb_data = user_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -3574,7 +3590,7 @@ static void prv_update_object_update_cb(GUPnPServiceProxy *proxy,
 					    &upnp_error,
 					    NULL)) {
 		DLEYNA_LOG_WARNING("Update Object operation failed: %s",
-				upnp_error->message);
+				   upnp_error->message);
 
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_OPERATION_FAILED,
@@ -3583,7 +3599,7 @@ static void prv_update_object_update_cb(GUPnPServiceProxy *proxy,
 					     upnp_error->message);
 	}
 
-	(void) g_idle_add(msu_async_task_complete, cb_data);
+	(void) g_idle_add(dls_async_task_complete, cb_data);
 	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
 
 	if (upnp_error)
@@ -3593,30 +3609,30 @@ static void prv_update_object_update_cb(GUPnPServiceProxy *proxy,
 }
 
 static gchar *prv_get_current_xml_fragment(GUPnPDIDLLiteObject *object,
-					   msu_upnp_prop_mask mask)
+					   dls_upnp_prop_mask mask)
 {
 	gchar *retval = NULL;
 
-	if (mask & MSU_UPNP_MASK_PROP_DISPLAY_NAME)
+	if (mask & DLS_UPNP_MASK_PROP_DISPLAY_NAME)
 		retval = gupnp_didl_lite_object_get_title_xml_string(object);
-	else if (mask & MSU_UPNP_MASK_PROP_ALBUM)
+	else if (mask & DLS_UPNP_MASK_PROP_ALBUM)
 		retval = gupnp_didl_lite_object_get_album_xml_string(object);
-	else if (mask & MSU_UPNP_MASK_PROP_DATE)
+	else if (mask & DLS_UPNP_MASK_PROP_DATE)
 		retval = gupnp_didl_lite_object_get_date_xml_string(object);
-	else if (mask & MSU_UPNP_MASK_PROP_TYPE)
+	else if (mask & DLS_UPNP_MASK_PROP_TYPE)
 		retval = gupnp_didl_lite_object_get_upnp_class_xml_string(
 			object);
-	else if (mask & MSU_UPNP_MASK_PROP_TRACK_NUMBER)
+	else if (mask & DLS_UPNP_MASK_PROP_TRACK_NUMBER)
 		retval = gupnp_didl_lite_object_get_track_number_xml_string(
 			object);
-	else if (mask & MSU_UPNP_MASK_PROP_ARTISTS)
+	else if (mask & DLS_UPNP_MASK_PROP_ARTISTS)
 		retval = gupnp_didl_lite_object_get_artists_xml_string(object);
 
 	return retval;
 }
 
 static gchar *prv_get_new_xml_fragment(GUPnPDIDLLiteObject *object,
-				       msu_upnp_prop_mask mask,
+				       dls_upnp_prop_mask mask,
 				       GVariant *value)
 {
 	GUPnPDIDLLiteContributor *artist;
@@ -3625,40 +3641,40 @@ static gchar *prv_get_new_xml_fragment(GUPnPDIDLLiteObject *object,
 	GVariantIter viter;
 	gchar *retval = NULL;
 
-	if (mask & MSU_UPNP_MASK_PROP_DISPLAY_NAME) {
+	if (mask & DLS_UPNP_MASK_PROP_DISPLAY_NAME) {
 		gupnp_didl_lite_object_set_title(
 					object,
 					g_variant_get_string(value, NULL));
 
 		retval = gupnp_didl_lite_object_get_title_xml_string(object);
-	} else if (mask & MSU_UPNP_MASK_PROP_ALBUM) {
+	} else if (mask & DLS_UPNP_MASK_PROP_ALBUM) {
 		gupnp_didl_lite_object_set_album(
 					object,
 					g_variant_get_string(value, NULL));
 
 		retval = gupnp_didl_lite_object_get_album_xml_string(object);
-	} else if (mask & MSU_UPNP_MASK_PROP_DATE) {
+	} else if (mask & DLS_UPNP_MASK_PROP_DATE) {
 		gupnp_didl_lite_object_set_date(
 					object,
 					g_variant_get_string(value, NULL));
 
 		retval = gupnp_didl_lite_object_get_date_xml_string(object);
-	} else if (mask & MSU_UPNP_MASK_PROP_TYPE) {
-		upnp_class = msu_props_media_spec_to_upnp_class(
+	} else if (mask & DLS_UPNP_MASK_PROP_TYPE) {
+		upnp_class = dls_props_media_spec_to_upnp_class(
 					g_variant_get_string(value, NULL));
 
 		gupnp_didl_lite_object_set_upnp_class(object, upnp_class);
 
 		retval = gupnp_didl_lite_object_get_upnp_class_xml_string(
 								object);
-	} else if (mask & MSU_UPNP_MASK_PROP_TRACK_NUMBER) {
+	} else if (mask & DLS_UPNP_MASK_PROP_TRACK_NUMBER) {
 		gupnp_didl_lite_object_set_track_number(
 						object,
 						g_variant_get_int32(value));
 
 		retval = gupnp_didl_lite_object_get_track_number_xml_string(
 			object);
-	} else if (mask & MSU_UPNP_MASK_PROP_ARTISTS) {
+	} else if (mask & DLS_UPNP_MASK_PROP_ARTISTS) {
 		gupnp_didl_lite_object_unset_artists(object);
 
 		(void) g_variant_iter_init(&viter, value);
@@ -3687,14 +3703,14 @@ static void prv_get_xml_fragments(GUPnPDIDLLiteParser *parser,
 	GVariantIter viter;
 	const gchar *prop;
 	GVariant *value;
-	msu_prop_map_t *prop_map;
+	dls_prop_map_t *prop_map;
 	GUPnPDIDLLiteWriter *writer;
 	GUPnPDIDLLiteObject *scratch_object;
 	gboolean first = TRUE;
-	msu_async_task_t *cb_data = user_data;
-	msu_async_update_t *cb_task_data = &cb_data->ut.update;
-	msu_task_t *task = &cb_data->task;
-	msu_task_update_t *task_data = &task->ut.update;
+	dls_async_task_t *cb_data = user_data;
+	dls_async_update_t *cb_task_data = &cb_data->ut.update;
+	dls_task_t *task = &cb_data->task;
+	dls_task_update_t *task_data = &task->ut.update;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -3766,7 +3782,7 @@ static void prv_get_xml_fragments(GUPnPDIDLLiteParser *parser,
 
 	cb_task_data->current_tag_value = g_string_free(current_str, FALSE);
 	DLEYNA_LOG_DEBUG("current_tag_value = %s",
-		      cb_task_data->current_tag_value);
+			 cb_task_data->current_tag_value);
 
 	cb_task_data->new_tag_value = g_string_free(new_str, FALSE);
 	DLEYNA_LOG_DEBUG("new_tag_value = %s", cb_task_data->new_tag_value);
@@ -3782,8 +3798,8 @@ static void prv_update_object_browse_cb(GUPnPServiceProxy *proxy,
 					gpointer user_data)
 {
 	GError *upnp_error = NULL;
-	msu_async_task_t *cb_data = user_data;
-	msu_async_update_t *cb_task_data = &cb_data->ut.update;
+	dls_async_task_t *cb_data = user_data;
+	dls_async_update_t *cb_task_data = &cb_data->ut.update;
 	GUPnPDIDLLiteParser *parser = NULL;
 	gchar *result = NULL;
 
@@ -3794,7 +3810,7 @@ static void prv_update_object_browse_cb(GUPnPServiceProxy *proxy,
 					    "Result", G_TYPE_STRING,
 					    &result, NULL)) {
 		DLEYNA_LOG_WARNING("Browse Object operation failed: %s",
-				upnp_error->message);
+				   upnp_error->message);
 
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_OPERATION_FAILED,
@@ -3803,7 +3819,7 @@ static void prv_update_object_browse_cb(GUPnPServiceProxy *proxy,
 		goto on_error;
 	}
 
-	DLEYNA_LOG_DEBUG("msu_device_update_ex_object result: %s", result);
+	DLEYNA_LOG_DEBUG("dls_device_update_ex_object result: %s", result);
 
 	parser = gupnp_didl_lite_parser_new();
 
@@ -3820,7 +3836,8 @@ static void prv_update_object_browse_cb(GUPnPServiceProxy *proxy,
 					    DLEYNA_ERROR_UNKNOWN_PROPERTY,
 					    "Property not defined for object");
 		} else {
-			DLEYNA_LOG_WARNING("Unable to parse results of browse: %s",
+			DLEYNA_LOG_WARNING(
+					"Unable to parse results of browse: %s",
 					upnp_error->message);
 
 			cb_data->error =
@@ -3846,7 +3863,7 @@ static void prv_update_object_browse_cb(GUPnPServiceProxy *proxy,
 
 on_error:
 
-	(void) g_idle_add(msu_async_task_complete, cb_data);
+	(void) g_idle_add(dls_async_task_complete, cb_data);
 	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
 
 no_complete:
@@ -3862,16 +3879,16 @@ no_complete:
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-void msu_device_update_object(msu_client_t *client,
-			      msu_task_t *task,
+void dls_device_update_object(dls_client_t *client,
+			      dls_task_t *task,
 			      const gchar *upnp_filter)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_device_context_t *context;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_device_context_t *context;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	context = msu_device_get_context(task->target.device, client);
+	context = dls_device_get_context(task->target.device, client);
 
 	cb_data->action = gupnp_service_proxy_begin_action(
 				context->service_proxy, "Browse",
@@ -3890,7 +3907,7 @@ void msu_device_update_object(msu_client_t *client,
 				  (gpointer *)&cb_data->proxy);
 
 	cb_data->cancel_id = g_cancellable_connect(cb_data->cancellable,
-					G_CALLBACK(msu_async_task_cancelled_cb),
+					G_CALLBACK(dls_async_task_cancelled_cb),
 					cb_data, NULL);
 
 	DLEYNA_LOG_DEBUG("Exit");
@@ -3911,7 +3928,7 @@ static void prv_playlist_upload_cb(GUPnPServiceProxy *proxy,
 				   GUPnPServiceProxyAction *action,
 				   gpointer user_data)
 {
-	msu_async_task_t *cb_data = user_data;
+	dls_async_task_t *cb_data = user_data;
 	gchar *didls;
 
 	didls = gupnp_media_collection_get_string(
@@ -3996,7 +4013,7 @@ static void prv_create_didls_item_browse_cb(GUPnPServiceProxy *proxy,
 {
 	GError *error = NULL;
 	prv_new_playlist_ct_t *priv_t = user_data;
-	msu_async_task_t *cb_data = priv_t->cb_data;
+	dls_async_task_t *cb_data = priv_t->cb_data;
 	GUPnPDIDLLiteParser *parser = NULL;
 	gchar *result = NULL;
 
@@ -4004,14 +4021,14 @@ static void prv_create_didls_item_browse_cb(GUPnPServiceProxy *proxy,
 					    "Result", G_TYPE_STRING,
 					    &result, NULL)) {
 		DLEYNA_LOG_WARNING("Browse Object operation failed: %s",
-				error->message);
+				   error->message);
 		DLEYNA_LOG_DEBUG_NL();
 
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_OPERATION_FAILED,
 					     "Browse operation failed: %s",
 					     error->message);
-		goto on_error;
+		goto on_exit;
 	}
 
 	DLEYNA_LOG_DEBUG_NL();
@@ -4024,27 +4041,26 @@ static void prv_create_didls_item_browse_cb(GUPnPServiceProxy *proxy,
 			 G_CALLBACK(prv_create_didls_item_parse_object),
 			 cb_data->ut.playlist.collection);
 
-	if (!gupnp_didl_lite_parser_parse_didl(parser, result, &error)) {
-		if (error->code == GUPNP_XML_ERROR_EMPTY_NODE) {
-			DLEYNA_LOG_WARNING("Property not defined for object");
+	if (gupnp_didl_lite_parser_parse_didl(parser, result, &error))
+		goto on_exit;
 
-			cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
-						     DLEYNA_ERROR_UNKNOWN_PROPERTY,
-						     "Property not defined for object");
-		} else {
-			DLEYNA_LOG_WARNING("Unable to parse results of browse: %s",
-					error->message);
+	if (error->code == GUPNP_XML_ERROR_EMPTY_NODE) {
+		DLEYNA_LOG_WARNING("Property not defined for object");
 
-			cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
-						     DLEYNA_ERROR_OPERATION_FAILED,
-						     "Unable to parse results of browse: %s",
-						     error->message);
-		}
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_UNKNOWN_PROPERTY,
+					     "Property not defined for object");
+	} else {
+		DLEYNA_LOG_WARNING("Unable to parse results of browse: %s",
+				   error->message);
 
-		goto on_error;
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_OPERATION_FAILED,
+					     "Unable to parse results of browse: %s",
+					     error->message);
 	}
 
-on_error:
+on_exit:
 
 	if (cb_data->error != NULL)
 		dleyna_task_processor_cancel_queue(
@@ -4060,20 +4076,20 @@ on_error:
 }
 
 static GUPnPServiceProxyAction *prv_create_didls_item_browse(
-					msu_service_task_t *task,
+					dls_service_task_t *task,
 					GUPnPServiceProxy *proxy,
 					gboolean *failed)
 {
 	prv_new_playlist_ct_t *priv_t;
 
-	priv_t = (prv_new_playlist_ct_t *)msu_service_task_get_user_data(task);
+	priv_t = (prv_new_playlist_ct_t *)dls_service_task_get_user_data(task);
 	*failed = FALSE;
 
 	DLEYNA_LOG_DEBUG("Browse for ID: %s", priv_t->id);
 
 	return gupnp_service_proxy_begin_action(
 			proxy, "Browse",
-			msu_service_task_begin_action_cb, task,
+			dls_service_task_begin_action_cb, task,
 			"ObjectID", G_TYPE_STRING, priv_t->id,
 			"BrowseFlag", G_TYPE_STRING, "BrowseMetadata",
 			"Filter", G_TYPE_STRING, "upnp:artist,upnp:album,res",
@@ -4082,15 +4098,15 @@ static GUPnPServiceProxyAction *prv_create_didls_item_browse(
 			"SortCriteria", G_TYPE_STRING, "", NULL);
 }
 
-static gboolean prv_create_chain_didls_items(msu_task_t *task,
+static gboolean prv_create_chain_didls_items(dls_task_t *task,
 					     GUPnPServiceProxy *proxy,
-					     msu_async_task_t *cb_data)
+					     dls_async_task_t *cb_data)
 {
 	gchar *root_path = NULL;
 	gchar *path;
 	gchar *id = NULL;
 	prv_new_playlist_ct_t *priv_t;
-	msu_async_playlist_t *a_playlist = &cb_data->ut.playlist;
+	dls_async_playlist_t *a_playlist = &cb_data->ut.playlist;
 	GVariantIter iter;
 
 	DLEYNA_LOG_DEBUG_NL();
@@ -4104,16 +4120,18 @@ static gboolean prv_create_chain_didls_items(msu_task_t *task,
 	g_variant_iter_init(&iter, task->ut.playlist.item_path);
 
 	while (g_variant_iter_next(&iter, "&o", &path)) {
-		if (!msu_path_get_path_and_id(path, &root_path, &id, NULL)) {
+		if (!dls_path_get_path_and_id(path, &root_path, &id, NULL)) {
 			DLEYNA_LOG_DEBUG("Can't get id for path %s", path);
-			cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
-						     DLEYNA_ERROR_OBJECT_NOT_FOUND,
-						     "Unable to find object for path: %s",
-						     path);
+			cb_data->error = g_error_new(
+						DLEYNA_SERVER_ERROR,
+						DLEYNA_ERROR_OBJECT_NOT_FOUND,
+						"Unable to find object for path: %s",
+						path);
 			goto on_error;
 		}
 
-		DLEYNA_LOG_DEBUG("Create Task: @id: %s - Root: %s", id, root_path);
+		DLEYNA_LOG_DEBUG("Create Task: @id: %s - Root: %s",
+				 id, root_path);
 
 		g_free(root_path);
 
@@ -4121,7 +4139,7 @@ static gboolean prv_create_chain_didls_items(msu_task_t *task,
 		priv_t->cb_data = cb_data;
 		priv_t->id = id;
 
-		msu_service_task_add(a_playlist->queue_id,
+		dls_service_task_add(a_playlist->queue_id,
 				     prv_create_didls_item_browse,
 				     task->target.device,
 				     proxy,
@@ -4137,8 +4155,8 @@ on_error:
 	return FALSE;
 }
 
-static void prv_create_playlist_object(msu_task_create_playlist_t *t_playlist,
-				       msu_async_playlist_t *a_playlist,
+static void prv_create_playlist_object(dls_task_create_playlist_t *t_playlist,
+				       dls_async_playlist_t *a_playlist,
 				       char *parent_id)
 {
 	GUPnPDIDLLiteWriter *writer;
@@ -4198,9 +4216,9 @@ static void prv_create_playlist_object(msu_task_create_playlist_t *t_playlist,
 static void prv_create_didls_chain_end(gboolean cancelled, gpointer data)
 {
 	prv_new_playlist_ct_t *priv_t = data;
-	msu_async_task_t *cb_data = priv_t->cb_data;
-	msu_async_playlist_t *a_playlist;
-	msu_task_create_playlist_t *t_playlist;
+	dls_async_task_t *cb_data = priv_t->cb_data;
+	dls_async_playlist_t *a_playlist;
+	dls_task_create_playlist_t *t_playlist;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -4229,7 +4247,7 @@ static void prv_create_didls_chain_end(gboolean cancelled, gpointer data)
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
-					G_CALLBACK(msu_async_task_cancelled_cb),
+					G_CALLBACK(dls_async_task_cancelled_cb),
 					cb_data, NULL);
 on_clear:
 
@@ -4238,7 +4256,7 @@ on_clear:
 			cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 						     DLEYNA_ERROR_CANCELLED,
 						     "Operation cancelled.");
-		(void) g_idle_add(msu_async_task_complete, cb_data);
+		(void) g_idle_add(dls_async_task_complete, cb_data);
 	}
 
 	prv_didls_free(priv_t);
@@ -4251,7 +4269,7 @@ on_clear:
 static void prv_create_chain_cancelled(GCancellable *cancellable,
 				       gpointer user_data)
 {
-	msu_async_task_t *cb_data = user_data;
+	dls_async_task_t *cb_data = user_data;
 	const dleyna_task_queue_key_t *queue_id = cb_data->ut.playlist.queue_id;
 
 	DLEYNA_LOG_DEBUG("Enter");
@@ -4259,12 +4277,12 @@ static void prv_create_chain_cancelled(GCancellable *cancellable,
 	dleyna_task_processor_cancel_queue(queue_id);
 }
 
-void msu_device_playlist_upload(msu_client_t *client,
-				msu_task_t *task,
+void dls_device_playlist_upload(dls_client_t *client,
+				dls_task_t *task,
 				const gchar *parent_id)
 {
-	msu_async_task_t *cb_data = (msu_async_task_t *)task;
-	msu_device_context_t *context;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_device_context_t *context;
 	prv_new_playlist_ct_t *priv_t;
 	const dleyna_task_queue_key_t *queue_id;
 
@@ -4277,16 +4295,16 @@ void msu_device_playlist_upload(msu_client_t *client,
 
 	queue_id = dleyna_task_processor_add_queue(
 			dls_server_get_task_processor(),
-			msu_service_task_create_source(),
-			DLEYNA_SERVER_SINK,
+			dls_service_task_create_source(),
+			DLS_SERVER_SINK,
 			DLEYNA_TASK_QUEUE_FLAG_AUTO_REMOVE,
-			msu_service_task_process_cb,
-			msu_service_task_cancel_cb,
-			msu_service_task_delete_cb);
+			dls_service_task_process_cb,
+			dls_service_task_cancel_cb,
+			dls_service_task_delete_cb);
 	dleyna_task_queue_set_finally(queue_id, prv_create_didls_chain_end);
 	dleyna_task_queue_set_user_data(queue_id, priv_t);
 
-	context = msu_device_get_context(task->target.device, client);
+	context = dls_device_get_context(task->target.device, client);
 
 	cb_data->proxy = context->service_proxy;
 	cb_data->ut.playlist.queue_id = queue_id;
@@ -4301,7 +4319,7 @@ void msu_device_playlist_upload(msu_client_t *client,
 					cb_data, NULL);
 		dleyna_task_queue_start(queue_id);
 	} else {
-		(void) g_idle_add(msu_async_task_complete, cb_data);
+		(void) g_idle_add(dls_async_task_complete, cb_data);
 	}
 
 	DLEYNA_LOG_DEBUG("Exit");

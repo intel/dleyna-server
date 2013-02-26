@@ -1,5 +1,5 @@
 /*
- * dleyna
+ * dLeyna
  *
  * Copyright (C) 2012-2013 Intel Corporation. All rights reserved.
  *
@@ -20,69 +20,88 @@
  *
  */
 
-#ifndef MSU_UPNP_H__
-#define MSU_UPNP_H__
+#ifndef DLS_UPNP_H__
+#define DLS_UPNP_H__
 
 #include <libdleyna/core/connector.h>
 
 #include "client.h"
 #include "async.h"
 
-typedef void (*msu_upnp_callback_t)(const gchar *path, void *user_data);
-typedef void (*msu_upnp_task_complete_t)(msu_task_t *task, GError *error);
+typedef void (*dls_upnp_callback_t)(const gchar *path, void *user_data);
+typedef void (*dls_upnp_task_complete_t)(dls_task_t *task, GError *error);
 
-msu_upnp_t *msu_upnp_new(dleyna_connector_id_t connection,
+dls_upnp_t *dls_upnp_new(dleyna_connector_id_t connection,
 			 const dleyna_connector_dispatch_cb_t *dispatch_table,
-			 msu_upnp_callback_t found_server,
-			 msu_upnp_callback_t lost_server,
+			 dls_upnp_callback_t found_server,
+			 dls_upnp_callback_t lost_server,
 			 void *user_data);
-void msu_upnp_delete(msu_upnp_t *upnp);
-GVariant *msu_upnp_get_server_ids(msu_upnp_t *upnp);
-GHashTable *msu_upnp_get_server_udn_map(msu_upnp_t *upnp);
-void msu_upnp_get_children(msu_upnp_t *upnp, msu_client_t *client,
-			   msu_task_t *task,
-			   msu_upnp_task_complete_t cb);
-void msu_upnp_get_all_props(msu_upnp_t *upnp, msu_client_t *client,
-			    msu_task_t *task,
-			    msu_upnp_task_complete_t cb);
-void msu_upnp_get_prop(msu_upnp_t *upnp, msu_client_t *client,
-		       msu_task_t *task,
-		       msu_upnp_task_complete_t cb);
-void msu_upnp_search(msu_upnp_t *upnp, msu_client_t *client,
-		     msu_task_t *task,
-		     msu_upnp_task_complete_t cb);
-void msu_upnp_get_resource(msu_upnp_t *upnp, msu_client_t *client,
-			   msu_task_t *task,
-			   msu_upnp_task_complete_t cb);
-void msu_upnp_upload_to_any(msu_upnp_t *upnp, msu_client_t *client,
-			    msu_task_t *task,
-			    msu_upnp_task_complete_t cb);
-void msu_upnp_upload(msu_upnp_t *upnp, msu_client_t *client,
-		     msu_task_t *task,
-		     msu_upnp_task_complete_t cb);
-void msu_upnp_get_upload_status(msu_upnp_t *upnp, msu_task_t *task);
-void msu_upnp_get_upload_ids(msu_upnp_t *upnp, msu_task_t *task);
-void msu_upnp_cancel_upload(msu_upnp_t *upnp, msu_task_t *task);
-void msu_upnp_delete_object(msu_upnp_t *upnp, msu_client_t *client,
-			    msu_task_t *task,
-			    msu_upnp_task_complete_t cb);
-void msu_upnp_create_container(msu_upnp_t *upnp, msu_client_t *client,
-			       msu_task_t *task,
-			       msu_upnp_task_complete_t cb);
-void msu_upnp_create_container_in_any(msu_upnp_t *upnp, msu_client_t *client,
-				      msu_task_t *task,
-				      msu_upnp_task_complete_t cb);
-void msu_upnp_update_object(msu_upnp_t *upnp, msu_client_t *client,
-			    msu_task_t *task,
-			    msu_upnp_task_complete_t cb);
-void msu_upnp_create_playlist(msu_upnp_t *upnp, msu_client_t *client,
-			      msu_task_t *task,
-			      msu_upnp_task_complete_t cb);
-void msu_upnp_create_playlist_in_any(msu_upnp_t *upnp, msu_client_t *client,
-				     msu_task_t *task,
-				     msu_upnp_task_complete_t cb);
 
-gboolean msu_upnp_device_context_exist(msu_device_t *device,
-				       msu_device_context_t *context);
+void dls_upnp_delete(dls_upnp_t *upnp);
 
-#endif
+GVariant *dls_upnp_get_server_ids(dls_upnp_t *upnp);
+
+GHashTable *dls_upnp_get_server_udn_map(dls_upnp_t *upnp);
+
+void dls_upnp_get_children(dls_upnp_t *upnp, dls_client_t *client,
+			   dls_task_t *task,
+			   dls_upnp_task_complete_t cb);
+
+void dls_upnp_get_all_props(dls_upnp_t *upnp, dls_client_t *client,
+			    dls_task_t *task,
+			    dls_upnp_task_complete_t cb);
+
+void dls_upnp_get_prop(dls_upnp_t *upnp, dls_client_t *client,
+		       dls_task_t *task,
+		       dls_upnp_task_complete_t cb);
+
+void dls_upnp_search(dls_upnp_t *upnp, dls_client_t *client,
+		     dls_task_t *task,
+		     dls_upnp_task_complete_t cb);
+
+void dls_upnp_get_resource(dls_upnp_t *upnp, dls_client_t *client,
+			   dls_task_t *task,
+			   dls_upnp_task_complete_t cb);
+
+void dls_upnp_upload_to_any(dls_upnp_t *upnp, dls_client_t *client,
+			    dls_task_t *task,
+			    dls_upnp_task_complete_t cb);
+
+void dls_upnp_upload(dls_upnp_t *upnp, dls_client_t *client,
+		     dls_task_t *task,
+		     dls_upnp_task_complete_t cb);
+
+void dls_upnp_get_upload_status(dls_upnp_t *upnp, dls_task_t *task);
+
+void dls_upnp_get_upload_ids(dls_upnp_t *upnp, dls_task_t *task);
+
+void dls_upnp_cancel_upload(dls_upnp_t *upnp, dls_task_t *task);
+
+void dls_upnp_delete_object(dls_upnp_t *upnp, dls_client_t *client,
+			    dls_task_t *task,
+			    dls_upnp_task_complete_t cb);
+
+void dls_upnp_create_container(dls_upnp_t *upnp, dls_client_t *client,
+			       dls_task_t *task,
+			       dls_upnp_task_complete_t cb);
+
+void dls_upnp_create_container_in_any(dls_upnp_t *upnp, dls_client_t *client,
+				      dls_task_t *task,
+				      dls_upnp_task_complete_t cb);
+
+void dls_upnp_update_object(dls_upnp_t *upnp, dls_client_t *client,
+			    dls_task_t *task,
+			    dls_upnp_task_complete_t cb);
+
+void dls_upnp_create_playlist(dls_upnp_t *upnp, dls_client_t *client,
+			      dls_task_t *task,
+			      dls_upnp_task_complete_t cb);
+
+void dls_upnp_create_playlist_in_any(dls_upnp_t *upnp, dls_client_t *client,
+				     dls_task_t *task,
+				     dls_upnp_task_complete_t cb);
+
+gboolean dls_upnp_device_context_exist(dls_device_t *device,
+				       dls_device_context_t *context);
+
+#endif /* DLS_UPNP_H__ */

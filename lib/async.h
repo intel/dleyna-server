@@ -1,5 +1,5 @@
 /*
- * dleyna
+ * dLeyna
  *
  * Copyright (C) 2012-2013 Intel Corporation. All rights reserved.
  *
@@ -20,8 +20,8 @@
  *
  */
 
-#ifndef MSU_ASYNC_H__
-#define MSU_ASYNC_H__
+#ifndef DLS_ASYNC_H__
+#define DLS_ASYNC_H__
 
 #include <libgupnp/gupnp-control-point.h>
 #include <libgupnp-av/gupnp-media-collection.h>
@@ -32,79 +32,82 @@
 #include "task.h"
 #include "upnp.h"
 
-typedef struct msu_async_task_t_ msu_async_task_t;
-typedef guint64 msu_upnp_prop_mask;
+typedef struct dls_async_task_t_ dls_async_task_t;
+typedef guint64 dls_upnp_prop_mask;
 
-typedef void (*msu_async_cb_t)(msu_async_task_t *cb_data);
+typedef void (*dls_async_cb_t)(dls_async_task_t *cb_data);
 
-typedef struct msu_async_bas_t_ msu_async_bas_t;
-struct msu_async_bas_t_ {
-	msu_upnp_prop_mask filter_mask;
+typedef struct dls_async_bas_t_ dls_async_bas_t;
+struct dls_async_bas_t_ {
+	dls_upnp_prop_mask filter_mask;
 	GPtrArray *vbs;
 	const gchar *protocol_info;
 	gboolean need_child_count;
 	guint retrieved;
 	guint max_count;
-	msu_async_cb_t get_children_cb;
+	dls_async_cb_t get_children_cb;
 };
 
-typedef struct msu_async_get_prop_t_ msu_async_get_prop_t;
-struct msu_async_get_prop_t_ {
+typedef struct dls_async_get_prop_t_ dls_async_get_prop_t;
+struct dls_async_get_prop_t_ {
 	GCallback prop_func;
 	const gchar *protocol_info;
 };
 
-typedef struct msu_async_get_all_t_ msu_async_get_all_t;
-struct msu_async_get_all_t_ {
+typedef struct dls_async_get_all_t_ dls_async_get_all_t;
+struct dls_async_get_all_t_ {
 	GCallback prop_func;
 	GVariantBuilder *vb;
-	msu_upnp_prop_mask filter_mask;
+	dls_upnp_prop_mask filter_mask;
 	const gchar *protocol_info;
 	gboolean need_child_count;
 	gboolean device_object;
 };
 
-typedef struct msu_async_upload_t_ msu_async_upload_t;
-struct msu_async_upload_t_ {
+typedef struct dls_async_upload_t_ dls_async_upload_t;
+struct dls_async_upload_t_ {
 	const gchar *object_class;
 	gchar *mime_type;
 };
 
-typedef struct msu_async_update_t_ msu_async_update_t;
-struct msu_async_update_t_ {
+typedef struct dls_async_update_t_ dls_async_update_t;
+struct dls_async_update_t_ {
 	gchar *current_tag_value;
 	gchar *new_tag_value;
 	GHashTable *map;
 };
 
-typedef struct msu_async_playlist_t_ msu_async_playlist_t;
-struct msu_async_playlist_t_ {
+typedef struct dls_async_playlist_t_ dls_async_playlist_t;
+struct dls_async_playlist_t_ {
 	const dleyna_task_queue_key_t *queue_id;
 	GUPnPMediaCollection *collection;
 	gchar *didl;
 };
 
-struct msu_async_task_t_ {
-	msu_task_t task; /* pseudo inheritance - MUST be first field */
-	msu_upnp_task_complete_t cb;
+struct dls_async_task_t_ {
+	dls_task_t task; /* pseudo inheritance - MUST be first field */
+	dls_upnp_task_complete_t cb;
 	GError *error;
 	GUPnPServiceProxyAction *action;
 	GUPnPServiceProxy *proxy;
 	GCancellable *cancellable;
 	gulong cancel_id;
 	union {
-		msu_async_bas_t bas;
-		msu_async_get_prop_t get_prop;
-		msu_async_get_all_t get_all;
-		msu_async_upload_t upload;
-		msu_async_update_t update;
-		msu_async_playlist_t playlist;
+		dls_async_bas_t bas;
+		dls_async_get_prop_t get_prop;
+		dls_async_get_all_t get_all;
+		dls_async_upload_t upload;
+		dls_async_update_t update;
+		dls_async_playlist_t playlist;
 	} ut;
 };
 
-void msu_async_task_delete(msu_async_task_t *cb_data);
-gboolean msu_async_task_complete(gpointer user_data);
-void msu_async_task_cancelled_cb(GCancellable *cancellable, gpointer user_data);
-void msu_async_task_cancel(msu_async_task_t *cb_data);
+void dls_async_task_delete(dls_async_task_t *cb_data);
 
-#endif
+gboolean dls_async_task_complete(gpointer user_data);
+
+void dls_async_task_cancelled_cb(GCancellable *cancellable, gpointer user_data);
+
+void dls_async_task_cancel(dls_async_task_t *cb_data);
+
+#endif /* DLS_ASYNC_H__ */

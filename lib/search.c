@@ -1,5 +1,5 @@
 /*
- * dleyna
+ * dLeyna
  *
  * Copyright (C) 2012-2013 Intel Corporation. All rights reserved.
  *
@@ -27,7 +27,7 @@
 #include "props.h"
 #include "search.h"
 
-gchar *msu_search_translate_search_string(GHashTable *filter_map,
+gchar *dls_search_translate_search_string(GHashTable *filter_map,
 					  const gchar *search_string)
 {
 	GRegex *reg;
@@ -37,7 +37,7 @@ gchar *msu_search_translate_search_string(GHashTable *filter_map,
 	gchar *op = NULL;
 	gchar *value = NULL;
 	const gchar *translated_value;
-	msu_prop_map_t *prop_map;
+	dls_prop_map_t *prop_map;
 	GString *str;
 	gint start_pos;
 	gint end_pos;
@@ -70,20 +70,20 @@ gchar *msu_search_translate_search_string(GHashTable *filter_map,
 		/* Handle special cases where we need to translate
 		   value as well as property name */
 
-		if (!strcmp(prop, SERVER_INTERFACE_PROP_TYPE)) {
+		if (!strcmp(prop, DLS_INTERFACE_PROP_TYPE)) {
 			/* Skip the quotes */
 
 			value[strlen(value) - 1] = 0;
-			translated_value = msu_props_media_spec_to_upnp_class(
+			translated_value = dls_props_media_spec_to_upnp_class(
 				value + 1);
 			if (!translated_value)
 				goto on_error;
 			g_free(value);
 			value = g_strdup_printf("\"%s\"", translated_value);
-		} else if (!strcmp(prop, SERVER_INTERFACE_PROP_PARENT) ||
-			   !strcmp(prop, SERVER_INTERFACE_PROP_PATH)) {
+		} else if (!strcmp(prop, DLS_INTERFACE_PROP_PARENT) ||
+			   !strcmp(prop, DLS_INTERFACE_PROP_PATH)) {
 			value[strlen(value) - 1] = 0;
-			if (!msu_path_get_path_and_id(value + 1, &root_path,
+			if (!dls_path_get_path_and_id(value + 1, &root_path,
 						      &id, NULL))
 				goto on_error;
 			g_free(root_path);

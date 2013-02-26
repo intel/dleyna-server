@@ -1,5 +1,5 @@
 /*
- * dleyna
+ * dLeyna
  *
  * Copyright (C) 2012-2013 Intel Corporation. All rights reserved.
  *
@@ -20,12 +20,12 @@
  *
  */
 
-#ifndef MSU_SEARCH_H__
-#define MSU_SEARCH_H__
+#ifndef DLS_SEARCH_H__
+#define DLS_SEARCH_H__
 
 #include <glib.h>
 
-gchar *msu_search_translate_search_string(GHashTable *filter_map,
+gchar *dls_search_translate_search_string(GHashTable *filter_map,
 					  const gchar *search_string);
 
-#endif
+#endif /* DLS_PROPS_H__ */

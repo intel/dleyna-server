@@ -1,5 +1,5 @@
 /*
- * dleyna
+ * dLeyna
  *
  * Copyright (C) 2012-2013 Intel Corporation. All rights reserved.
  *
@@ -20,12 +20,12 @@
  *
  */
 
-#ifndef MSU_SORT_H__
-#define MSU_SORT_H__
+#ifndef DLS_SORT_H__
+#define DLS_SORT_H__
 
 #include <glib.h>
 
-gchar *msu_sort_translate_sort_string(GHashTable *filter_map,
+gchar *dls_sort_translate_sort_string(GHashTable *filter_map,
 				      const gchar *sort_string);
 
-#endif
+#endif /* DLS_SORT_H__ */

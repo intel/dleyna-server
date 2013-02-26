@@ -174,7 +174,7 @@ AC_ARG_ENABLE(lib-only,
 			[compile only the libdleyna-server library]),
 		[],
 		[enable_lib_only=no])
-		
+
 AS_IF([test "x$[]enable_lib_only" = "xno"],
       [PKG_CHECK_MODULES([DBUS], [dbus-1],
 			 [DBUS_SESSION_DIR=`$PKG_CONFIG --variable=session_bus_services_dir dbus-1`;

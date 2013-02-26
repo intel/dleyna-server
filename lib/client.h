@@ -1,5 +1,5 @@
 /*
- * dleyna
+ * dLeyna
  *
  * Copyright (C) 2012-2013 Intel Corporation. All rights reserved.
  *
@@ -20,16 +20,15 @@
  *
  */
 
-#ifndef MSU_CLIENT_H__
-#define MSU_CLIENT_H__
+#ifndef DLS_CLIENT_H__
+#define DLS_CLIENT_H__
 
 #include <glib.h>
 
-typedef struct msu_client_t_ msu_client_t;
-struct msu_client_t_ {
+typedef struct dls_client_t_ dls_client_t;
+struct dls_client_t_ {
 	gchar *protocol_info;
 	gboolean prefer_local_addresses;
 };
 
-
-#endif /* MSU_CLIENT_H__ */
+#endif /* DLS_CLIENT_H__ */

@@ -1,5 +1,5 @@
 /*
- * dleyna
+ * dLeyna
  *
  * Copyright (C) 2012-2013 Intel Corporation. All rights reserved.
  *
@@ -24,11 +24,11 @@
 
 #include "async.h"
 
-msu_task_t *msu_task_get_version_new(dleyna_connector_msg_id_t invocation)
+dls_task_t *dls_task_get_version_new(dleyna_connector_msg_id_t invocation)
 {
-	msu_task_t *task = g_new0(msu_task_t, 1);
+	dls_task_t *task = g_new0(dls_task_t, 1);
 
-	task->type = MSU_TASK_GET_VERSION;
+	task->type = DLS_TASK_GET_VERSION;
 	task->invocation = invocation;
 	task->result_format = "(@s)";
 	task->result = g_variant_ref_sink(g_variant_new_string(VERSION));
@@ -37,11 +37,11 @@ msu_task_t *msu_task_get_version_new(dleyna_connector_msg_id_t invocation)
 	return task;
 }
 
-msu_task_t *msu_task_get_servers_new(dleyna_connector_msg_id_t invocation)
+dls_task_t *dls_task_get_servers_new(dleyna_connector_msg_id_t invocation)
 {
-	msu_task_t *task = g_new0(msu_task_t, 1);
+	dls_task_t *task = g_new0(dls_task_t, 1);
 
-	task->type = MSU_TASK_GET_SERVERS;
+	task->type = DLS_TASK_GET_SERVERS;
 	task->invocation = invocation;
 	task->result_format = "(@ao)";
 	task->synchronous = TRUE;
@@ -49,58 +49,58 @@ msu_task_t *msu_task_get_servers_new(dleyna_connector_msg_id_t invocation)
 	return task;
 }
 
-static void prv_msu_task_delete(msu_task_t *task)
+static void prv_delete(dls_task_t *task)
 {
 	if (!task->synchronous)
-		msu_async_task_delete((msu_async_task_t *)task);
+		dls_async_task_delete((dls_async_task_t *)task);
 
 	switch (task->type) {
-	case MSU_TASK_GET_CHILDREN:
+	case DLS_TASK_GET_CHILDREN:
 		if (task->ut.get_children.filter)
 			g_variant_unref(task->ut.get_children.filter);
 		g_free(task->ut.get_children.sort_by);
 		break;
-	case MSU_TASK_GET_ALL_PROPS:
+	case DLS_TASK_GET_ALL_PROPS:
 		g_free(task->ut.get_props.interface_name);
 		break;
-	case MSU_TASK_GET_PROP:
+	case DLS_TASK_GET_PROP:
 		g_free(task->ut.get_prop.interface_name);
 		g_free(task->ut.get_prop.prop_name);
 		break;
-	case MSU_TASK_SEARCH:
+	case DLS_TASK_SEARCH:
 		g_free(task->ut.search.query);
 		if (task->ut.search.filter)
 			g_variant_unref(task->ut.search.filter);
 		g_free(task->ut.search.sort_by);
 		break;
-	case MSU_TASK_GET_RESOURCE:
+	case DLS_TASK_GET_RESOURCE:
 		if (task->ut.resource.filter)
 			g_variant_unref(task->ut.resource.filter);
 		g_free(task->ut.resource.protocol_info);
 		break;
-	case MSU_TASK_SET_PROTOCOL_INFO:
+	case DLS_TASK_SET_PROTOCOL_INFO:
 		if (task->ut.protocol_info.protocol_info)
 			g_free(task->ut.protocol_info.protocol_info);
 		break;
-	case MSU_TASK_UPLOAD_TO_ANY:
-	case MSU_TASK_UPLOAD:
+	case DLS_TASK_UPLOAD_TO_ANY:
+	case DLS_TASK_UPLOAD:
 		g_free(task->ut.upload.display_name);
 		g_free(task->ut.upload.file_path);
 		break;
-	case MSU_TASK_CREATE_CONTAINER:
-	case MSU_TASK_CREATE_CONTAINER_IN_ANY:
+	case DLS_TASK_CREATE_CONTAINER:
+	case DLS_TASK_CREATE_CONTAINER_IN_ANY:
 		g_free(task->ut.create_container.display_name);
 		g_free(task->ut.create_container.type);
 		g_variant_unref(task->ut.create_container.child_types);
 		break;
-	case MSU_TASK_UPDATE_OBJECT:
+	case DLS_TASK_UPDATE_OBJECT:
 		if (task->ut.update.to_add_update)
 			g_variant_unref(task->ut.update.to_add_update);
 		if (task->ut.update.to_delete)
 			g_variant_unref(task->ut.update.to_delete);
 		break;
-	case MSU_TASK_CREATE_PLAYLIST:
-	case MSU_TASK_CREATE_PLAYLIST_IN_ANY:
+	case DLS_TASK_CREATE_PLAYLIST:
+	case DLS_TASK_CREATE_PLAYLIST_IN_ANY:
 		g_free(task->ut.playlist.title);
 		g_free(task->ut.playlist.creator);
 		g_free(task->ut.playlist.genre);
@@ -122,7 +122,7 @@ static void prv_msu_task_delete(msu_task_t *task)
 	g_free(task);
 }
 
-static gboolean prv_set_task_target_info(msu_task_t *task, const gchar *path,
+static gboolean prv_set_task_target_info(dls_task_t *task, const gchar *path,
 					 GError **error)
 {
 	task->target.path = g_strdup(path);
@@ -133,24 +133,24 @@ static gboolean prv_set_task_target_info(msu_task_t *task, const gchar *path,
 					       &task->target.device, error);
 }
 
-static msu_task_t *prv_m2spec_task_new(msu_task_type_t type,
+static dls_task_t *prv_m2spec_task_new(dls_task_type_t type,
 				       dleyna_connector_msg_id_t invocation,
 				       const gchar *path,
 				       const gchar *result_format,
 				       GError **error,
 				       gboolean synchronous)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 
 	if (synchronous) {
-		task = g_new0(msu_task_t, 1);
+		task = g_new0(dls_task_t, 1);
 		task->synchronous = TRUE;
 	} else {
-		task = (msu_task_t *)g_new0(msu_async_task_t, 1);
+		task = (dls_task_t *)g_new0(dls_async_task_t, 1);
 	}
 
 	if (!prv_set_task_target_info(task, path, error)) {
-		prv_msu_task_delete(task);
+		prv_delete(task);
 		task = NULL;
 
 		goto finished;
@@ -165,14 +165,14 @@ finished:
 	return task;
 }
 
-msu_task_t *msu_task_get_children_new(dleyna_connector_msg_id_t invocation,
+dls_task_t *dls_task_get_children_new(dleyna_connector_msg_id_t invocation,
 				      const gchar *path, GVariant *parameters,
 				      gboolean items, gboolean containers,
 				      GError **error)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 
-	task = prv_m2spec_task_new(MSU_TASK_GET_CHILDREN, invocation, path,
+	task = prv_m2spec_task_new(DLS_TASK_GET_CHILDREN, invocation, path,
 				   "(@aa{sv})", error, FALSE);
 	if (!task)
 		goto finished;
@@ -192,15 +192,15 @@ finished:
 	return task;
 }
 
-msu_task_t *msu_task_get_children_ex_new(dleyna_connector_msg_id_t invocation,
+dls_task_t *dls_task_get_children_ex_new(dleyna_connector_msg_id_t invocation,
 					 const gchar *path,
 					 GVariant *parameters, gboolean items,
 					 gboolean containers,
 					 GError **error)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 
-	task = prv_m2spec_task_new(MSU_TASK_GET_CHILDREN, invocation, path,
+	task = prv_m2spec_task_new(DLS_TASK_GET_CHILDREN, invocation, path,
 				   "(@aa{sv})", error, FALSE);
 	if (!task)
 		goto finished;
@@ -219,13 +219,13 @@ finished:
 	return task;
 }
 
-msu_task_t *msu_task_get_prop_new(dleyna_connector_msg_id_t invocation,
+dls_task_t *dls_task_get_prop_new(dleyna_connector_msg_id_t invocation,
 				  const gchar *path, GVariant *parameters,
 				  GError **error)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 
-	task = prv_m2spec_task_new(MSU_TASK_GET_PROP, invocation, path, "(v)",
+	task = prv_m2spec_task_new(DLS_TASK_GET_PROP, invocation, path, "(v)",
 				   error, FALSE);
 	if (!task)
 		goto finished;
@@ -241,13 +241,13 @@ finished:
 	return task;
 }
 
-msu_task_t *msu_task_get_props_new(dleyna_connector_msg_id_t invocation,
+dls_task_t *dls_task_get_props_new(dleyna_connector_msg_id_t invocation,
 				   const gchar *path, GVariant *parameters,
 				   GError **error)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 
-	task = prv_m2spec_task_new(MSU_TASK_GET_ALL_PROPS, invocation, path,
+	task = prv_m2spec_task_new(DLS_TASK_GET_ALL_PROPS, invocation, path,
 				   "(@a{sv})", error, FALSE);
 	if (!task)
 		goto finished;
@@ -260,13 +260,13 @@ finished:
 	return task;
 }
 
-msu_task_t *msu_task_search_new(dleyna_connector_msg_id_t invocation,
+dls_task_t *dls_task_search_new(dleyna_connector_msg_id_t invocation,
 				const gchar *path, GVariant *parameters,
 				GError **error)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 
-	task = prv_m2spec_task_new(MSU_TASK_SEARCH, invocation, path,
+	task = prv_m2spec_task_new(DLS_TASK_SEARCH, invocation, path,
 				   "(@aa{sv})", error, FALSE);
 	if (!task)
 		goto finished;
@@ -281,13 +281,13 @@ finished:
 	return task;
 }
 
-msu_task_t *msu_task_search_ex_new(dleyna_connector_msg_id_t invocation,
+dls_task_t *dls_task_search_ex_new(dleyna_connector_msg_id_t invocation,
 				   const gchar *path, GVariant *parameters,
 				   GError **error)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 
-	task = prv_m2spec_task_new(MSU_TASK_SEARCH, invocation, path,
+	task = prv_m2spec_task_new(DLS_TASK_SEARCH, invocation, path,
 				   "(@aa{sv}u)", error, FALSE);
 	if (!task)
 		goto finished;
@@ -303,13 +303,13 @@ finished:
 	return task;
 }
 
-msu_task_t *msu_task_get_resource_new(dleyna_connector_msg_id_t invocation,
+dls_task_t *dls_task_get_resource_new(dleyna_connector_msg_id_t invocation,
 				      const gchar *path, GVariant *parameters,
 				      GError **error)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 
-	task = prv_m2spec_task_new(MSU_TASK_GET_RESOURCE, invocation, path,
+	task = prv_m2spec_task_new(DLS_TASK_GET_RESOURCE, invocation, path,
 				   "(@a{sv})", error, FALSE);
 	if (!task)
 		goto finished;
@@ -323,12 +323,12 @@ finished:
 	return task;
 }
 
-msu_task_t *msu_task_set_protocol_info_new(dleyna_connector_msg_id_t invocation,
+dls_task_t *dls_task_set_protocol_info_new(dleyna_connector_msg_id_t invocation,
 					   GVariant *parameters)
 {
-	msu_task_t *task = g_new0(msu_task_t, 1);
+	dls_task_t *task = g_new0(dls_task_t, 1);
 
-	task->type = MSU_TASK_SET_PROTOCOL_INFO;
+	task->type = DLS_TASK_SET_PROTOCOL_INFO;
 	task->invocation = invocation;
 	task->synchronous = TRUE;
 	g_variant_get(parameters, "(s)", &task->ut.protocol_info.protocol_info);
@@ -336,13 +336,13 @@ msu_task_t *msu_task_set_protocol_info_new(dleyna_connector_msg_id_t invocation,
 	return task;
 }
 
-static msu_task_t *prv_upload_new_generic(msu_task_type_t type,
+static dls_task_t *prv_upload_new_generic(dls_task_type_t type,
 					  dleyna_connector_msg_id_t invocation,
 					  const gchar *path,
 					  GVariant *parameters,
 					  GError **error)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 
 	task = prv_m2spec_task_new(type, invocation, path,
 				   "(uo)", error, FALSE);
@@ -359,13 +359,13 @@ finished:
 	return task;
 }
 
-msu_task_t *msu_task_prefer_local_addresses_new(
+dls_task_t *dls_task_prefer_local_addresses_new(
 					dleyna_connector_msg_id_t invocation,
 					GVariant *parameters)
 {
-	msu_task_t *task = g_new0(msu_task_t, 1);
+	dls_task_t *task = g_new0(dls_task_t, 1);
 
-	task->type = MSU_TASK_SET_PREFER_LOCAL_ADDRESSES;
+	task->type = DLS_TASK_SET_PREFER_LOCAL_ADDRESSES;
 	task->invocation = invocation;
 	task->synchronous = TRUE;
 	g_variant_get(parameters, "(b)",
@@ -374,30 +374,30 @@ msu_task_t *msu_task_prefer_local_addresses_new(
 	return task;
 }
 
-msu_task_t *msu_task_upload_to_any_new(dleyna_connector_msg_id_t invocation,
+dls_task_t *dls_task_upload_to_any_new(dleyna_connector_msg_id_t invocation,
 				       const gchar *path, GVariant *parameters,
 				       GError **error)
 {
-	return prv_upload_new_generic(MSU_TASK_UPLOAD_TO_ANY, invocation,
+	return prv_upload_new_generic(DLS_TASK_UPLOAD_TO_ANY, invocation,
 				      path, parameters, error);
 }
 
-msu_task_t *msu_task_upload_new(dleyna_connector_msg_id_t invocation,
+dls_task_t *dls_task_upload_new(dleyna_connector_msg_id_t invocation,
 				const gchar *path, GVariant *parameters,
 				GError **error)
 {
-	return prv_upload_new_generic(MSU_TASK_UPLOAD, invocation,
+	return prv_upload_new_generic(DLS_TASK_UPLOAD, invocation,
 				      path, parameters, error);
 }
 
-msu_task_t *msu_task_get_upload_status_new(dleyna_connector_msg_id_t invocation,
+dls_task_t *dls_task_get_upload_status_new(dleyna_connector_msg_id_t invocation,
 					   const gchar *path,
 					   GVariant *parameters,
 					   GError **error)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 
-	task = prv_m2spec_task_new(MSU_TASK_GET_UPLOAD_STATUS, invocation, path,
+	task = prv_m2spec_task_new(DLS_TASK_GET_UPLOAD_STATUS, invocation, path,
 				   "(stt)", error, TRUE);
 	if (!task)
 		goto finished;
@@ -411,13 +411,13 @@ finished:
 	return task;
 }
 
-msu_task_t *msu_task_get_upload_ids_new(dleyna_connector_msg_id_t invocation,
+dls_task_t *dls_task_get_upload_ids_new(dleyna_connector_msg_id_t invocation,
 					const gchar *path,
 					GError **error)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 
-	task = prv_m2spec_task_new(MSU_TASK_GET_UPLOAD_IDS, invocation, path,
+	task = prv_m2spec_task_new(DLS_TASK_GET_UPLOAD_IDS, invocation, path,
 				   "(@au)", error, TRUE);
 	if (!task)
 		goto finished;
@@ -427,14 +427,14 @@ finished:
 	return task;
 }
 
-msu_task_t *msu_task_cancel_upload_new(dleyna_connector_msg_id_t invocation,
+dls_task_t *dls_task_cancel_upload_new(dleyna_connector_msg_id_t invocation,
 				       const gchar *path,
 				       GVariant *parameters,
 				       GError **error)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 
-	task = prv_m2spec_task_new(MSU_TASK_CANCEL_UPLOAD, invocation, path,
+	task = prv_m2spec_task_new(DLS_TASK_CANCEL_UPLOAD, invocation, path,
 				   NULL, error, TRUE);
 	if (!task)
 		goto finished;
@@ -447,25 +447,25 @@ finished:
 	return task;
 }
 
-msu_task_t *msu_task_delete_new(dleyna_connector_msg_id_t invocation,
+dls_task_t *dls_task_delete_new(dleyna_connector_msg_id_t invocation,
 				const gchar *path,
 				GError **error)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 
-	task = prv_m2spec_task_new(MSU_TASK_DELETE_OBJECT, invocation,
+	task = prv_m2spec_task_new(DLS_TASK_DELETE_OBJECT, invocation,
 				   path, NULL, error, FALSE);
 	return task;
 }
 
-msu_task_t *msu_task_create_container_new_generic(
+dls_task_t *dls_task_create_container_new_generic(
 					dleyna_connector_msg_id_t invocation,
-					msu_task_type_t type,
+					dls_task_type_t type,
 					const gchar *path,
 					GVariant *parameters,
 					GError **error)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 
 	task = prv_m2spec_task_new(type, invocation, path,
 				   "(@o)", error, FALSE);
@@ -482,13 +482,13 @@ finished:
 	return task;
 }
 
-msu_task_t *msu_task_create_playlist_new(dleyna_connector_msg_id_t invocation,
-					 msu_task_type_t type,
+dls_task_t *dls_task_create_playlist_new(dleyna_connector_msg_id_t invocation,
+					 dls_task_type_t type,
 					 const gchar *path,
 					 GVariant *parameters,
 					 GError **error)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 
 	task = prv_m2spec_task_new(type, invocation, path,
 				   "(uo)", error, FALSE);
@@ -510,13 +510,13 @@ finished:
 
 }
 
-msu_task_t *msu_task_update_new(dleyna_connector_msg_id_t invocation,
+dls_task_t *dls_task_update_new(dleyna_connector_msg_id_t invocation,
 				const gchar *path, GVariant *parameters,
 				GError **error)
 {
-	msu_task_t *task;
+	dls_task_t *task;
 
-	task = prv_m2spec_task_new(MSU_TASK_UPDATE_OBJECT, invocation, path,
+	task = prv_m2spec_task_new(DLS_TASK_UPDATE_OBJECT, invocation, path,
 				   NULL, error, FALSE);
 	if (!task)
 		goto finished;
@@ -530,7 +530,7 @@ finished:
 	return task;
 }
 
-void msu_task_complete(msu_task_t *task)
+void dls_task_complete(dls_task_t *task)
 {
 	GVariant *variant = NULL;
 
@@ -545,7 +545,8 @@ void msu_task_complete(msu_task_t *task)
 				variant = g_variant_new(task->result_format,
 							task->result);
 		}
-		dls_server_get_connector()->return_response(task->invocation, variant);
+		dls_server_get_connector()->return_response(task->invocation,
+							    variant);
 		task->invocation = NULL;
 	}
 
@@ -554,13 +555,14 @@ finished:
 	return;
 }
 
-void msu_task_fail(msu_task_t *task, GError *error)
+void dls_task_fail(dls_task_t *task, GError *error)
 {
 	if (!task)
 		goto finished;
 
 	if (task->invocation) {
-		dls_server_get_connector()->return_error(task->invocation, error);
+		dls_server_get_connector()->return_error(task->invocation,
+							 error);
 		task->invocation = NULL;
 	}
 
@@ -569,7 +571,7 @@ finished:
 	return;
 }
 
-void msu_task_cancel(msu_task_t *task)
+void dls_task_cancel(dls_task_t *task)
 {
 	GError *error;
 
@@ -579,20 +581,21 @@ void msu_task_cancel(msu_task_t *task)
 	if (task->invocation) {
 		error = g_error_new(DLEYNA_SERVER_ERROR, DLEYNA_ERROR_CANCELLED,
 				    "Operation cancelled.");
-		dls_server_get_connector()->return_error(task->invocation, error);
+		dls_server_get_connector()->return_error(task->invocation,
+							 error);
 		task->invocation = NULL;
 		g_error_free(error);
 	}
 
 	if (!task->synchronous)
-		msu_async_task_cancel((msu_async_task_t *)task);
+		dls_async_task_cancel((dls_async_task_t *)task);
 
 finished:
 
 	return;
 }
 
-void msu_task_delete(msu_task_t *task)
+void dls_task_delete(dls_task_t *task)
 {
 	GError *error;
 
@@ -602,11 +605,12 @@ void msu_task_delete(msu_task_t *task)
 	if (task->invocation) {
 		error = g_error_new(DLEYNA_SERVER_ERROR, DLEYNA_ERROR_DIED,
 				    "Unable to complete command.");
-		dls_server_get_connector()->return_error(task->invocation, error);
+		dls_server_get_connector()->return_error(task->invocation,
+							 error);
 		g_error_free(error);
 	}
 
-	prv_msu_task_delete(task);
+	prv_delete(task);
 
 finished:
 
