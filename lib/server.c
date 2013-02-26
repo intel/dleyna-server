@@ -1148,6 +1148,11 @@ static void prv_control_point_initialize(const dleyna_connector_t *connector,
 	g_set_prgname(DLS_PRG_NAME);
 }
 
+static void prv_control_point_finalize(void)
+{
+	dls_upnp_unsubscribe(g_context.upnp);
+}
+
 static void prv_control_point_free(void)
 {
 	dls_upnp_delete(g_context.upnp);
@@ -1180,6 +1185,7 @@ static const gchar *prv_control_point_root_introspection(void)
 
 static const dleyna_control_point_t g_control_point = {
 	prv_control_point_initialize,
+	prv_control_point_finalize,
 	prv_control_point_free,
 	prv_control_point_server_name,
 	prv_control_point_server_introspection,
