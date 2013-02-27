@@ -1130,6 +1130,20 @@ out:
 	return retval;
 }
 
+static void prv_control_point_stop_service(void)
+{
+	dls_upnp_unsubscribe(g_context.upnp);
+
+	dls_upnp_delete(g_context.upnp);
+
+	if (g_context.connection) {
+		if (g_context.dls_id)
+			g_context.connector->unpublish_object(
+							g_context.connection,
+							g_context.dls_id);
+	}
+}
+
 static void prv_control_point_initialize(const dleyna_connector_t *connector,
 					 dleyna_task_processor_t *processor,
 					 dleyna_settings_t *settings)
@@ -1146,20 +1160,6 @@ static void prv_control_point_initialize(const dleyna_connector_t *connector,
 						 g_free, prv_unregister_client);
 
 	g_set_prgname(DLS_PRG_NAME);
-}
-
-static void prv_control_point_finalize(void)
-{
-	dls_upnp_unsubscribe(g_context.upnp);
-
-	dls_upnp_delete(g_context.upnp);
-
-	if (g_context.connection) {
-		if (g_context.dls_id)
-			g_context.connector->unpublish_object(
-							g_context.connection,
-							g_context.dls_id);
-	}
 }
 
 static void prv_control_point_free(void)
@@ -1185,12 +1185,12 @@ static const gchar *prv_control_point_root_introspection(void)
 
 static const dleyna_control_point_t g_control_point = {
 	prv_control_point_initialize,
-	prv_control_point_finalize,
 	prv_control_point_free,
 	prv_control_point_server_name,
 	prv_control_point_server_introspection,
 	prv_control_point_root_introspection,
-	prv_control_point_start_service
+	prv_control_point_start_service,
+	prv_control_point_stop_service
 };
 
 const dleyna_control_point_t *dleyna_control_point_get_server(void)
