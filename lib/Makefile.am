@@ -28,7 +28,6 @@ libdleyna_server_1_0_la_SOURCES =	$(libdleyna_serverinc_HEADERS)	\
 					path.c		 		\
 					props.c		 		\
 					search.c	 		\
-					service-task.c	 		\
 					sort.c		 		\
 					task.c		 		\
 					upnp.c

@@ -30,12 +30,12 @@
 
 #include <libdleyna/core/error.h>
 #include <libdleyna/core/log.h>
+#include <libdleyna/core/service-task.h>
 
 #include "device.h"
 #include "interface.h"
 #include "path.h"
 #include "server.h"
-#include "service-task.h"
 
 #define DLS_SYSTEM_UPDATE_VAR "SystemUpdateID"
 #define DLS_CONTAINER_UPDATE_VAR "ContainerUpdateIDs"
@@ -648,7 +648,7 @@ on_error:
 }
 
 static GUPnPServiceProxyAction *prv_get_feature_list(
-						dls_service_task_t *task,
+						dleyna_service_task_t *task,
 						GUPnPServiceProxy *proxy,
 						gboolean *failed)
 {
@@ -656,7 +656,7 @@ static GUPnPServiceProxyAction *prv_get_feature_list(
 
 	return gupnp_service_proxy_begin_action(
 					proxy, "GetFeatureList",
-					dls_service_task_begin_action_cb,
+					dleyna_service_task_begin_action_cb,
 					task, NULL);
 }
 
@@ -723,7 +723,7 @@ on_error:
 }
 
 static GUPnPServiceProxyAction *prv_get_sort_ext_capabilities(
-						dls_service_task_t *task,
+						dleyna_service_task_t *task,
 						GUPnPServiceProxy *proxy,
 						gboolean *failed)
 {
@@ -732,7 +732,7 @@ static GUPnPServiceProxyAction *prv_get_sort_ext_capabilities(
 	return gupnp_service_proxy_begin_action(
 					proxy,
 					"GetSortExtensionCapabilities",
-					dls_service_task_begin_action_cb,
+					dleyna_service_task_begin_action_cb,
 					task, NULL);
 }
 
@@ -799,7 +799,7 @@ on_error:
 }
 
 static GUPnPServiceProxyAction *prv_get_sort_capabilities(
-					dls_service_task_t *task,
+					dleyna_service_task_t *task,
 					GUPnPServiceProxy *proxy,
 					gboolean *failed)
 {
@@ -808,7 +808,7 @@ static GUPnPServiceProxyAction *prv_get_sort_capabilities(
 	return gupnp_service_proxy_begin_action(
 					proxy,
 					"GetSortCapabilities",
-					dls_service_task_begin_action_cb,
+					dleyna_service_task_begin_action_cb,
 					task, NULL);
 }
 
@@ -841,7 +841,7 @@ on_error:
 }
 
 static GUPnPServiceProxyAction *prv_get_search_capabilities(
-					dls_service_task_t *task,
+					dleyna_service_task_t *task,
 					GUPnPServiceProxy *proxy,
 					gboolean *failed)
 {
@@ -849,17 +849,17 @@ static GUPnPServiceProxyAction *prv_get_search_capabilities(
 
 	return gupnp_service_proxy_begin_action(
 					proxy, "GetSearchCapabilities",
-					dls_service_task_begin_action_cb,
+					dleyna_service_task_begin_action_cb,
 					task, NULL);
 }
 
-static GUPnPServiceProxyAction *prv_subscribe(dls_service_task_t *task,
+static GUPnPServiceProxyAction *prv_subscribe(dleyna_service_task_t *task,
 					      GUPnPServiceProxy *proxy,
 					      gboolean *failed)
 {
 	dls_device_t *device;
 
-	device = dls_service_task_get_device(task);
+	device = (dls_device_t *)dleyna_service_task_get_user_data(task);
 	dls_device_subscribe_to_contents_change(device);
 
 	*failed = FALSE;
@@ -902,7 +902,7 @@ static gboolean prv_subtree_interface_filter(const gchar *object_path,
 	return retval;
 }
 
-static GUPnPServiceProxyAction *prv_declare(dls_service_task_t *task,
+static GUPnPServiceProxyAction *prv_declare(dleyna_service_task_t *task,
 					    GUPnPServiceProxy *proxy,
 					    gboolean *failed)
 {
@@ -910,9 +910,8 @@ static GUPnPServiceProxyAction *prv_declare(dls_service_task_t *task,
 	dls_device_t *device;
 	prv_new_device_ct_t *priv_t;
 
-	device = dls_service_task_get_device(task);
-
-	priv_t = (prv_new_device_ct_t *)dls_service_task_get_user_data(task);
+	priv_t = (prv_new_device_ct_t *)dleyna_service_task_get_user_data(task);
+	device = priv_t->dev;
 
 	id = dls_server_get_connector()->publish_subtree(priv_t->connection,
 						  device->path,
@@ -977,26 +976,26 @@ dls_device_t *dls_device_new(
 	context = dls_device_append_new_context(dev, ip_address, proxy);
 	s_proxy = context->service_proxy;
 
-	dls_service_task_add(queue_id, prv_get_search_capabilities,
-			     dev, s_proxy,
-			     prv_get_search_capabilities_cb, NULL, priv_t);
+	dleyna_service_task_add(queue_id, prv_get_search_capabilities,
+				s_proxy,
+				prv_get_search_capabilities_cb, NULL, priv_t);
 
-	dls_service_task_add(queue_id, prv_get_sort_capabilities,
-			     dev, s_proxy,
-			     prv_get_sort_capabilities_cb, NULL, priv_t);
+	dleyna_service_task_add(queue_id, prv_get_sort_capabilities,
+				s_proxy,
+				prv_get_sort_capabilities_cb, NULL, priv_t);
 
-	dls_service_task_add(queue_id, prv_get_sort_ext_capabilities,
-			     dev, s_proxy,
-			     prv_get_sort_ext_capabilities_cb, NULL, priv_t);
+	dleyna_service_task_add(queue_id, prv_get_sort_ext_capabilities,
+				s_proxy,
+				prv_get_sort_ext_capabilities_cb, NULL, priv_t);
 
-	dls_service_task_add(queue_id, prv_get_feature_list, dev, s_proxy,
-			     prv_get_feature_list_cb, NULL, priv_t);
+	dleyna_service_task_add(queue_id, prv_get_feature_list, s_proxy,
+				prv_get_feature_list_cb, NULL, priv_t);
 
-	dls_service_task_add(queue_id, prv_subscribe, dev, s_proxy,
-			     NULL, NULL, NULL);
+	dleyna_service_task_add(queue_id, prv_subscribe, s_proxy,
+				NULL, NULL, dev);
 
-	dls_service_task_add(queue_id, prv_declare, dev, s_proxy,
-			     NULL, g_free, priv_t);
+	dleyna_service_task_add(queue_id, prv_declare, s_proxy,
+				NULL, g_free, priv_t);
 
 	dleyna_task_queue_start(queue_id);
 
@@ -4099,20 +4098,21 @@ on_exit:
 }
 
 static GUPnPServiceProxyAction *prv_create_didls_item_browse(
-					dls_service_task_t *task,
+					dleyna_service_task_t *task,
 					GUPnPServiceProxy *proxy,
 					gboolean *failed)
 {
 	prv_new_playlist_ct_t *priv_t;
 
-	priv_t = (prv_new_playlist_ct_t *)dls_service_task_get_user_data(task);
+	priv_t = (prv_new_playlist_ct_t *)dleyna_service_task_get_user_data(
+									task);
 	*failed = FALSE;
 
 	DLEYNA_LOG_DEBUG("Browse for ID: %s", priv_t->id);
 
 	return gupnp_service_proxy_begin_action(
 			proxy, "Browse",
-			dls_service_task_begin_action_cb, task,
+			dleyna_service_task_begin_action_cb, task,
 			"ObjectID", G_TYPE_STRING, priv_t->id,
 			"BrowseFlag", G_TYPE_STRING, "BrowseMetadata",
 			"Filter", G_TYPE_STRING, "upnp:artist,upnp:album,res",
@@ -4162,12 +4162,11 @@ static gboolean prv_create_chain_didls_items(dls_task_t *task,
 		priv_t->cb_data = cb_data;
 		priv_t->id = id;
 
-		dls_service_task_add(a_playlist->queue_id,
-				     prv_create_didls_item_browse,
-				     task->target.device,
-				     proxy,
-				     prv_create_didls_item_browse_cb,
-				     prv_didls_free, priv_t);
+		dleyna_service_task_add(a_playlist->queue_id,
+					prv_create_didls_item_browse,
+					proxy,
+					prv_create_didls_item_browse_cb,
+					prv_didls_free, priv_t);
 	}
 
 	DLEYNA_LOG_DEBUG_NL();
@@ -4318,12 +4317,12 @@ void dls_device_playlist_upload(dls_client_t *client,
 
 	queue_id = dleyna_task_processor_add_queue(
 			dls_server_get_task_processor(),
-			dls_service_task_create_source(),
+			dleyna_service_task_create_source(),
 			DLS_SERVER_SINK,
 			DLEYNA_TASK_QUEUE_FLAG_AUTO_REMOVE,
-			dls_service_task_process_cb,
-			dls_service_task_cancel_cb,
-			dls_service_task_delete_cb);
+			dleyna_service_task_process_cb,
+			dleyna_service_task_cancel_cb,
+			dleyna_service_task_delete_cb);
 	dleyna_task_queue_set_finally(queue_id, prv_create_didls_chain_end);
 	dleyna_task_queue_set_user_data(queue_id, priv_t);
 
