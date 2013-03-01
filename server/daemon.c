@@ -27,6 +27,8 @@
 #include <libdleyna/core/main-loop.h>
 #include <lib/control-point-server.h>
 
+#define DLS_SERVER_SERVICE_NAME "dleyna-server-service"
+
 static guint g_sig_id;
 
 static gboolean prv_quit_handler(GIOChannel *source, GIOCondition condition,
@@ -88,7 +90,7 @@ int main(int argc, char *argv[])
 	if (!prv_init_signal_handler(mask))
 		goto out;
 
-	retval = dleyna_main_loop_start(argv[0],
+	retval = dleyna_main_loop_start(DLS_SERVER_SERVICE_NAME,
 					dleyna_control_point_get_server(),
 					NULL);
 
