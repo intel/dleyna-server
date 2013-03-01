@@ -220,7 +220,7 @@ AC_SUBST([with_log_type])
 AC_CONFIG_FILES([Makefile				\
 		 lib/Makefile				\
 		 lib/dleyna-server-1.0.pc		\
-		 lib/dleyna-server.conf			\
+		 lib/dleyna-server-service.conf		\
 		 server/com.intel.dleyna-server.service	\
 		 server/dleyna-server-service-1.0.pc	\
 		 server/Makefile			\
