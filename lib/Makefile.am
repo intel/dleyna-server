@@ -51,14 +51,14 @@ MAINTAINERCLEANFILES =	Makefile.in		\
 			build-aux/missing	\
 			build-aux/install-sh
 
-sysconf_DATA = dleyna-server.conf
+sysconf_DATA = dleyna-server-service.conf
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = dleyna-server-1.0.pc
 
 EXTRA_DIST = $(sysconf_DATA)
-CLEANFILES = $(pkgconfig_DATA) dleyna-server.conf
-DISTCLEANFILES = $(pkgconfig_DATA) dleyna-server.conf
+CLEANFILES = $(pkgconfig_DATA) dleyna-server-service.conf
+DISTCLEANFILES = $(pkgconfig_DATA) dleyna-server-service.conf
 
 maintainer-clean-local:
 	rm -rf build-aux
