@@ -1,0 +1,903 @@
+API
+---
+
+Dleyna-server-service is a middleware component.  It is designed to be
+launched by d-Bus activation when needed.  It automatically shuts down
+when the last of its clients quits or releases its connection.
+
+Dleyna-server-service currently connects to the d-Bus session bus,
+although this may change in the future.  It exposes four different
+types of objects:
+
+1. A manager object.  There is only ever a single instance of this
+object.  It can be used to retrieve a list of the DMSs on the local
+area network.  It is also used to perform certain server independent
+tasks.
+
+2. Server objects.  One separate object is exposed for each DMS
+available on the LAN.  These objects expose interfaces that allow
+clients to retrieve information about the servers and to browse and
+search their contents.
+
+3. Container objects.  Container objects represent separate folders
+within the DMS.  They allow clients to browse and search the contents
+of the folder to which they correspond.
+
+4. Item objects.  Represent individual pieces of media content
+published by a DMS.  These objects can be used to retrieve information
+about media objects, such as their name, their authors, and most
+importantly, their URLs.
+
+The remainder of this document will describe the four d-Bus objects
+listed above and the interfaces they support.
+
+
+The Manager Object:
+-------------------
+
+There is only ever a single instance of this object.  The manager
+object exposes a single d-Bus interface,
+com.intel.dLeynaServer.Manager.
+
+
+com.intel.dLeynaServer.Manager
+------------------------------
+
+Methods:
+----------
+
+The interface com.intel.dLeynaServer.Manager contains 5 methods.
+Descriptions of each of these methods along with their d-Bus
+signatures are given below.
+
+GetServers() -> ao
+
+GetServers takes no parameters and returns an array of d-Bus object
+paths.  Each of these paths reference a d-Bus object that represents a
+single DMS.
+
+GetVersion() -> s
+
+Returns the version number of dleyna-server-service
+
+Release()
+
+Indicates to dleyna-server-service that a client is no longer interested
+in its services.  Internally, dleyna-server-service maintains a reference
+count.  This reference count is increased when a new client connects.
+It is decreased when a client quits.  When the reference count reaches
+0, dleyna-server-service exits.  A call to Release also decreases the
+reference count.  Clients should call this method if they intend to
+keep running but they have no immediate plans to invoke any of
+dleyna-server-service's methods. This allows dleyna-server-service to quit,
+freeing up system resources.
+
+SetProtocolInfo(s ProtocolInfo) -> void
+
+Informs dleyna-server-service of the mime types and network protocols
+supported by the client.
+
+The explanation behind this function is a little complex.  DMSs often
+support a feature call transcoding.  This allows them to publish each
+media item they manage in a number of different formats.  This is
+useful as not all devices support the same set of media formats and
+codecs.  For example, a DMS might publish two separate URLS for a
+video file.  The first URL might point to the file in its original
+format, e.g., to an ogg vorbis file.  The second URL however, could
+point to a MP4 encoded version of the same file.  The second URL might
+be preferable if viewing the file on a mobile device.  In short,
+SetProtocolInfo allows clients to specify the formats that they would
+like to receive media content in.  This function should be called by
+all MediaPlayers.  Doing so, will ensure that dleyna-server-service only
+returns compatible URLs via the org.gnome.MediaItem2 interface.  For
+more information see the section on MediaServer2Spec below.
+
+The Protocol info field is a comma separated list of protocol info
+values.  Each protocol info value consists of 4 fields separated by
+colons.  Unfortunately, the format is too complex to describe in this
+document.  The reader is referred to the UPnP Connection Manager
+Service Template document (1) and the DLNA Guidelines (2) where it is
+described extensively.  However, an example protocol info value is
+presented below, to give the reader an idea of what such a string
+might look like.
+
+"http-get:*:audio/mp4:DLNA.ORG_PN=AMR_WBplus,
+http-get:*:image/jpeg:DLNA.ORG_PN=JPEG_MED"
+
+The protocol info value above indicates that the client supports the
+retrieval, via HTTP, and the playback of audio MP4 and JPEG files.
+
+PreferLocalAddresses(b Prefer) -> void
+
+Indicates whether  local addresses should be prioritized  or not. DMSs
+tend to make their services available on multiple interfaces. If a DMP
+and a DMS are running on the same device, the DMP will have the option
+of  communicating with  the  DMS over  the  loopback or  the LAN.   By
+default dleyna-server-service  will return loopback  addresses to clients
+running on  the same device.   This is not  very helpful for  DMCs who
+need  non-local  addresses  to  pass  to renderers  running  on  other
+devices.   DMCs should  therefore call  this function  with  the value
+FALSE before requesting any URLs from any servers.
+
+
+Signals:
+---------
+
+The com.intel.dLeynaServer.Manager interface also exposes two signals.
+
+FoundServer(o)
+
+Is generated whenever a new DMS is detected on the local area network.
+The signal contains the path of the newly discovered server.
+
+LostServer(o)
+
+Is generated whenever a DMS is shutdown.  The signal contains the path
+of the server which has just been shutdown.
+
+
+The Server Objects:
+------------------
+
+Dleyna-server-service exposes a separate d-Bus object for each DMS it
+detects on the LAN.  These objects serve two purposes.
+
+1. They allow the client to retrieve information about the DMS, such
+as its name, the URL of its icon, its manufacturer, etc.
+
+2. They represent the root container of the DMS allowing clients to
+search and browse the DMSs contents.
+
+Each server object exposes three separate interfaces:
+com.intel.dLeynaServer.MediaDevice, org.gnome.MediaObject2 and
+org.gnome.UPnP.MediaContainer2.
+
+
+com.intel.dLeynaServer.MediaDevice:
+---------------------------
+
+The com.intel.dLeynaServer.MediaDevice interface exposes information about the
+DMS via a number of d-Bus properties.  These properties are described
+below:
+
+|------------------------------------------------------------------------------|
+|     Name          |   Type    |m/o*|              Description                |
+|------------------------------------------------------------------------------|
+| DeviceType        |     s     | m  | The UPnP type of the device, e.g.,      |
+|                   |           |    | urn:schemas-upnp-org:device:\           |
+|                   |           |    | MediaServer:1                           |
+|------------------------------------------------------------------------------|
+| UDN               |     s     | m  | The Unique Device Name of the server.   |
+|------------------------------------------------------------------------------|
+| FriendlyName      |     s     | m  | The friendly name of the media server.  |
+-------------------------------------------------------------------------------|
+| IconURL           |     s     | o  | A URL pointing to an icon that          |
+|                   |           |    | graphically identifies the server       |
+|------------------------------------------------------------------------------|
+| Manufacturer      |     s     | m  | A string identifying the manufacturer   |
+|                   |           |    | of the server                           |
+|------------------------------------------------------------------------------|
+| ManufacturerUrl   |     s     | o  | A URL pointing to the manufacturer's    |
+|                   |           |    | web site.                               |
+|------------------------------------------------------------------------------|
+| ModelDescription  |     s     | o  | A description of the server.            |
+|------------------------------------------------------------------------------|
+| ModelName         |     s     | m  | The model name of the server.           |
+|------------------------------------------------------------------------------|
+| ModelNumber       |     s     | o  | The server's version number             |
+|------------------------------------------------------------------------------|
+| SerialNumber      |     s     | o  | The server's serial number              |
+|------------------------------------------------------------------------------|
+| PresentationURL   |     s     | o  | The presentation URL of the server,     |
+|                   |           |    | i.e., a link to it's HTML management    |
+|                   |           |    | interface.                              |
+|------------------------------------------------------------------------------|
+| DLNACaps          |   a{sv}   | o  | Represents the device capabilities as   |
+|                   |           |    | announced in the device description     |
+|                   |           |    | file via the dlna:X_DLNACAP element. (1)|
+|------------------------------------------------------------------------------|
+| SearchCaps        |     as    | m  | List of property names that can be used |
+|                   |           |    | in search queries.                      |
+|                   |           |    | Empty if not supported by the device.   |
+|------------------------------------------------------------------------------|
+| SortCaps          |     as    | m  | List of property names that can be used |
+|                   |           |    | to sort Search() or Browse() action     |
+|                   |           |    | results.                                |
+|                   |           |    | Empty if not supported by the device.   |
+|------------------------------------------------------------------------------|
+| SortExtCaps       |     as    | o  | List of sort modifiers that can be used |
+|                   |           |    | to sort Search() or Browse() results.   |
+|                   |           |    | Empty if not supported by the device.   |
+|------------------------------------------------------------------------------|
+| FeatureList       |  a(ssao)  | o  | Each element in the FeatureList array   |
+|                   |           |    | represents a feature supported by the   |
+|                   |           |    | DMS. Each feature contains three pieces |
+|                   |           |    | of information, a name, a version number|
+|                   |           |    | and an array of object paths that can   |
+|                   |           |    | clients can use to take advantage of the|
+|                   |           |    | feature. There are three standardized   |
+|                   |           |    | feature names, BOOKMARK, EPG and TUNER. |
+|------------------------------------------------------------------------------|
+| ServiceResetToken |     s     | o  |  A string containing the current        |
+|                   |           |    |  service reset token of the server.     |
+|------------------------------------------------------------------------------|
+| SystemUpdateID    |     u     | m  | An integer value that is incremenented  |
+|                   |           |    | every time changes are made to the DMS. |
+|------------------------------------------------------------------------------|
+
+(* where m/o indicates whether the property is optional or mandatory )
+(1) A value of -1 for the srs-rt-retention-period capability denotes an
+infinite retention period.
+
+All of the above properties are static with the sole exception
+of SystemUpdateID. A org.freedesktop.DBus.Properties.PropertiesChanged signal
+is emitted when this property changes.
+
+Methods:
+---------
+
+The com.intel.dLeynaServer.MediaDevice interface currently exposes seven methods:
+
+UploadToAnyContainer(s DisplayName, s FilePath) -> (u UploadId, o ObjectPath)
+
+UploadToAnyContainer allows a client to upload a local file to a DMS.
+The DMS chooses the best place to store the file based on the file's
+type.  DisplayName is the friendly name the DMS should associate with
+the file and FilePath is a full path to the file.  The successful
+completion of this method indicates that the upload has begun, but has
+not necessarily finished.  There are two return values.  The UploadId,
+which can be used to monitor the progress of the upload and to
+cancel it and ObjectPath, which contains the path of the newly created object.
+
+CreateContainerInAnyContainer(s DisplayName, s Type, as ChildTypes)
+                                                             -> o ObjectPath
+
+Creates a new container. The DMS chooses the best place to create
+this new container. DisplayName is the name of the new container,
+Type is the type and ChildTypes is an array of types that can be stored
+in the new folder, e.g., ['video','container'].
+A special value of ['*'] indicates that no restriction is placed
+on the types of objects that can be stored in the container.
+The path of the newly created object is returned.
+
+CreatePlayListInAnyContainer(s Title, s Creator, s Genre, s Desc,
+			ao PlaylistItems )	-> (u UploadId, o ObjectPath)
+
+Create a new Playlist. The DMS chooses the best place to create this new
+container. Title is the name of the Playlist, Creator is the name of the
+creator of the Playlist, Genre is the genre of the playlist, Desc is a short
+description of the playlist and PlaylistItems is an array of Item path to be
+added in the playlist. Creator, Genre and Desc are optional, you can pass
+empty strings for these parameters.
+The successful completion of this method indicates that the upload has begun,
+but has not necessarily finished.  There are two return values.  The UploadId,
+which can be used to monitor the progress of the upload and to
+cancel it and ObjectPath, which contains the path of the newly created object.
+
+GetUploadStatus(u UploadId) -> (s UploadStatus, t Length, t Total)
+
+GetUploadStatus returns the current status of an upload previously
+started by a call to Upload or UploadToAnyContainer.  Clients should
+pass in the UploadId they received as a return value from either
+of these two functions.  This method returns three pieces of information.
+
+i.   UploadStatus, indicating the status of the upload.  Four separate
+     values are possible.  "IN_PROGRESS", "CANCELLED", "ERROR", "COMPLETED"
+ii.  Length, indicating the number of bytes that have been transferred so far.
+iii. Total, indicating the total size of the upload.
+
+Clients can call GetUploadStatus to retrieve the status of an upload up to
+30 seconds after the specified upload has finished.
+
+The only exception to this rule is if the DMS to which the file is being
+uploaded shuts down or disappears from the UPnP network.  If this happens
+all active uploads to this DMS will be cancelled and the Device object
+representing this DMS will disappear.  As the Device object is no longer
+available, clients cannot call GetUploadStatus to determine the status
+of their uploads.  Clients that initiate uploads should listen for
+the LostServer signal.  They should assume that any uploads to a DMS that
+were in progress when this signal is received for that DMS, have been
+cancelled.
+
+GetUploadIDs() -> (au UploadIDs)
+
+GetUploadIDs returns an array containing the IDs of all the outstanding upload
+tasks.  An empty array will be returned if no uploads are in progress on the
+current device.  As with GetUploadStatus, the IDs of upload tasks will be
+returned by GetUploadIDs for 30 seconds after the uploads have finished.
+
+CancelUpload(u UploadId) -> void
+
+Cancels the upload identified by UploadId.  This function has no effect if the
+upload has already completed, i.e., its status is set to COMPLETED.
+
+Cancel() -> void
+
+Cancels all requests a client has outstanding on that server.
+
+
+Signals:
+---------
+
+The com.intel.dLeynaServer.MediaDevice interface also exposes three signals.
+
+LastChange (a(sv) StateEvent)
+
+The LastChange signal is generated by servers to provide precise information
+of changes that have taken place to their content.  LastChange is useful for
+synchronisation controllers.  It allows them to dynamically update their local
+cache of the server's content.  This signal contains an array of zero or more
+elements, each of which represents a change to a specific object.
+The value of each dictionary entry depends on the key value.
+
+|------------------------------------------------------------------------------|
+| Key values | R/O | Description                                               |
+|------------------------------------------------------------------------------|
+|   "ADD"    |  O  | Indicates that an object has been added.                  |
+|------------------------------------------------------------------------------|
+|   "MOD"    |  O  | Indicates that an object has been modified.               |
+|------------------------------------------------------------------------------|
+|   "DEL"    |  O  | Indicates that an object has been deleted                 |
+|------------------------------------------------------------------------------|
+|   "DONE"   |  O  | Indicates that an update to a sub-tree has completed.     |
+|------------------------------------------------------------------------------|
+
+
+|------------------------------------------------------------------------------|
+|  Dictionary value for key "ADD": Format (oubos)                              |
+|------------------------------------------------------------------------------|
+| o | M | Contains the Object Path property of the object that was added.      |
+|------------------------------------------------------------------------------|
+| u | M | Contains the value of the SystemUpdateID  when the object was added. |
+|------------------------------------------------------------------------------|
+| b | M | True if the object was added as part of a subtree update             |
+|------------------------------------------------------------------------------|
+| o | M | Contains the Object Path property of the parent container to which   |
+|   |   | this object was added.                                               |
+|------------------------------------------------------------------------------|
+| s | M | Contains the value of the Type (converted upnp:class property)       |
+|   |   | of the object that was added.                                        |
+|------------------------------------------------------------------------------|
+
+|------------------------------------------------------------------------------|
+|  Dictionary value for key "MOD": Format (oub)                                |
+|------------------------------------------------------------------------------|
+| o | M | Contains the Object Path property of the object that was modified.   |
+|------------------------------------------------------------------------------|
+| u | M | Contains the value of the SystemUpdateID  when the object was added. |
+|------------------------------------------------------------------------------|
+| b | M | True if the object was modified as part of a subtree update          |
+|------------------------------------------------------------------------------|
+
+|------------------------------------------------------------------------------|
+|  Dictionary value for key "DEL": Format (oub)                                |
+|------------------------------------------------------------------------------|
+| o | M | Contains the Object Path property of the object that was deleted.    |
+|------------------------------------------------------------------------------|
+| u | M | Contains the value of the SystemUpdateID  when the object was added. |
+|------------------------------------------------------------------------------|
+| b | M | True if the object was deleted as part of a subtree update           |
+|------------------------------------------------------------------------------|
+
+|------------------------------------------------------------------------------|
+|  Dictionary value for key "DONE": Format (ou)                                |
+|------------------------------------------------------------------------------|
+| o | M | Contains the Object Path of the updated sub-tree                     |
+|------------------------------------------------------------------------------|
+| u | M | Contains the value of the SystemUpdateID  when the object was added. |
+|------------------------------------------------------------------------------|
+
+
+ContainerUpdateIDs(a(ou) ContainerPathsIDs)
+
+Is generated when the contents of one or more folders maintained by the
+server have changed. This signal contains an array of paths/ContainerUpdateID
+of the server containers that have changed.
+
+UploadUpdate(u UploadId, s UploadStatus, Length t, Total t)
+
+Is generated when an upload completes, fails or is cancelled.  The first
+parameter is the ID of the upload.   The second contains one of three values,
+"CANCELLED", "COMPLETED", "ERROR", indicating whether the upload was cancelled,
+completed successfully or failed, respectively.  The third parameter indicates
+the total amount of bytes that were uploaded and the fourth, the size of the
+file being uploaded.
+
+Here is some example code in python that enumerates all the media
+servers present on the network and prints their names and the paths of
+the d-Bus objects that represent them, to the screen.
+
+import dbus
+
+bus = dbus.SessionBus()
+manager = dbus.Interface(bus.get_object('com.intel.dleyna-server',
+                                        '/com/intel/dLeynaServer'),
+                         'com.intel.dLeynaServer.Manager')
+for path in manager.GetServers():
+    server = dbus.Interface(bus.get_object(
+            'com.intel.dleyna-server', path),
+                            'org.freedesktop.DBus.Properties')
+    folderName = server.Get("", "DisplayName")
+    print '{0:<30}{1:<30}'.format(folderName , path)
+
+
+Running this code on a LAN with 3 DMSs produces the following output:
+
+My Media                      /com/intel/dLeynaServer/server/3
+Root                          /com/intel/dLeynaServer/server/1
+Test Streams                  /com/intel/dLeynaServer/server/4
+
+
+org.gnome.MediaObject2
+----------------------
+
+The org.gnome.MediaObject2 interface exposes some basic properties of
+the server's root directory.  This interface is described
+MediaServer2Spec specification (3).  Dleyna-server-service enhances this
+interface by adding new properties and methods and by defining
+additional values for the Type property.
+
+Additional Values for the Type Property:
+----------------------------------------
+
+The Type property tells what kind of object we are dealing with and
+which can take the below values in addition to those described
+in MediaServer2Spec specification (3).
+in case of Items:
+ 'video.musicclip', 'video.broadcast'
+ 'audio.broadcast', 'audio.book',
+ 'playlist'
+and in case of Containers:
+ 'album', 'album.music', 'album.photo'
+ 'person', 'person.musicartist'
+ 'genre', 'genre.music', 'genre.movie'
+
+Additional Properties:
+----------------------
+
+|---------------------------------------------------------------------------|
+|     Name        | Type  | m/o* |              Description                 |
+|---------------------------------------------------------------------------|
+| DLNAManaged     | a{sb} |  o   |  A dictionary of boolean values          |
+|                 |       |      |  indicating the values of the various    |
+|                 |       |      |  DLNA managed attributes. There are 5    |
+|                 |       |      |  keys: Upload, CreateContainer, Delete,  |
+|                 |       |      |  UploadDelete, ChangeMeta                |
+|---------------------------------------------------------------------------|
+| Restricted      |  b    |  m   |  Indicates whether the object is         |
+|                 |       |      |  modifiable.                             |
+|---------------------------------------------------------------------------|
+| Creator         |  s    |  o   |  Indicates an entity that owns the       |
+|                 |       |      |  content or is primarily responsible for |
+|                 |       |      |  creating the content.                   |
+|---------------------------------------------------------------------------|
+| ObjectUpdateID  |  u    |  o   |  Represents a last-modified timestamp    |
+|                 |       |      |  for the object relative to the          |
+|                 |       |      |  SystemUpdateID state variable.          |
+|---------------------------------------------------------------------------|
+
+
+Additional Methods:
+------------------
+
+Delete() -> void
+
+Delete will simply call the UPnP DestroyObject method on the relevant
+server side object. Note that calling Delete on the root object of a
+server will delete all the contents on the server but not the
+device object itself.
+
+Update(a{sv} ToAddUpdate, as ToDelete) -> void
+
+Updates the meta data of an existing DMS object.  It is based on the
+MediaServerAv UpdateObject command.  ToAddUpdate is a dictionary of
+property name value pairs that are to be updated, or added if they do
+not already exist.  ToDelete is an array of properties to be deleted.
+The same property cannot appear in both ToAddUpdate and ToDelete.
+Only the following properties can be updated: 'Date', 'DisplayName',
+'Artists', 'Album', 'Type', 'TrackNumber'.
+
+
+org.gnome.MediaContainer2
+----------------------
+
+The org.gnome.MediaContainer2 interface exposes some additional
+properties of the root directory.  It also provides methods that can
+be used by clients to perform a recursive search on the root directory
+and to retrieve a list of its children.  The org.gnome.MediaContainer2
+interface is documented in the MediaServer2Spec (3).  However,
+dleyna-server-service's implementation of org.gnome.MediaContainer2
+differs slightly from the specification.  These differences can be
+grouped into two categories: unsupported properties and new methods.
+
+Unsupported Properties:
+-----------------------
+
+The properties org.gnome.UPnP.MediaContainer2.ChildCount and
+org.gnome.UPnP.MediaContainer2.ContainerCount are not implemented as
+there is no way to efficiently implement these properties in
+dleyna-server-service.
+
+In addition, org.gnome.UPnP.MediaContainer2.Icon is not supported
+either as its implementation is really complicated, requiring the
+creation of virtual objects.  Furthermore, it cannot be properly
+implemented in dleyna-server-service as the UPnP servers do not provide
+us with enough information to populate the mandatory properties for
+these virtual objects.  Nevertheless, clients can retrieve a URL that
+points to a server's icon via the com.intel.dLeynaServer.MediaDevice property
+IconURL.
+
+Please note that none of these unsupported properties are mandatory,
+so their absence does not affect dleyna-server-service's compatibility
+with MediaServer2Spec.
+
+Additional properties unsupported by org.gnome.MediaContainer2
+--------------------------------------------------------------
+
+|---------------------------------------------------------------------------|
+|     Name               | Type | m/o* |              Description           |
+|---------------------------------------------------------------------------|
+| CreateClasses          |a(sb) |  o   |  Array of UPnP createClasses       |
+|                        |      |      |  property. A createClasses         |
+|                        |      |      |  property is a tuple (sb)          |
+|                        |      |      |  representing the class and        |
+|                        |      |      |  whether derived values are        |
+|                        |      |      |  allowed for this class.           |
+|---------------------------------------------------------------------------|
+| ContainerUpdateID      |  u   |  o   |  Contains the value of the         |
+|                        |      |      |  SystemUpdateID state variable     |
+|                        |      |      |  generated by the most recent      |
+|                        |      |      |  container modification for that   |
+|                        |      |      |  container                         |
+|---------------------------------------------------------------------------|
+| TotalDeletedChildCount |  u   |  o   |  Contains the total number of      |
+|                        |      |      |  child objects that have been      |
+|                        |      |      |  deleted from a container object   |
+|                        |      |      |  since the last initialization     |
+|---------------------------------------------------------------------------|
+
+New Methods:
+------------
+
+Seven new methods have been added.  These methods are:
+
+ListChildrenEx(u Offset, u Max, as Filter, s SortBy) -> aa{sv}
+
+ListItemsEx(u Offset, u Max, as Filter, s SortBy) -> aa{sv}
+
+ListContainersEx(u Offset, u Max, as Filter, s SortBy) -> aa{sv}
+
+SearchObjectsEx(s Query, u Offset, u Max, as Filter, s SortBy) -> aa{sv}
+
+Upload(s DisplayName, s FilePath) -> (u UploadId, o ObjectPath)
+
+CreateContainer(s DisplayName, s Type, as ChildTypes) -> o ObjectPath
+
+CreatePlayList(s Title, s Creator, s Genre, s Desc, ao PlaylistItems )
+	-> (u UploadId, o ObjectPath)
+
+The first four methods are identical in function and behaviour to
+existing the MediaServer2Spec functions ListChildren, ListItems,
+ListContainers, and SearchObjects, with the exception that they take
+one extra parameter, and in the case of SearchObjectsEx, return an
+extra result.
+
+This extra parameter allows clients to specify a sort
+order for the returned items.  It is a string that specifies a comma
+separated list of PropertyNames, identifying the order in which
+returned items should be sorted.  Each property name can be preceded
+with a '-' or a '+' to indicate descending or ascending order
+respectively.  An example, is "+Date,-DisplayName", which will sort
+the return items first by date in ascending order and then by name in
+descending order.  White space is not permitted in this string.
+
+The return signature of SearchObjectsEx is (aa{sv}u).  Note the extra
+integer return value after the dictionary of objects.  This integer
+contains the total number of items matching the specified search as
+opposed to the total number of objects contained in the returned dictionary
+of objects.  These two values may differ if the client has used the
+Offset and Max parameters to request a portion of the total
+results returned, because for example its screen is only capable of
+displaying 20 objects at any one time.  Knowing the total number of
+objects that match a search is useful for applications.
+It allows them to inform the user as to the total number of matches
+and to correctly compute the scrollbars of the list displaying
+the found items.
+
+A small Python function is given below to demonstrate how these new
+methods may be used.  This function accepts one parameter, a path to a
+d-Bus container object, and it prints out the names of all the
+children of that object in descending order.
+
+def list_children(server_path):
+    bus = dbus.SessionBus()
+    container = dbus.Interface(bus.get_object(
+                'com.intel.dleyna-server', path),
+                                        'org.gnome.UPnP.MediaContainer2')
+    objects = container.ListChildrenEx(0, 0, ['DisplayName'], "-DisplayName")
+    for item in objects:
+        for key, value in item.iteritems():
+            print '{0:<30}{1:<30}'.format(key, value)
+
+The output of this function might look something like this:
+
+DisplayName                   Videos
+DisplayName                   Pictures
+DisplayName                   Music
+DisplayName                   Files & Folders
+
+when the server_path parameter contains the path of a server object.
+
+The fifth new method, Upload, allows clients to upload a local file to
+the org.gnome.UPnP.MediaContainer2 object upon which it was executed.
+It is identical in function and behavior to
+com.intel.dLeynaServer.MediaDevice.UploadToAnyContainer with the sole
+exception that Upload allows the client to specify the server-side
+container into which the file is to be uploaded whereas
+UploadToAnyContainer leaves it up to the server to determine the most
+suitable location for the file.
+
+The CreateContainer method creates a new child container.
+DisplayName is the name of the new container,
+Type is the type and ChildTypes is an array of types that can be stored
+in the new folder, e.g., ['video','container'].
+A special value of ['*'] indicates that no restriction is placed
+on the types of objects that can be stored in the container.
+The path of the newly created object is returned.
+
+The CreatePlayList method allows the creation of a playlist to
+the org.gnome.UPnP.MediaContainer2 object upon which it was executed.
+It is identical in function and behavior to
+com.intel.dLeynaServer.MediaDevice CreatePlaylistInAnyContainer with the sole
+exception that CreatePlayList allows the client to specify the server-side
+container into which the Playlist is to be uploaded whereas
+CreatePlaylistInAnyContainer leaves it up to the server to determine the most
+suitable location for the file.
+
+Recommended Usage:
+------------------
+
+All of the list and search functions supported by dleyna-server-service's
+implementation of org.gnome.UPnP.MediaContainer2 contain three
+parameters that should be used to improve the efficiency and
+responsiveness of applications built using dleyna-server-service.
+
+The first two parameters of interest are offset and max.  These
+parameters allow the client application to retrieve the contents of a
+directory, or the results of a search, in chunks.  This is vital if
+the client's user interface is limited to displaying a fixed number,
+let's say 30, items on the screen at any one time.  Suppose the client
+performs a search which has 2000 results.  If it passes the Search or
+SearchEx method an offset and a max of 0, all of the results will be
+returned to the client at once, even though it is only capable of
+display 30 items at a time.  This will increase the memory
+requirements of the client and reduce its responsiveness as it must
+wait until all 2000 items have been received before it can update the
+UI.  Also, if the user locates the item he is looking for in the first
+page of items, a lot of network and IPC traffic will have been
+generated in vain.  For these reasons, it is better to retrieve items
+in chunks, as needed.
+
+The amount of network and IPC traffic can be reduced further by
+prudent use of the filter parameter.  This parameter is an array of
+strings, each element of which corresponds to a property name.  If the
+client invokes a function specifying a filter parameter that is set to
+a single element array containing the string '*', dleyna-server-service
+will include all the properties of all the requested objects in the
+result.  However, often the client only needs to know a subset of
+these properties.  A UI that displays results of a search might only
+want to display the names and perhaps the dates of the items that
+match the search.  Once the user has identified the item he is looking
+for, the remaining properties for that item, and only that item, can
+be retrieved.  As an example, consider the list_children function
+above.  It requests that only the DisplayName of each of the
+containers' children be returned.  Replacing ['DisplayName'] with
+['*'] will generate a lot more output.
+
+
+Container Objects:
+------------------
+
+Container objects represent folders in a DMS.  In order to manipulate
+a container object one first needs to discover its path.  This can be
+done by calling one of the List or Search methods implemented by the
+server object or another container object.  Note that a server object
+is also a container object so a container object can be constructed by
+using a server's d-Bus object path.
+
+Container objects support two interfaces: org.gnome.MediaObject2 and
+org.gnome.MediaContainer2.  Both of these interfaces have been
+described in detail above and will not be discussed further in this
+section.
+
+An example of how container objects can be used is given in the
+following function.
+
+def tree(server_path, level=0):
+    bus = dbus.SessionBus()
+    container = dbus.Interface(bus.get_object(
+                'com.intel.dleyna-server', server_path),
+                                        'org.gnome.UPnP.MediaContainer2')
+    objects = container.ListChildren(0, 0, ["DisplayName", "Path", "Type"])
+    for props in objects:
+        print " " * (level * 4) + ( props["DisplayName"] +
+                                    " : (" + props["Path"]+ ")")
+        if props["Type"] == "container":
+            tree(props["Path"], level + 1)
+
+When given the path of a container, and this could be a server object
+which acts as a root container, it recursively prints the contents of
+that container in depth first order.  For example, to dump the entire
+contents of the My Media server introduced above, one would simply
+need to invoke tree("/com/intel/dLeynaServer/server/3").
+
+
+Item Objects:
+-------------
+
+Item objects represent a unique piece of media that can be downloaded
+or streamed.  Each item object implements the
+org.gnome.UPnP.MediaObject2 interface, which is described above, and
+the org.gnome.UPnP.MediaItem2 interface that is documented in the
+MediaServer2Spec (3).  Although the org.gnome.UPnP.MediaItem2 is
+documented elsewhere, there are some peculiarities of its
+implementation in dleyna-server-service that merit further explanation.
+These are described in the sections below.
+
+
+Transcoding and org.gnome.UPnP.MediaItem2
+-----------------------------------------
+
+As mentioned above, DMSs often provide different representations of
+the same media file.  Separate sets of meta data, such as a mime type,
+a URL, a size, a ColorDepth, etc., are associated with each
+representation.  Unfortunately, it is difficult to represent this in
+org.gnome.UPnP.MediaItem2.  Although, org.gnome.UPnP.MediaItem2,
+allows multiple URLs to be specified, it only permits a single set of
+meta data to be associated with each item.  For example, the MIMEType
+property is a single string and not an array.  If multiple URLs were
+associated with the same item, one would not know to which URL the
+MIMEType property pertained.  For this reason, dleyna-server-service only
+ever returns one element in the URLs property.  By default, the value
+of this URL and all of the meta data properties that can change with a
+representation (MIMEType, DLNAProfile, Size, Duration, Bitrate,
+SampleRate, BitsPerSample, Width, Height, ColorDepth) refer to the
+first representation returned by the DMS for this item.  However, the
+client can change this behaviour by calling
+com.intel.dLeynaServer.Manager.SetProtocolInfo.  If this is done,
+these properties correspond to the first representation returned by
+the server that is compatible with the specified protocol info.  If no
+representations are compatible, these properties will not be present
+in the item.
+
+
+Resources
+----------
+
+Dleyna-server-service offers a second solution to the above problem that
+may be useful in certain programming environments.  It implements a
+non standard property called "Resources" which is an array of
+dictionaries.  Each dictionary represents a separate representation of
+the item and contains all the properties, including the MIMEType and
+the URL that pertain to that representation.  This can be convenient
+if you wish to display the media item in a web browser.  You can
+simply create a video or an audio tag with one source for each element
+in the resources array and then let the browser work out which one
+suits it best.  The specification for the Resources property is given
+in the table below:
+
+|---------------------------------------------------------------------------|
+|     Name        | Type | m/o* |              Description                  |
+|---------------------------------------------------------------------------|
+| Resources       |aa{sv}|  m   | Returns the set of resources associated   |
+|                 |      |      |  with an item                             |
+|---------------------------------------------------------------------------|
+
+The names of the properties included in this array are identical to
+the names of the org.gnome.UPnP.MediaItem2 properties to which they
+correspond, e.g., MIMEType, Size.
+However, one additional property is included.
+
+Additional property
+-------------------
+
+|---------------------------------------------------------------------------|
+|     Name        | Type | m/o* |              Description                  |
+|---------------------------------------------------------------------------|
+| UpdateCount     |  u   |  o   |  Contains the number of times the         |
+|                 |      |      |  implementation detects that a change was |
+|                 |      |      |  made to the resource.                    |
+|---------------------------------------------------------------------------|
+
+Please note that if you want this property to be included in the
+results of a call to one of the List or the Search functions, and you
+are explicitly filtering properties, you must include "Resource" in
+the filter array.  The filter parameter also applies to the contents
+of the returned resources.  So if you specify a filter of ["MIMEType",
+"URL"] the dictionaries in the resources array will contain only these
+properties.
+
+
+GetCompatibleResource
+------------------------
+
+A third option is provided to make the lives of DMC authors easier.
+In a DMC, the best resource is defined not by the local device but by
+the capabilities of the renderer chosen by the user to play the given
+item.  Once the user selects a file to play and a renderer upon which
+to play it, the DMC needs to retrieve the renderer's Sink
+ProtocolInfo.  It can then pass this data directly to a new function
+that dleyna-server-service adds to the org.gnome.UPnP.MediaItem2
+interface, called GetCompatibleResource.  GetCompatibleResource
+returns a dictionary of properties that corresponds to the item
+representation that best matches a specified protocol info.  The
+signature of GetCompatibleResources is given below:
+
+GetCompatibleResources(s protocol_info, as filter) -> a{sv}
+
+The first argument is a comma separated list of protocol info values,
+as described above.  The second argument is an array of properties to
+be included in the returned dictionary.  The format and the behaviour
+of this array is identical to the filter argument passed to the Search
+and List functions.
+
+Additional Properties
+---------------------
+
+Dleyna-server-service defines some additional properties for
+org.gnome.UPnP.MediaItem2. These properties are described in the table
+below:
+
+|---------------------------------------------------------------------------|
+|     Name        | Type | m/o* |              Description                  |
+|---------------------------------------------------------------------------|
+| AlbumArtURL     |  s   |  o   | Contains the URL of the album art         |
+|                 |      |      |  associated with an item                  |
+|---------------------------------------------------------------------------|
+| RefPath         |  o   |  o   | The presence of this property indicates   |
+|                 |      |      |  that the item is a reference item that   |
+|                 |      |      |  references another item located elsewhere|
+|                 |      |      |  in the DMS's directory structure. The    |
+|                 |      |      |  value of this property is the path of    |
+|                 |      |      |  the referenced item.                     |
+|---------------------------------------------------------------------------|
+| Artists         |  o   |  m   | An array of all the artists who           |
+|                 |      |      |  contributed towards the creation of the  |
+|                 |      |      |  item. The array will be empty if no      |
+|                 |      |      |  artists are associated with the item.    |
+|---------------------------------------------------------------------------|
+
+
+
+Dleyna-server-service does not implement the
+org.gnome.UPnP.MediaItem2.AlbumArt property for the same reasons that
+it does not implement the org.gnome.UPnP.MediaContainer2.Icon
+property. However, it does provide an alternative method of retrieving
+the album art associated with media content. It does this through a
+new property called AlbumArtURL described in the table above that
+exposes the URL of the album art directly.
+
+
+Unimplemented Properties
+-----------------------
+
+Dleyna-server-service does not support the following MediaServer2Spec
+properties:
+
+PixelWidth
+PixelHeight
+Thumbnail
+AlbumArt
+
+However, as these properties are optional, dleyna-server-service's
+failure to support them does not affect its compatibility with
+MediaServer2Spec.
+
+
+References:
+-----------
+
+1) ConnectionManager:2 Service Template (http://www.upnp.org/)
+2) DLNA Guidelines December 2011, Part 1 Architectures and Protocols
+(http://www.dlna.org/)
+3) MediaServer2Spec (http://live.gnome.org/Rygel/MediaServer2Spec)
