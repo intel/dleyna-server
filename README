@@ -69,7 +69,8 @@ optimizations. Disable = -O0, enable = -O2.
 --enable-never-quit
 
 This option is disabled by default.  To enable use --enable-never-quit.
-When enabled, media-service-upnp doesn't quit when the last client disconnects.
+When enabled, dleyna-server-service doesn't quit when the last
+client disconnects.
 
 --with-log-type
 
