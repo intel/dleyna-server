@@ -79,7 +79,7 @@ See logging.txt for more information about logging.
 
 See logging.txt for more information about logging.
 
---with_connector-name
+--with-connector-name
 
 Set the IPC mechanism to be used.
 
