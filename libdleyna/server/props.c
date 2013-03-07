@@ -77,7 +77,7 @@ static const gchar gUPnPPhoto[] = "object.item.imageItem.photo";
 
 /* Item types defined for org.gnome.MediaObject2 */
 static const gchar gMediaSpec2Audio[] = "audio";
-static const gchar gMediaSpec2AudioMusic[] = "audio.music";
+static const gchar gMediaSpec2Music[] = "music";
 static const gchar gMediaSpec2Container[] = "container";
 static const gchar gMediaSpec2Image[] = "image";
 static const gchar gMediaSpec2ImagePhoto[] = "image.photo";
@@ -90,6 +90,8 @@ static const gchar gMediaSpec2ExtAlbumPhoto[] = "album.photo";
 static const gchar gMediaSpec2ExtAlbumMusic[] = "album.music";
 static const gchar gMediaSpec2ExtAudioBroadcast[] = "audio.broadcast";
 static const gchar gMediaSpec2ExtAudioBook[] = "audio.book";
+/* "audio.music" became just "music" in org.gnome.MediaObject2 */
+static const gchar gMediaSpec2ExtAudioMusic[] = "audio.music";
 static const gchar gMediaSpec2ExtGenre[] = "genre";
 static const gchar gMediaSpec2ExtGenreMovie[] = "genre.movie";
 static const gchar gMediaSpec2ExtGenreMusic[] = "genre.music";
@@ -1059,7 +1061,8 @@ const gchar *dls_props_media_spec_to_upnp_class(const gchar *m2spec_class)
 		retval = gUPnPGenre;
 	else if (!strcmp(m2spec_class, gMediaSpec2Container))
 		retval = gUPnPContainer;
-	else if (!strcmp(m2spec_class, gMediaSpec2AudioMusic))
+	else if (!strcmp(m2spec_class, gMediaSpec2Music) ||
+			 !strcmp(m2spec_class, gMediaSpec2ExtAudioMusic))
 		retval = gUPnPMusicTrack;
 	else if (!strcmp(m2spec_class, gMediaSpec2ExtAudioBroadcast))
 		retval = gUPnPAudioBroadcast;
@@ -1121,7 +1124,7 @@ const gchar *dls_props_upnp_class_to_media_spec(const gchar *upnp_class)
 	} else if (!strncmp(upnp_class, gUPnPAudioItem, gUPnPAudioItemLen)) {
 		ptr = upnp_class + gUPnPAudioItemLen;
 		if (!strcmp(ptr, ".musicTrack"))
-			retval = gMediaSpec2AudioMusic;
+			retval = gMediaSpec2Music;
 		else if (!strcmp(ptr, ".audioBroadcast"))
 			retval = gMediaSpec2ExtAudioBroadcast;
 		else if (!strcmp(ptr, ".audioBook"))
