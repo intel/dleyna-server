@@ -75,27 +75,30 @@ static const gchar gUPnPVideoBroadcast[] =
 	"object.item.videoItem.videoBroadcast";
 static const gchar gUPnPPhoto[] = "object.item.imageItem.photo";
 
-static const gchar gMediaSpec2Container[] = "container";
-static const gchar gMediaSpec2Album[] = "album";
-static const gchar gMediaSpec2AlbumPhoto[] = "album.photo";
-static const gchar gMediaSpec2AlbumMusic[] = "album.music";
-static const gchar gMediaSpec2Person[] = "person";
-static const gchar gMediaSpec2PersonMusicArtist[] = "person.musicartist";
-static const gchar gMediaSpec2Genre[] = "genre";
-static const gchar gMediaSpec2GenreMovie[] = "genre.movie";
-static const gchar gMediaSpec2GenreMusic[] = "genre.music";
-static const gchar gMediaSpec2AudioMusic[] = "audio.music";
-static const gchar gMediaSpec2AudioBroadcast[] = "audio.broadcast";
-static const gchar gMediaSpec2AudioBook[] = "audio.book";
+/* Item types defined for org.gnome.MediaObject2 */
 static const gchar gMediaSpec2Audio[] = "audio";
-static const gchar gMediaSpec2VideoMovie[] = "video.movie";
-static const gchar gMediaSpec2VideoMusicClip[] = "video.musicclip";
-static const gchar gMediaSpec2VideoBroadcast[] = "video.broadcast";
-static const gchar gMediaSpec2Video[] = "video";
-static const gchar gMediaSpec2ImagePhoto[] = "image.photo";
+static const gchar gMediaSpec2AudioMusic[] = "audio.music";
+static const gchar gMediaSpec2Container[] = "container";
 static const gchar gMediaSpec2Image[] = "image";
-static const gchar gMediaSpec2Playlist[] = "playlist";
-static const gchar gMediaSpec2Item[] = "item";
+static const gchar gMediaSpec2ImagePhoto[] = "image.photo";
+static const gchar gMediaSpec2Video[] = "video";
+static const gchar gMediaSpec2VideoMovie[] = "video.movie";
+
+/* Extended types */
+static const gchar gMediaSpec2ExtAlbum[] = "album";
+static const gchar gMediaSpec2ExtAlbumPhoto[] = "album.photo";
+static const gchar gMediaSpec2ExtAlbumMusic[] = "album.music";
+static const gchar gMediaSpec2ExtAudioBroadcast[] = "audio.broadcast";
+static const gchar gMediaSpec2ExtAudioBook[] = "audio.book";
+static const gchar gMediaSpec2ExtGenre[] = "genre";
+static const gchar gMediaSpec2ExtGenreMovie[] = "genre.movie";
+static const gchar gMediaSpec2ExtGenreMusic[] = "genre.music";
+static const gchar gMediaSpec2ExtItem[] = "item";
+static const gchar gMediaSpec2ExtPerson[] = "person";
+static const gchar gMediaSpec2ExtPersonMusicArtist[] = "person.musicartist";
+static const gchar gMediaSpec2ExtPlaylist[] = "playlist";
+static const gchar gMediaSpec2ExtVideoMusicClip[] = "video.musicclip";
+static const gchar gMediaSpec2ExtVideoBroadcast[] = "video.broadcast";
 
 static dls_prop_map_t *prv_prop_map_new(const gchar *prop_name,
 					    dls_upnp_prop_mask type,
@@ -1038,37 +1041,37 @@ const gchar *dls_props_media_spec_to_upnp_class(const gchar *m2spec_class)
 {
 	const gchar *retval = NULL;
 
-	if (!strcmp(m2spec_class, gMediaSpec2AlbumPhoto))
+	if (!strcmp(m2spec_class, gMediaSpec2ExtAlbumPhoto))
 		retval = gUPnPPhotoAlbum;
-	else if (!strcmp(m2spec_class, gMediaSpec2AlbumMusic))
+	else if (!strcmp(m2spec_class, gMediaSpec2ExtAlbumMusic))
 		retval = gUPnPMusicAlbum;
-	else if (!strcmp(m2spec_class, gMediaSpec2Album))
+	else if (!strcmp(m2spec_class, gMediaSpec2ExtAlbum))
 		retval = gUPnPAlbum;
-	else if (!strcmp(m2spec_class, gMediaSpec2PersonMusicArtist))
+	else if (!strcmp(m2spec_class, gMediaSpec2ExtPersonMusicArtist))
 		retval = gUPnPMusicArtist;
-	else if (!strcmp(m2spec_class, gMediaSpec2Person))
+	else if (!strcmp(m2spec_class, gMediaSpec2ExtPerson))
 		retval = gUPnPPerson;
-	else if (!strcmp(m2spec_class, gMediaSpec2GenreMovie))
+	else if (!strcmp(m2spec_class, gMediaSpec2ExtGenreMovie))
 		retval = gUPnPMovieGenre;
-	else if (!strcmp(m2spec_class, gMediaSpec2GenreMusic))
+	else if (!strcmp(m2spec_class, gMediaSpec2ExtGenreMusic))
 		retval = gUPnPMusicGenre;
-	else if (!strcmp(m2spec_class, gMediaSpec2Genre))
+	else if (!strcmp(m2spec_class, gMediaSpec2ExtGenre))
 		retval = gUPnPGenre;
 	else if (!strcmp(m2spec_class, gMediaSpec2Container))
 		retval = gUPnPContainer;
 	else if (!strcmp(m2spec_class, gMediaSpec2AudioMusic))
 		retval = gUPnPMusicTrack;
-	else if (!strcmp(m2spec_class, gMediaSpec2AudioBroadcast))
+	else if (!strcmp(m2spec_class, gMediaSpec2ExtAudioBroadcast))
 		retval = gUPnPAudioBroadcast;
-	else if (!strcmp(m2spec_class, gMediaSpec2AudioBook))
+	else if (!strcmp(m2spec_class, gMediaSpec2ExtAudioBook))
 		retval = gUPnPAudioBook;
 	else if (!strcmp(m2spec_class, gMediaSpec2Audio))
 		retval = gUPnPAudioItem;
 	else if (!strcmp(m2spec_class, gMediaSpec2VideoMovie))
 		retval = gUPnPMovie;
-	else if (!strcmp(m2spec_class, gMediaSpec2VideoMusicClip))
+	else if (!strcmp(m2spec_class, gMediaSpec2ExtVideoMusicClip))
 		retval = gUPnPMusicVideoClip;
-	else if (!strcmp(m2spec_class, gMediaSpec2VideoBroadcast))
+	else if (!strcmp(m2spec_class, gMediaSpec2ExtVideoBroadcast))
 		retval = gUPnPVideoBroadcast;
 	else if (!strcmp(m2spec_class, gMediaSpec2Video))
 		retval = gUPnPVideoItem;
@@ -1076,9 +1079,9 @@ const gchar *dls_props_media_spec_to_upnp_class(const gchar *m2spec_class)
 		retval = gUPnPPhoto;
 	else if (!strcmp(m2spec_class, gMediaSpec2Image))
 		retval = gUPnPImageItem;
-	else if (!strcmp(m2spec_class, gMediaSpec2Playlist))
+	else if (!strcmp(m2spec_class, gMediaSpec2ExtPlaylist))
 		retval = gUPnPPlaylistItem;
-	else if (!strcmp(m2spec_class, gMediaSpec2Item))
+	else if (!strcmp(m2spec_class, gMediaSpec2ExtItem))
 		retval = gUPnPItem;
 
 	return retval;
@@ -1092,25 +1095,25 @@ const gchar *dls_props_upnp_class_to_media_spec(const gchar *upnp_class)
 	if (!strncmp(upnp_class, gUPnPAlbum, gUPnPAlbumLen)) {
 		ptr = upnp_class + gUPnPAlbumLen;
 		if (!strcmp(ptr, ".photoAlbum"))
-			retval = gMediaSpec2AlbumPhoto;
+			retval = gMediaSpec2ExtAlbumPhoto;
 		else if (!strcmp(ptr, ".musicAlbum"))
-			retval = gMediaSpec2AlbumMusic;
+			retval = gMediaSpec2ExtAlbumMusic;
 		else
-			retval = gMediaSpec2Album;
+			retval = gMediaSpec2ExtAlbum;
 	} else if (!strncmp(upnp_class, gUPnPPerson, gUPnPPersonLen)) {
 		ptr = upnp_class + gUPnPPersonLen;
 		if (!strcmp(ptr, ".musicArtist"))
-			retval = gMediaSpec2PersonMusicArtist;
+			retval = gMediaSpec2ExtPersonMusicArtist;
 		else
-			retval = gMediaSpec2Person;
+			retval = gMediaSpec2ExtPerson;
 	} else if (!strncmp(upnp_class, gUPnPGenre, gUPnPGenreLen)) {
 		ptr = upnp_class + gUPnPGenreLen;
 		if (!strcmp(ptr, ".movieGenre"))
-			retval = gMediaSpec2GenreMovie;
+			retval = gMediaSpec2ExtGenreMovie;
 		else if (!strcmp(ptr, ".musicGenre"))
-			retval = gMediaSpec2GenreMusic;
+			retval = gMediaSpec2ExtGenreMusic;
 		else
-			retval = gMediaSpec2Genre;
+			retval = gMediaSpec2ExtGenre;
 	} else if (!strncmp(upnp_class, gUPnPContainer, gUPnPContainerLen)) {
 		ptr = upnp_class + gUPnPContainerLen;
 		if (!*ptr || *ptr == '.')
@@ -1120,9 +1123,9 @@ const gchar *dls_props_upnp_class_to_media_spec(const gchar *upnp_class)
 		if (!strcmp(ptr, ".musicTrack"))
 			retval = gMediaSpec2AudioMusic;
 		else if (!strcmp(ptr, ".audioBroadcast"))
-			retval = gMediaSpec2AudioBroadcast;
+			retval = gMediaSpec2ExtAudioBroadcast;
 		else if (!strcmp(ptr, ".audioBook"))
-			retval = gMediaSpec2AudioBook;
+			retval = gMediaSpec2ExtAudioBook;
 		else
 			retval = gMediaSpec2Audio;
 	} else if (!strncmp(upnp_class, gUPnPVideoItem, gUPnPVideoItemLen)) {
@@ -1130,9 +1133,9 @@ const gchar *dls_props_upnp_class_to_media_spec(const gchar *upnp_class)
 		if (!strcmp(ptr, ".movie"))
 			retval = gMediaSpec2VideoMovie;
 		else if (!strcmp(ptr, ".musicVideoClip"))
-			retval = gMediaSpec2VideoMusicClip;
+			retval = gMediaSpec2ExtVideoMusicClip;
 		else if (!strcmp(ptr, ".videoBroadcast"))
-			retval = gMediaSpec2VideoBroadcast;
+			retval = gMediaSpec2ExtVideoBroadcast;
 		else
 			retval = gMediaSpec2Video;
 	}  else if (!strncmp(upnp_class, gUPnPImageItem, gUPnPImageItemLen)) {
@@ -1143,11 +1146,11 @@ const gchar *dls_props_upnp_class_to_media_spec(const gchar *upnp_class)
 			retval = gMediaSpec2Image;
 	}  else if (!strncmp(upnp_class, gUPnPPlaylistItem,
 			     gUPnPPlaylistItemLen)) {
-		retval = gMediaSpec2Playlist;
+		retval = gMediaSpec2ExtPlaylist;
 	} else if (!strncmp(upnp_class, gUPnPItem, gUPnPItemLen)) {
 		ptr = upnp_class + gUPnPItemLen;
 		if (!*ptr || *ptr == '.')
-			retval = gMediaSpec2Item;
+			retval = gMediaSpec2ExtItem;
 	}
 
 	return retval;
