@@ -46,12 +46,14 @@ struct dls_async_bas_t_ {
 	guint retrieved;
 	guint max_count;
 	dls_async_cb_t get_children_cb;
+	const gchar *metadata;
 };
 
 typedef struct dls_async_get_prop_t_ dls_async_get_prop_t;
 struct dls_async_get_prop_t_ {
 	GCallback prop_func;
 	const gchar *protocol_info;
+	const gchar *metadata;
 };
 
 typedef struct dls_async_get_all_t_ dls_async_get_all_t;
@@ -62,6 +64,7 @@ struct dls_async_get_all_t_ {
 	const gchar *protocol_info;
 	gboolean need_child_count;
 	gboolean device_object;
+	const gchar *metadata;
 };
 
 typedef struct dls_async_upload_t_ dls_async_upload_t;

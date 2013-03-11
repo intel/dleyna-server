@@ -377,6 +377,13 @@ void dls_prop_maps_new(GHashTable **property_map, GHashTable **filter_map)
 	g_hash_table_insert(p_map, "upnp:totalDeletedChildCount",
 			    DLS_INTERFACE_PROP_TOTAL_DELETED_CHILD_COUNT);
 
+	/* DIDL-Lite xml */
+	prop_t = prv_prop_map_new("*",
+				  DLS_UPNP_MASK_PROP_METADATA,
+				  TRUE, FALSE, FALSE);
+	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_METADATA, prop_t);
+	g_hash_table_insert(p_map, "*", DLS_INTERFACE_PROP_METADATA);
+
 	*filter_map = f_map;
 	*property_map = p_map;
 }
@@ -1358,7 +1365,8 @@ void dls_props_add_item(GVariantBuilder *item_vb,
 			GUPnPDIDLLiteObject *object,
 			const gchar *root_path,
 			dls_upnp_prop_mask filter_mask,
-			const gchar *protocol_info)
+			const gchar *protocol_info,
+			const gchar *metadata)
 {
 	int track_number;
 	GUPnPDIDLLiteResource *res;
@@ -1428,6 +1436,11 @@ void dls_props_add_item(GVariantBuilder *item_vb,
 
 	if (filter_mask & DLS_UPNP_MASK_PROP_RESOURCES)
 		prv_add_resources(item_vb, object, filter_mask);
+
+	if (filter_mask & DLS_UPNP_MASK_PROP_METADATA)
+		prv_add_string_prop(item_vb,
+				    DLS_INTERFACE_PROP_METADATA,
+				    metadata);
 }
 
 void dls_props_add_resource(GVariantBuilder *item_vb,
@@ -1624,7 +1637,8 @@ on_error:
 
 GVariant *dls_props_get_item_prop(const gchar *prop, const gchar *root_path,
 				  GUPnPDIDLLiteObject *object,
-				  const gchar *protocol_info)
+				  const gchar *protocol_info,
+				  const gchar *metadata)
 {
 	const gchar *str;
 	gchar *path;
@@ -1712,6 +1726,13 @@ GVariant *dls_props_get_item_prop(const gchar *prop, const gchar *root_path,
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_RESOURCES)) {
 		retval = g_variant_ref_sink(
 			prv_compute_resources(object, DLS_UPNP_MASK_ALL_PROPS));
+	} else if (!strcmp(prop, DLS_INTERFACE_PROP_METADATA)) {
+		if (!metadata)
+			goto on_error;
+
+		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, metadata);
+
+		retval = g_variant_ref_sink(g_variant_new_string(metadata));
 	} else {
 		res = prv_get_matching_resource(object, protocol_info);
 		if (!res)

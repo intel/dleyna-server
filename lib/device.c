@@ -1110,7 +1110,8 @@ static void prv_found_child(GUPnPDIDLLiteParser *parser,
 		dls_props_add_item(builder->vb, object,
 				   task->target.root_path,
 				   cb_task_data->filter_mask,
-				   cb_task_data->protocol_info);
+				   cb_task_data->protocol_info,
+				   cb_task_data->metadata);
 	}
 
 	g_ptr_array_add(cb_task_data->vbs, builder);
@@ -1226,6 +1227,8 @@ static void prv_get_children_cb(GUPnPServiceProxy *proxy,
 
 	DLEYNA_LOG_DEBUG("GetChildren result: %s", result);
 
+	cb_task_data->metadata = result;
+
 	parser = gupnp_didl_lite_parser_new();
 
 	g_signal_connect(parser, "object-available" ,
@@ -1331,7 +1334,8 @@ static void prv_get_item(GUPnPDIDLLiteParser *parser,
 		dls_props_add_item(cb_task_data->vb, object,
 				   cb_data->task.target.root_path,
 				   DLS_UPNP_MASK_ALL_PROPS,
-				   cb_task_data->protocol_info);
+				   cb_task_data->protocol_info,
+				   cb_task_data->metadata);
 	else
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_UNKNOWN_INTERFACE,
@@ -1412,7 +1416,8 @@ static void prv_get_all(GUPnPDIDLLiteParser *parser,
 					   object,
 					   cb_data->task.target.root_path,
 					   DLS_UPNP_MASK_ALL_PROPS,
-					   cb_task_data->protocol_info);
+					   cb_task_data->protocol_info,
+					   cb_task_data->metadata);
 		}
 	}
 }
@@ -1850,6 +1855,8 @@ static void prv_get_all_ms2spec_props_cb(GUPnPServiceProxy *proxy,
 
 	DLEYNA_LOG_DEBUG("GetMS2SpecProps result: %s", result);
 
+	cb_task_data->metadata = result;
+
 	parser = gupnp_didl_lite_parser_new();
 
 	g_signal_connect(parser, "object-available" , cb_task_data->prop_func,
@@ -2070,7 +2077,8 @@ static void prv_get_item_property(GUPnPDIDLLiteParser *parser,
 						task_data->prop_name,
 						task->target.root_path,
 						object,
-						cb_task_data->protocol_info);
+						cb_task_data->protocol_info,
+						cb_task_data->metadata);
 
 on_error:
 
@@ -2240,6 +2248,8 @@ static void prv_get_ms2spec_prop_cb(GUPnPServiceProxy *proxy,
 	}
 
 	DLEYNA_LOG_DEBUG("GetMS2SpecProp result: %s", result);
+
+	cb_task_data->metadata = result;
 
 	parser = gupnp_didl_lite_parser_new();
 
@@ -2535,7 +2545,8 @@ static void prv_found_target(GUPnPDIDLLiteParser *parser,
 				   object,
 				   cb_data->task.target.root_path,
 				   cb_task_data->filter_mask,
-				   cb_task_data->protocol_info);
+				   cb_task_data->protocol_info,
+				   cb_task_data->metadata);
 	}
 
 	g_ptr_array_add(cb_task_data->vbs, builder);
@@ -2592,6 +2603,8 @@ static void prv_search_cb(GUPnPServiceProxy *proxy,
 			 G_CALLBACK(prv_found_target), cb_data);
 
 	DLEYNA_LOG_DEBUG("Server Search result: %s", result);
+
+	cb_task_data->metadata = result;
 
 	if (!gupnp_didl_lite_parser_parse_didl(parser, result, &upnp_error) &&
 	    upnp_error->code != GUPNP_XML_ERROR_EMPTY_NODE) {

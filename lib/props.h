@@ -61,6 +61,7 @@
 #define DLS_UPNP_MASK_PROP_UPDATE_COUNT			(1LL << 32)
 #define DLS_UPNP_MASK_PROP_CONTAINER_UPDATE_ID		(1LL << 33)
 #define DLS_UPNP_MASK_PROP_TOTAL_DELETED_CHILD_COUNT	(1LL << 34)
+#define DLS_UPNP_MASK_PROP_METADATA			(1LL << 35)
 
 #define DLS_UPNP_MASK_ALL_PROPS 0xffffffffffffffff
 
@@ -121,11 +122,13 @@ void dls_props_add_item(GVariantBuilder *item_vb,
 			GUPnPDIDLLiteObject *object,
 			const gchar *root_path,
 			dls_upnp_prop_mask filter_mask,
-			const gchar *protocol_info);
+			const gchar *protocol_info,
+			const gchar *metadata);
 
 GVariant *dls_props_get_item_prop(const gchar *prop, const gchar *root_path,
 				  GUPnPDIDLLiteObject *object,
-				  const gchar *protocol_info);
+				  const gchar *protocol_info,
+				  const gchar *metadata);
 
 const gchar *dls_props_media_spec_to_upnp_class(const gchar *m2spec_class);
 
