@@ -1,4 +1,4 @@
-SUBDIRS = lib
+SUBDIRS = libdleyna/server
 
 if BUILD_SERVER
 SUBDIRS += server test/dbus
