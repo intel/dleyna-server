@@ -434,23 +434,7 @@ org.gnome.MediaObject2
 The org.gnome.MediaObject2 interface exposes some basic properties of
 the server's root directory.  This interface is described
 MediaServer2Spec specification (3).  Dleyna-server-service enhances this
-interface by adding new properties and methods and by defining
-additional values for the Type property.
-
-Additional Values for the Type Property:
-----------------------------------------
-
-The Type property tells what kind of object we are dealing with and
-which can take the below values in addition to those described
-in MediaServer2Spec specification (3).
-in case of Items:
- 'video.musicclip', 'video.broadcast'
- 'audio.broadcast', 'audio.book',
- 'playlist'
-and in case of Containers:
- 'album', 'album.music', 'album.photo'
- 'person', 'person.musicartist'
- 'genre', 'genre.music', 'genre.movie'
+interface by adding new properties and methods.
 
 Additional Properties:
 ----------------------
@@ -458,23 +442,46 @@ Additional Properties:
 |---------------------------------------------------------------------------|
 |     Name        | Type  | m/o* |              Description                 |
 |---------------------------------------------------------------------------|
+| Creator         |  s    |  o   |  Indicates an entity that owns the       |
+|                 |       |      |  content or is primarily responsible for |
+|                 |       |      |  creating the content.                   |
+|---------------------------------------------------------------------------|
 | DLNAManaged     | a{sb} |  o   |  A dictionary of boolean values          |
 |                 |       |      |  indicating the values of the various    |
 |                 |       |      |  DLNA managed attributes. There are 5    |
 |                 |       |      |  keys: Upload, CreateContainer, Delete,  |
 |                 |       |      |  UploadDelete, ChangeMeta                |
 |---------------------------------------------------------------------------|
-| Restricted      |  b    |  m   |  Indicates whether the object is         |
-|                 |       |      |  modifiable.                             |
-|---------------------------------------------------------------------------|
-| Creator         |  s    |  o   |  Indicates an entity that owns the       |
-|                 |       |      |  content or is primarily responsible for |
-|                 |       |      |  creating the content.                   |
-|---------------------------------------------------------------------------|
 | ObjectUpdateID  |  u    |  o   |  Represents a last-modified timestamp    |
 |                 |       |      |  for the object relative to the          |
 |                 |       |      |  SystemUpdateID state variable.          |
 |---------------------------------------------------------------------------|
+| Restricted      |  b    |  m   |  Indicates whether the object is         |
+|                 |       |      |  modifiable.                             |
+|---------------------------------------------------------------------------|
+| TypeEx          |  s    |  m   |  Extended object type (see details       |
+|                 |       |      |  below)                                  |
+|---------------------------------------------------------------------------|
+
+
+Values for the TypeEx Property:
+-------------------------------
+
+The TypeEx property tells what kind of object we are dealing with. It
+is a superset of the standard MediaObject2 Type property. The allowed
+values are:
+
+in case of Items:
+ 'audio', 'music', 'image', 'photo', 'video', 'video.movie',
+ 'video.musicclip', 'video.broadcast'
+ 'audio.music', 'audio.broadcast', 'audio.book',
+ 'item', 'playlist'
+
+and in case of Containers:
+ 'container',
+ 'album', 'album.music', 'album.photo'
+ 'person', 'person.musicartist'
+ 'genre', 'genre.music', 'genre.movie'
 
 
 Additional Methods:
@@ -495,7 +502,7 @@ property name value pairs that are to be updated, or added if they do
 not already exist.  ToDelete is an array of properties to be deleted.
 The same property cannot appear in both ToAddUpdate and ToDelete.
 Only the following properties can be updated: 'Date', 'DisplayName',
-'Artists', 'Album', 'Type', 'TrackNumber'.
+'Artists', 'Album', 'Type', 'TypeEx', 'TrackNumber'.
 
 
 org.gnome.MediaContainer2
