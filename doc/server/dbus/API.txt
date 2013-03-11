@@ -808,14 +808,17 @@ Additional property
 |                 |      |      |  implementation detects that a change was |
 |                 |      |      |  made to the resource.                    |
 |---------------------------------------------------------------------------|
+| Metadata        |  s   |  m   |  Contains the Item Metadata information   |
+|                 |      |      |  in DIDL-Lite XML format.                 |
+|---------------------------------------------------------------------------|
 
-Please note that if you want this property to be included in the
+Please note that if you want UpdateCount property to be included in the
 results of a call to one of the List or the Search functions, and you
 are explicitly filtering properties, you must include "Resource" in
 the filter array.  The filter parameter also applies to the contents
 of the returned resources.  So if you specify a filter of ["MIMEType",
 "URL"] the dictionaries in the resources array will contain only these
-properties.
+properties.  Metadata property is not searchable.
 
 
 GetCompatibleResource

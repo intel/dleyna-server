@@ -333,6 +333,8 @@ static const gchar g_server_introspection[] =
 	"       access='read'/>"
 	"    <property type='aa{sv}' name='"DLS_INTERFACE_PROP_RESOURCES"'"
 	"       access='read'/>"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_METADATA"'"
+	"       access='read'/>"
 	"  </interface>"
 	"  <interface name='"DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE"'>"
 	"    <method name='"DLS_INTERFACE_UPLOAD_TO_ANY"'>"
