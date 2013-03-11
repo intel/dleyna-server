@@ -25,7 +25,7 @@
 #include <sys/signalfd.h>
 
 #include <libdleyna/core/main-loop.h>
-#include <lib/control-point-server.h>
+#include <libdleyna/server/control-point-server.h>
 
 #define DLS_SERVER_SERVICE_NAME "dleyna-server-service"
 

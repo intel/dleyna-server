@@ -9,7 +9,7 @@ AC_INIT([dleyna-server],
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_SRCDIR([lib/server.c])
+AC_CONFIG_SRCDIR([libdleyna/server/server.c])
 
 AC_PREFIX_DEFAULT(/usr/local)
 
@@ -38,7 +38,6 @@ LT_LANG([C])
 PKG_PROG_PKG_CONFIG(0.16)
 PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.28])
 PKG_CHECK_MODULES([GIO], [gio-2.0 >= 2.28])
-PKG_CHECK_MODULES([DLEYNA_CORE], [dleyna-core-1.0 >= 0.0.1])
 PKG_CHECK_MODULES([GSSDP], [gssdp-1.0 >= 0.13.2])
 PKG_CHECK_MODULES([GUPNP], [gupnp-1.0 >= 0.19.1])
 PKG_CHECK_MODULES([GUPNPAV], [gupnp-av-1.0 >= 0.11.5])
@@ -78,6 +77,17 @@ AC_DEFINE_UNQUOTED([DLEYNA_LOG_LEVEL_INFO],     [${LOG_LEVEL_5}], [Log level fla
 AC_DEFINE_UNQUOTED([DLEYNA_LOG_LEVEL_DEBUG],    [${LOG_LEVEL_6}], [Log level flag for debug messages])
 AC_DEFINE_UNQUOTED([DLEYNA_LOG_LEVEL_DEFAULT],  [${LOG_LEVEL_7}], [Log level flag to display default level messages])
 AC_DEFINE_UNQUOTED([DLEYNA_LOG_LEVEL_ALL],      [${LOG_LEVEL_8}], [Log level flag for all messages])
+
+AC_ARG_ENABLE(master-build,,
+		[],
+		[master_build=no])
+
+AS_IF([test "x$master_build" = "xno"],
+      [PKG_CHECK_MODULES([DLEYNA_CORE], [dleyna-core-1.0 >= 0.0.1])],
+      [this_abs_top_srcdir=`cd "$srcdir" && pwd`;
+       DLEYNA_CORE_CFLAGS="-I$this_abs_top_srcdir/../dleyna-core";
+       DLEYNA_CORE_LIBS="-L$this_abs_top_srcdir/../dleyna-core/.libs -ldleyna-core-1.0"
+      ])
 
 AC_ARG_ENABLE(debug,
 		AS_HELP_STRING(
@@ -217,13 +227,13 @@ AC_SUBST([with_connector_name])
 AC_SUBST([with_log_level])
 AC_SUBST([with_log_type])
 
-AC_CONFIG_FILES([Makefile				\
-		 lib/Makefile				\
-		 lib/dleyna-server-1.0.pc		\
-		 lib/dleyna-server-service.conf		\
-		 server/com.intel.dleyna-server.service	\
-		 server/dleyna-server-service-1.0.pc	\
-		 server/Makefile			\
+AC_CONFIG_FILES([Makefile					\
+		 libdleyna/server/Makefile			\
+		 libdleyna/server/dleyna-server-1.0.pc		\
+		 libdleyna/server/dleyna-server-service.conf	\
+		 server/com.intel.dleyna-server.service		\
+		 server/dleyna-server-service-1.0.pc		\
+		 server/Makefile				\
 		 test/dbus/Makefile
 		])
 

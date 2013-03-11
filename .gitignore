@@ -36,8 +36,8 @@ m4/ltversion.m4
 m4/lt~obsolete.m4
 
 server/com.intel.dleyna-server.service
-lib/dleyna-server-service.conf
-lib/dleyna-server-1.0.pc
+libdleyna/server/dleyna-server-service.conf
+libdleyna/server/dleyna-server-1.0.pc
 
 server/dleyna-server-service
 test/dbus/dms-info

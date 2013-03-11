@@ -56,7 +56,19 @@ sysconf_DATA = dleyna-server-service.conf
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = dleyna-server-1.0.pc
 
-EXTRA_DIST = $(sysconf_DATA)
+EXTRA_DIST = 	$(sysconf_DATA)			\
+		async.h				\
+		client.h			\
+		device.h			\
+		interface.h			\
+		path.h				\
+		props.h				\
+		search.h			\
+		server.h			\
+		sort.h				\
+		task.h				\
+		upnp.h
+
 CLEANFILES = $(pkgconfig_DATA) dleyna-server-service.conf
 DISTCLEANFILES = $(pkgconfig_DATA) dleyna-server-service.conf
 
