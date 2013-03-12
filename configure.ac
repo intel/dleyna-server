@@ -1,7 +1,7 @@
 AC_PREREQ([2.66])
 
 AC_INIT([dleyna-server],
-	[0.0.1],
+	[0.0.2],
 	[https://github.com/01org/dleyna-server/issues/new],
 	,
 	[https://01.org/dleyna/])
@@ -184,8 +184,8 @@ AC_ARG_WITH(ua-prefix,
 			[Specify a user agent prefix]),
 		[with_ua_prefix = "$withval"; AC_DEFINE_UNQUOTED([UA_PREFIX], "$with_ua_prefix", [User Agent prefix])],
 		[])
-		
-		
+
+
 
 AC_ARG_ENABLE(lib-only,
 		AS_HELP_STRING(
