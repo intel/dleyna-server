@@ -1,3 +1,4 @@
 version 0.0.1
-	- Initial version of dleyna-server
+	- Initial version of dleyna-server.
+	- Enable support of deleyna-server as git submodules.
 
