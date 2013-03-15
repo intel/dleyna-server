@@ -43,6 +43,7 @@ enum dls_interface_type_ {
 #define DLS_INTERFACE_PROP_RESTRICTED "Restricted"
 #define DLS_INTERFACE_PROP_DISPLAY_NAME "DisplayName"
 #define DLS_INTERFACE_PROP_TYPE "Type"
+#define DLS_INTERFACE_PROP_TYPE_EX "TypeEx"
 #define DLS_INTERFACE_PROP_CREATOR "Creator"
 #define DLS_INTERFACE_PROP_DLNA_MANAGED "DLNAManaged"
 #define DLS_INTERFACE_PROP_OBJECT_UPDATE_ID "ObjectUpdateID"

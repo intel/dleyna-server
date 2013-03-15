@@ -70,11 +70,12 @@ gchar *dls_search_translate_search_string(GHashTable *filter_map,
 		/* Handle special cases where we need to translate
 		   value as well as property name */
 
-		if (!strcmp(prop, DLS_INTERFACE_PROP_TYPE)) {
+		if (!strcmp(prop, DLS_INTERFACE_PROP_TYPE) ||
+		    !strcmp(prop, DLS_INTERFACE_PROP_TYPE_EX)) {
 			/* Skip the quotes */
 
 			value[strlen(value) - 1] = 0;
-			translated_value = dls_props_media_spec_to_upnp_class(
+			translated_value = dls_props_media_spec_ex_to_upnp_class(
 				value + 1);
 			if (!translated_value)
 				goto on_error;

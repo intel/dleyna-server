@@ -291,7 +291,7 @@ static void prv_last_change_decode(GUPnPCDSLastChangeEntry *entry,
 		if (!mclass)
 			goto on_error;
 
-		media_class = dls_props_upnp_class_to_media_spec(mclass);
+		media_class = dls_props_upnp_class_to_media_spec_ex(mclass);
 		if (!media_class)
 			goto on_error;
 
@@ -2753,7 +2753,7 @@ static gchar *prv_create_new_container_didl(const gchar *parent_id,
 					item,
 					task->ut.create_container.display_name);
 	gupnp_didl_lite_object_set_parent_id(item, parent_id);
-	actual_type = dls_props_media_spec_to_upnp_class(
+	actual_type = dls_props_media_spec_ex_to_upnp_class(
 						task->ut.create_container.type);
 	gupnp_didl_lite_object_set_upnp_class(item, actual_type);
 	gupnp_didl_lite_object_set_restricted(item, FALSE);
@@ -2761,7 +2761,7 @@ static gchar *prv_create_new_container_didl(const gchar *parent_id,
 
 	g_variant_iter_init(&iter, task->ut.create_container.child_types);
 	while ((child_type = g_variant_iter_next_value(&iter))) {
-		actual_type = dls_props_media_spec_to_upnp_class(
+		actual_type = dls_props_media_spec_ex_to_upnp_class(
 					g_variant_get_string(child_type, NULL));
 		if (actual_type != NULL)
 			gupnp_didl_lite_container_add_create_class(container,
@@ -3641,7 +3641,8 @@ static gchar *prv_get_current_xml_fragment(GUPnPDIDLLiteObject *object,
 		retval = gupnp_didl_lite_object_get_album_xml_string(object);
 	else if (mask & DLS_UPNP_MASK_PROP_DATE)
 		retval = gupnp_didl_lite_object_get_date_xml_string(object);
-	else if (mask & DLS_UPNP_MASK_PROP_TYPE)
+	else if (mask & DLS_UPNP_MASK_PROP_TYPE ||
+		 mask & DLS_UPNP_MASK_PROP_TYPE_EX)
 		retval = gupnp_didl_lite_object_get_upnp_class_xml_string(
 			object);
 	else if (mask & DLS_UPNP_MASK_PROP_TRACK_NUMBER)
@@ -3681,8 +3682,9 @@ static gchar *prv_get_new_xml_fragment(GUPnPDIDLLiteObject *object,
 					g_variant_get_string(value, NULL));
 
 		retval = gupnp_didl_lite_object_get_date_xml_string(object);
-	} else if (mask & DLS_UPNP_MASK_PROP_TYPE) {
-		upnp_class = dls_props_media_spec_to_upnp_class(
+	} else if (mask & DLS_UPNP_MASK_PROP_TYPE ||
+		   mask & DLS_UPNP_MASK_PROP_TYPE_EX) {
+		upnp_class = dls_props_media_spec_ex_to_upnp_class(
 					g_variant_get_string(value, NULL));
 
 		gupnp_didl_lite_object_set_upnp_class(object, upnp_class);
