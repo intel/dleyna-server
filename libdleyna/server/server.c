@@ -130,6 +130,8 @@ static const gchar g_server_introspection[] =
 	"       access='read'/>"
 	"    <property type='u' name='"DLS_INTERFACE_PROP_OBJECT_UPDATE_ID"'"
 	"       access='read'/>"
+	"    <property type='aa{sv}' name='"DLS_INTERFACE_PROP_RESOURCES"'"
+	"       access='read'/>"
 	"    <method name='"DLS_INTERFACE_DELETE"'>"
 	"    </method>"
 	"    <method name='"DLS_INTERFACE_UPDATE"'>"
@@ -137,6 +139,14 @@ static const gchar g_server_introspection[] =
 	"           direction='in'/>"
 	"      <arg type='as' name='"DLS_INTERFACE_TO_DELETE"'"
 	"           direction='in'/>"
+	"    </method>"
+	"    <method name='"DLS_INTERFACE_GET_COMPATIBLE_RESOURCE"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_PROTOCOL_INFO"'"
+	"           direction='in'/>"
+	"      <arg type='as' name='"DLS_INTERFACE_FILTER"'"
+	"           direction='in'/>"
+	"      <arg type='a{sv}' name='"DLS_INTERFACE_PROPERTIES_VALUE"'"
+	"           direction='out'/>"
 	"    </method>"
 	"  </interface>"
 	"  <interface name='"DLS_INTERFACE_MEDIA_CONTAINER"'>"
@@ -285,14 +295,6 @@ static const gchar g_server_introspection[] =
 	"       access='read'/>"
 	"  </interface>"
 	"  <interface name='"DLS_INTERFACE_MEDIA_ITEM"'>"
-	"    <method name='"DLS_INTERFACE_GET_COMPATIBLE_RESOURCE"'>"
-	"      <arg type='s' name='"DLS_INTERFACE_PROTOCOL_INFO"'"
-	"           direction='in'/>"
-	"      <arg type='as' name='"DLS_INTERFACE_FILTER"'"
-	"           direction='in'/>"
-	"      <arg type='a{sv}' name='"DLS_INTERFACE_PROPERTIES_VALUE"'"
-	"           direction='out'/>"
-	"    </method>"
 	"    <property type='as' name='"DLS_INTERFACE_PROP_URLS"'"
 	"       access='read'/>"
 	"    <property type='s' name='"DLS_INTERFACE_PROP_MIME_TYPE"'"
@@ -330,8 +332,6 @@ static const gchar g_server_introspection[] =
 	"    <property type='s' name='"DLS_INTERFACE_PROP_ALBUM_ART_URL"'"
 	"       access='read'/>"
 	"    <property type='o' name='"DLS_INTERFACE_PROP_REFPATH"'"
-	"       access='read'/>"
-	"    <property type='aa{sv}' name='"DLS_INTERFACE_PROP_RESOURCES"'"
 	"       access='read'/>"
 	"  </interface>"
 	"  <interface name='"DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE"'>"
@@ -843,6 +843,9 @@ static void prv_object_method_call(dleyna_connector_id_t conn,
 	else if (!strcmp(method, DLS_INTERFACE_UPDATE))
 		task = dls_task_update_new(invocation, object,
 					   parameters, &error);
+	else if (!strcmp(method, DLS_INTERFACE_GET_COMPATIBLE_RESOURCE))
+		task = dls_task_get_resource_new(invocation, object,
+						 parameters, &error);
 	else
 		goto finished;
 
@@ -866,7 +869,7 @@ static void prv_item_method_call(dleyna_connector_id_t conn,
 				 const gchar *method, GVariant *parameters,
 				 dleyna_connector_msg_id_t invocation)
 {
-	dls_task_t *task;
+/*	dls_task_t *task;
 	GError *error = NULL;
 
 	if (!strcmp(method, DLS_INTERFACE_GET_COMPATIBLE_RESOURCE)) {
@@ -884,7 +887,7 @@ static void prv_item_method_call(dleyna_connector_id_t conn,
 	}
 
 finished:
-
+*/
 	return;
 }
 

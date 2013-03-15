@@ -1090,7 +1090,8 @@ static void prv_found_child(GUPnPDIDLLiteParser *parser,
 	builder->vb = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 
 	if (!dls_props_add_object(builder->vb, object, task->target.root_path,
-				  task->target.path, cb_task_data->filter_mask))
+				  task->target.path, cb_task_data->filter_mask,
+				  cb_task_data->protocol_info))
 		goto on_error;
 
 	if (GUPNP_IS_DIDL_LITE_CONTAINER(object)) {
@@ -1109,8 +1110,7 @@ static void prv_found_child(GUPnPDIDLLiteParser *parser,
 	} else {
 		dls_props_add_item(builder->vb, object,
 				   task->target.root_path,
-				   cb_task_data->filter_mask,
-				   cb_task_data->protocol_info);
+				   cb_task_data->filter_mask);
 	}
 
 	g_ptr_array_add(cb_task_data->vbs, builder);
@@ -1330,8 +1330,7 @@ static void prv_get_item(GUPnPDIDLLiteParser *parser,
 	if (!GUPNP_IS_DIDL_LITE_CONTAINER(object))
 		dls_props_add_item(cb_task_data->vb, object,
 				   cb_data->task.target.root_path,
-				   DLS_UPNP_MASK_ALL_PROPS,
-				   cb_task_data->protocol_info);
+				   DLS_UPNP_MASK_ALL_PROPS);
 	else
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_UNKNOWN_INTERFACE,
@@ -1381,7 +1380,8 @@ static void prv_get_object(GUPnPDIDLLiteParser *parser,
 
 	if (!dls_props_add_object(cb_task_data->vb, object,
 				  cb_data->task.target.root_path,
-				  parent_path, DLS_UPNP_MASK_ALL_PROPS))
+				  parent_path, DLS_UPNP_MASK_ALL_PROPS,
+				  cb_task_data->protocol_info))
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_BAD_RESULT,
 					     "Unable to retrieve mandatory object properties");
@@ -1411,8 +1411,7 @@ static void prv_get_all(GUPnPDIDLLiteParser *parser,
 			dls_props_add_item(cb_task_data->vb,
 					   object,
 					   cb_data->task.target.root_path,
-					   DLS_UPNP_MASK_ALL_PROPS,
-					   cb_task_data->protocol_info);
+					   DLS_UPNP_MASK_ALL_PROPS);
 		}
 	}
 }
@@ -2041,13 +2040,16 @@ static void prv_get_object_property(GUPnPDIDLLiteParser *parser,
 	dls_async_task_t *cb_data = user_data;
 	dls_task_t *task = &cb_data->task;
 	dls_task_get_prop_t *task_data = &task->ut.get_prop;
+	dls_async_get_prop_t *cb_task_data = &cb_data->ut.get_prop;
 
 	if (cb_data->task.result)
 		goto on_error;
 
-	cb_data->task.result = dls_props_get_object_prop(task_data->prop_name,
-							 task->target.root_path,
-							 object);
+	cb_data->task.result = dls_props_get_object_prop(
+						task_data->prop_name,
+						task->target.root_path,
+						object,
+						cb_task_data->protocol_info);
 
 on_error:
 
@@ -2061,16 +2063,13 @@ static void prv_get_item_property(GUPnPDIDLLiteParser *parser,
 	dls_async_task_t *cb_data = user_data;
 	dls_task_t *task = &cb_data->task;
 	dls_task_get_prop_t *task_data = &task->ut.get_prop;
-	dls_async_get_prop_t *cb_task_data = &cb_data->ut.get_prop;
 
 	if (cb_data->task.result)
 		goto on_error;
 
-	cb_data->task.result = dls_props_get_item_prop(
-						task_data->prop_name,
-						task->target.root_path,
-						object,
-						cb_task_data->protocol_info);
+	cb_data->task.result = dls_props_get_item_prop(task_data->prop_name,
+						       task->target.root_path,
+						       object);
 
 on_error:
 
@@ -2514,7 +2513,8 @@ static void prv_found_target(GUPnPDIDLLiteParser *parser,
 
 	if (!dls_props_add_object(builder->vb, object,
 				  cb_data->task.target.root_path,
-				  parent_path, cb_task_data->filter_mask))
+				  parent_path, cb_task_data->filter_mask,
+				  cb_task_data->protocol_info))
 		goto on_error;
 
 	if (GUPNP_IS_DIDL_LITE_CONTAINER(object)) {
@@ -2534,8 +2534,7 @@ static void prv_found_target(GUPnPDIDLLiteParser *parser,
 		dls_props_add_item(builder->vb,
 				   object,
 				   cb_data->task.target.root_path,
-				   cb_task_data->filter_mask,
-				   cb_task_data->protocol_info);
+				   cb_task_data->filter_mask);
 	}
 
 	g_ptr_array_add(cb_task_data->vbs, builder);

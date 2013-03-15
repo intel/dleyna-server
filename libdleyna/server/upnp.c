@@ -571,6 +571,7 @@ void dls_upnp_get_resource(dls_upnp_t *upnp, dls_client_t *client,
 	DLEYNA_LOG_DEBUG("Root Path %s Id %s", task->target.root_path,
 			 task->target.id);
 
+	cb_task_data->protocol_info = client->protocol_info;
 	cb_task_data->filter_mask =
 		dls_props_parse_filter(upnp->filter_map,
 				       task->ut.resource.filter, &upnp_filter);

@@ -97,10 +97,12 @@ gboolean dls_props_add_object(GVariantBuilder *item_vb,
 			      GUPnPDIDLLiteObject *object,
 			      const char *root_path,
 			      const gchar *parent_path,
-			      dls_upnp_prop_mask filter_mask);
+			      dls_upnp_prop_mask filter_mask,
+			      const gchar *protocol_info);
 
 GVariant *dls_props_get_object_prop(const gchar *prop, const gchar *root_path,
-				    GUPnPDIDLLiteObject *object);
+				    GUPnPDIDLLiteObject *object,
+				    const gchar *protocol_info);
 
 void dls_props_add_container(GVariantBuilder *item_vb,
 			     GUPnPDIDLLiteContainer *object,
@@ -120,12 +122,10 @@ void dls_props_add_resource(GVariantBuilder *item_vb,
 void dls_props_add_item(GVariantBuilder *item_vb,
 			GUPnPDIDLLiteObject *object,
 			const gchar *root_path,
-			dls_upnp_prop_mask filter_mask,
-			const gchar *protocol_info);
+			dls_upnp_prop_mask filter_mask);
 
 GVariant *dls_props_get_item_prop(const gchar *prop, const gchar *root_path,
-				  GUPnPDIDLLiteObject *object,
-				  const gchar *protocol_info);
+				  GUPnPDIDLLiteObject *object);
 
 const gchar *dls_props_media_spec_to_upnp_class(const gchar *m2spec_class);
 

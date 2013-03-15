@@ -64,6 +64,10 @@ class MediaObject(object):
     def update(self, to_add_update, to_delete):
         return self.__objIF.Update(to_add_update, to_delete)
 
+    def print_compatible_resource(self, protocol_info, fltr):
+        print_properties(self.__objIF.GetCompatibleResource(protocol_info,
+                                                             fltr))
+
 class Item(MediaObject):
     def __init__(self, path):
         MediaObject.__init__(self, path)
@@ -71,10 +75,6 @@ class Item(MediaObject):
         self._itemIF = dbus.Interface(bus.get_object(
                 'com.intel.dleyna-server', path),
                                        'org.gnome.UPnP.MediaItem2')
-
-    def print_compatible_resource(self, protocol_info, fltr):
-        print_properties(self._itemIF.GetCompatibleResource(protocol_info,
-                                                             fltr))
 
 class Container(MediaObject):
 
