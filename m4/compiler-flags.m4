@@ -1,7 +1,7 @@
 dnl
-dnl dleyna-server
+dnl dLeyna
 dnl
-dnl Copyright (C) 2013 Intel Corporation. All rights reserved.
+dnl Copyright (C) 2012-2013 Intel Corporation. All rights reserved.
 dnl
 dnl This program is free software; you can redistribute it and/or modify it
 dnl under the terms and conditions of the GNU Lesser General Public License,
@@ -16,6 +16,7 @@ dnl You should have received a copy of the GNU Lesser General Public License
 dnl along with this program; if not, write to the Free Software Foundation, Inc.,
 dnl 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 dnl
+dnl Ludovic Ferrandis <ludovic.ferrandis@intel.com>
 dnl Regis Merlino <regis.merlino@intel.com>
 dnl
 
