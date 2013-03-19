@@ -46,9 +46,6 @@ AC_DEFUN_ONCE([DLEYNA_SERVER_COMPILER_FLAGS], [
 		CFLAGS+=" -std=gnu99"
 		CFLAGS+=" -pedantic"
 		CFLAGS+=" -Wno-overlength-strings"
-
-		CFLAGS+=" -DG_DISABLE_DEPRECATED"
-		CFLAGS+=" -DGLIB_DISABLE_DEPRECATION_WARNINGS"
 	fi
 
 	CFLAGS+=" -Wno-format-extra-args"
