@@ -1178,11 +1178,64 @@ static GVariant *prv_props_get_dlna_managed_dict(GUPnPOCMFlags flags)
 	return g_variant_builder_end(&builder);
 }
 
+static GVariant *prv_compute_resources(GUPnPDIDLLiteObject *object,
+				       dls_upnp_prop_mask filter_mask)
+{
+	GUPnPDIDLLiteResource *res = NULL;
+	GList *resources;
+	GList *ptr;
+	GVariantBuilder *res_array_vb;
+	GVariantBuilder *res_vb;
+	const char *str_val;
+	GVariant *retval;
+
+	res_array_vb = g_variant_builder_new(G_VARIANT_TYPE("aa{sv}"));
+
+	resources = gupnp_didl_lite_object_get_resources(object);
+	ptr = resources;
+
+	while (ptr) {
+		res = ptr->data;
+		res_vb = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+		if (filter_mask & DLS_UPNP_MASK_PROP_URL) {
+			str_val = gupnp_didl_lite_resource_get_uri(res);
+			if (str_val)
+				prv_add_string_prop(res_vb,
+						    DLS_INTERFACE_PROP_URL,
+						    str_val);
+		}
+		prv_parse_resources(res_vb, res, filter_mask);
+		g_variant_builder_add(res_array_vb, "@a{sv}",
+				      g_variant_builder_end(res_vb));
+		g_variant_builder_unref(res_vb);
+		g_object_unref(ptr->data);
+		ptr = g_list_next(ptr);
+	}
+	retval = g_variant_builder_end(res_array_vb);
+	g_variant_builder_unref(res_array_vb);
+
+	g_list_free(resources);
+
+	return retval;
+}
+
+static void prv_add_resources(GVariantBuilder *item_vb,
+			      GUPnPDIDLLiteObject *object,
+			      dls_upnp_prop_mask filter_mask)
+{
+	GVariant *val;
+
+	val = prv_compute_resources(object, filter_mask);
+	g_variant_builder_add(item_vb, "{sv}", DLS_INTERFACE_PROP_RESOURCES,
+			      val);
+}
+
 gboolean dls_props_add_object(GVariantBuilder *item_vb,
 			      GUPnPDIDLLiteObject *object,
 			      const char *root_path,
 			      const gchar *parent_path,
-			      dls_upnp_prop_mask filter_mask)
+			      dls_upnp_prop_mask filter_mask,
+			      const gchar *protocol_info)
 {
 	gchar *path = NULL;
 	const char *id;
@@ -1190,10 +1243,12 @@ gboolean dls_props_add_object(GVariantBuilder *item_vb,
 	const char *creator;
 	const char *upnp_class;
 	const char *media_spec_type;
+	const char *str_val;
+	guint uint_val;
 	gboolean retval = FALSE;
 	gboolean rest;
 	GUPnPOCMFlags flags;
-	guint uint_val;
+	GUPnPDIDLLiteResource *res;
 
 	id = gupnp_didl_lite_object_get_id(object);
 	if (!id)
@@ -1244,6 +1299,22 @@ gboolean dls_props_add_object(GVariantBuilder *item_vb,
 		prv_add_uint_prop(item_vb, DLS_INTERFACE_PROP_OBJECT_UPDATE_ID,
 				  uint_val);
 	}
+
+	res = prv_get_matching_resource(object, protocol_info);
+	if (res) {
+		if (filter_mask & DLS_UPNP_MASK_PROP_URLS) {
+			str_val = gupnp_didl_lite_resource_get_uri(res);
+			if (str_val)
+				prv_add_strv_prop(item_vb,
+						  DLS_INTERFACE_PROP_URLS,
+						  &str_val, 1);
+		}
+		prv_parse_resources(item_vb, res, filter_mask);
+		g_object_unref(res);
+	}
+
+	if (filter_mask & DLS_UPNP_MASK_PROP_RESOURCES)
+		prv_add_resources(item_vb, object, filter_mask);
 
 	retval = TRUE;
 
@@ -1302,68 +1373,14 @@ void dls_props_add_container(GVariantBuilder *item_vb,
 	}
 }
 
-static GVariant *prv_compute_resources(GUPnPDIDLLiteObject *object,
-				       dls_upnp_prop_mask filter_mask)
-{
-	GUPnPDIDLLiteResource *res = NULL;
-	GList *resources;
-	GList *ptr;
-	GVariantBuilder *res_array_vb;
-	GVariantBuilder *res_vb;
-	const char *str_val;
-	GVariant *retval;
-
-	res_array_vb = g_variant_builder_new(G_VARIANT_TYPE("aa{sv}"));
-
-	resources = gupnp_didl_lite_object_get_resources(object);
-	ptr = resources;
-
-	while (ptr) {
-		res = ptr->data;
-		res_vb = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
-		if (filter_mask & DLS_UPNP_MASK_PROP_URL) {
-			str_val = gupnp_didl_lite_resource_get_uri(res);
-			if (str_val)
-				prv_add_string_prop(res_vb,
-						    DLS_INTERFACE_PROP_URL,
-						    str_val);
-		}
-		prv_parse_resources(res_vb, res, filter_mask);
-		g_variant_builder_add(res_array_vb, "@a{sv}",
-				      g_variant_builder_end(res_vb));
-		g_variant_builder_unref(res_vb);
-		g_object_unref(ptr->data);
-		ptr = g_list_next(ptr);
-	}
-	retval = g_variant_builder_end(res_array_vb);
-	g_variant_builder_unref(res_array_vb);
-
-	g_list_free(resources);
-
-	return retval;
-}
-
-static void prv_add_resources(GVariantBuilder *item_vb,
-			      GUPnPDIDLLiteObject *object,
-			      dls_upnp_prop_mask filter_mask)
-{
-	GVariant *val;
-
-	val = prv_compute_resources(object, filter_mask);
-	g_variant_builder_add(item_vb, "{sv}", DLS_INTERFACE_PROP_RESOURCES,
-			      val);
-}
-
 void dls_props_add_item(GVariantBuilder *item_vb,
 			GUPnPDIDLLiteObject *object,
 			const gchar *root_path,
-			dls_upnp_prop_mask filter_mask,
-			const gchar *protocol_info)
+			dls_upnp_prop_mask filter_mask)
 {
 	int track_number;
-	GUPnPDIDLLiteResource *res;
-	const char *str_val;
 	char *path;
+	const char *str_val;
 	GList *list;
 
 	if (filter_mask & DLS_UPNP_MASK_PROP_ARTIST)
@@ -1412,22 +1429,6 @@ void dls_props_add_item(GVariantBuilder *item_vb,
 			g_free(path);
 		}
 	}
-
-	res = prv_get_matching_resource(object, protocol_info);
-	if (res) {
-		if (filter_mask & DLS_UPNP_MASK_PROP_URLS) {
-			str_val = gupnp_didl_lite_resource_get_uri(res);
-			if (str_val)
-				prv_add_strv_prop(item_vb,
-						  DLS_INTERFACE_PROP_URLS,
-						  &str_val, 1);
-		}
-		prv_parse_resources(item_vb, res, filter_mask);
-		g_object_unref(res);
-	}
-
-	if (filter_mask & DLS_UPNP_MASK_PROP_RESOURCES)
-		prv_add_resources(item_vb, object, filter_mask);
 }
 
 void dls_props_add_resource(GVariantBuilder *item_vb,
@@ -1530,7 +1531,8 @@ on_error:
 }
 
 GVariant *dls_props_get_object_prop(const gchar *prop, const gchar *root_path,
-				    GUPnPDIDLLiteObject *object)
+				    GUPnPDIDLLiteObject *object,
+				    const gchar *protocol_info)
 {
 	const char *id;
 	gchar *path;
@@ -1538,9 +1540,10 @@ GVariant *dls_props_get_object_prop(const gchar *prop, const gchar *root_path,
 	const char *media_spec_type;
 	const char *title;
 	gboolean rest;
+	guint uint_val;
 	GVariant *retval = NULL;
 	GUPnPOCMFlags dlna_managed;
-	guint uint_val;
+	GUPnPDIDLLiteResource *res;
 
 	if (!strcmp(prop, DLS_INTERFACE_PROP_PARENT)) {
 		id = gupnp_didl_lite_object_get_parent_id(object);
@@ -1615,6 +1618,17 @@ GVariant *dls_props_get_object_prop(const gchar *prop, const gchar *root_path,
 		DLEYNA_LOG_DEBUG("Prop %s = %u", prop, uint_val);
 
 		retval = g_variant_ref_sink(g_variant_new_uint32(uint_val));
+	} else if (!strcmp(prop, DLS_INTERFACE_PROP_RESOURCES)) {
+		retval = g_variant_ref_sink(
+			prv_compute_resources(object, DLS_UPNP_MASK_ALL_PROPS));
+	} else {
+		res = prv_get_matching_resource(object, protocol_info);
+		if (!res)
+			goto on_error;
+
+		retval = prv_get_resource_property(prop, res);
+
+		g_object_unref(res);
 	}
 
 on_error:
@@ -1623,13 +1637,11 @@ on_error:
 }
 
 GVariant *dls_props_get_item_prop(const gchar *prop, const gchar *root_path,
-				  GUPnPDIDLLiteObject *object,
-				  const gchar *protocol_info)
+				  GUPnPDIDLLiteObject *object)
 {
 	const gchar *str;
 	gchar *path;
 	gint track_number;
-	GUPnPDIDLLiteResource *res;
 	GVariant *retval = NULL;
 	GList *list;
 
@@ -1709,17 +1721,6 @@ GVariant *dls_props_get_item_prop(const gchar *prop, const gchar *root_path,
 		path = dls_path_from_id(root_path, str);
 		retval = g_variant_ref_sink(g_variant_new_string(path));
 		g_free(path);
-	} else if (!strcmp(prop, DLS_INTERFACE_PROP_RESOURCES)) {
-		retval = g_variant_ref_sink(
-			prv_compute_resources(object, DLS_UPNP_MASK_ALL_PROPS));
-	} else {
-		res = prv_get_matching_resource(object, protocol_info);
-		if (!res)
-			goto on_error;
-
-		retval = prv_get_resource_property(prop, res);
-
-		g_object_unref(res);
 	}
 
 on_error:
