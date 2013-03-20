@@ -1029,6 +1029,26 @@ void dls_upnp_get_object_metadata(dls_upnp_t *upnp, dls_client_t *client,
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
+void dls_upnp_create_reference(dls_upnp_t *upnp, dls_client_t *client,
+			       dls_task_t *task,
+			       dls_upnp_task_complete_t cb)
+{
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	cb_data->cb = cb;
+
+	DLEYNA_LOG_DEBUG("Root Path: %s - Id: %s", task->target.root_path,
+			 task->target.id);
+
+	dls_device_create_reference(client, task);
+
+	DLEYNA_LOG_DEBUG("Exit");
+
+	return;
+}
+
 void dls_upnp_unsubscribe(dls_upnp_t *upnp)
 {
 	GHashTableIter iter;
