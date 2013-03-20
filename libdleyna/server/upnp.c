@@ -960,6 +960,43 @@ void dls_upnp_get_object_metadata(dls_upnp_t *upnp, dls_client_t *client,
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
+void dls_upnp_create_reference(dls_upnp_t *upnp, dls_client_t *client,
+			       dls_task_t *task,
+			       dls_upnp_task_complete_t cb)
+{
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_task_create_reference_t *task_data;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	cb_data->cb = cb;
+	task_data = &task->ut.create_reference;
+
+	DLEYNA_LOG_DEBUG("Root Path: %s - Id: %s", task->target.root_path,
+			 task->target.id);
+
+	if (!task_data->item_path)
+		goto on_param_error;
+
+	dls_device_create_reference(client, task);
+
+	DLEYNA_LOG_DEBUG("Exit");
+
+	return;
+
+on_param_error:
+
+	DLEYNA_LOG_WARNING("Invalid Parameter");
+
+	cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+				     DLEYNA_ERROR_OPERATION_FAILED,
+				     "Invalid Parameter");
+
+	(void) g_idle_add(dls_async_task_complete, cb_data);
+
+	DLEYNA_LOG_DEBUG("Exit failure");
+}
+
 void dls_upnp_unsubscribe(dls_upnp_t *upnp)
 {
 	GHashTableIter iter;

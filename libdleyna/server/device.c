@@ -2768,11 +2768,13 @@ static gchar *prv_create_new_container_didl(const gchar *parent_id,
 						task->ut.create_container.type);
 	gupnp_didl_lite_object_set_upnp_class(item, actual_type);
 	gupnp_didl_lite_object_set_restricted(item, FALSE);
+
 	flags = GUPNP_OCM_FLAGS_UPLOAD |
 		GUPNP_OCM_FLAGS_CREATE_CONTAINER |
 		GUPNP_OCM_FLAGS_DESTROYABLE |
 		GUPNP_OCM_FLAGS_UPLOAD_DESTROYABLE |
 		GUPNP_OCM_FLAGS_CHANGE_METADATA;
+
 	gupnp_didl_lite_object_set_dlna_managed(item, flags);
 
 	g_variant_iter_init(&iter, task->ut.create_container.child_types);
@@ -4025,3 +4027,108 @@ void dls_device_get_object_metadata(dls_client_t *client,
 
 	DLEYNA_LOG_DEBUG("Exit");
 }
+
+static void prv_create_reference_cb(GUPnPServiceProxy *proxy,
+				    GUPnPServiceProxyAction *action,
+				    gpointer user_data)
+{
+	GError *upnp_error = NULL;
+	dls_async_task_t *cb_data = user_data;
+	gchar *object_id = NULL;
+	gchar *object_path;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	if (!gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
+					    &upnp_error,
+					    "NewID", G_TYPE_STRING,
+					    &object_id,
+					    NULL)) {
+		DLEYNA_LOG_WARNING("CreateReference operation failed: %s",
+				   upnp_error->message);
+
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_OPERATION_FAILED,
+					     "Update Object operation "
+					     " failed: %s",
+					     upnp_error->message);
+
+		goto on_error;
+	}
+
+	object_path = dls_path_from_id(cb_data->task.target.root_path,
+				       object_id);
+
+	DLEYNA_LOG_DEBUG("Result @id: %s - Path: %s", object_id, object_path);
+
+	cb_data->task.result = g_variant_ref_sink(g_variant_new_object_path(
+								object_path));
+	g_free(object_path);
+
+on_error:
+
+	(void) g_idle_add(dls_async_task_complete, cb_data);
+	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
+
+	g_free(object_id);
+
+	if (upnp_error != NULL)
+		g_error_free(upnp_error);
+
+	DLEYNA_LOG_DEBUG("Exit");
+}
+
+void dls_device_create_reference(dls_client_t *client,
+				 dls_task_t *task)
+{
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_device_context_t *context;
+	const gchar *i_path;
+	gchar *i_root = NULL;
+	gchar *i_id = NULL;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	i_path = g_variant_get_string(
+				cb_data->task.ut.create_reference.item_path,
+				NULL);
+
+	if (!dls_path_get_path_and_id(i_path, &i_root, &i_id, NULL)) {
+		DLEYNA_LOG_DEBUG("Can't get id for path %s", i_path);
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_OBJECT_NOT_FOUND,
+					     "Unable to find object for path: %s",
+					     i_path);
+		goto on_error;
+	}
+
+	DLEYNA_LOG_DEBUG("Create Reference for @id: %s", i_id);
+	DLEYNA_LOG_DEBUG("        In Container @id: %s", task->target.id);
+
+	context = dls_device_get_context(task->target.device, client);
+
+	cb_data->action = gupnp_service_proxy_begin_action(
+				context->service_proxy, "CreateReference",
+				prv_create_reference_cb, cb_data,
+				"ContainerID", G_TYPE_STRING, task->target.id,
+				"ObjectID", G_TYPE_STRING, i_id,
+				NULL);
+
+	cb_data->proxy = context->service_proxy;
+
+	g_object_add_weak_pointer((G_OBJECT(context->service_proxy)),
+				  (gpointer *)&cb_data->proxy);
+
+	cb_data->cancel_id = g_cancellable_connect(
+					cb_data->cancellable,
+					G_CALLBACK(dls_async_task_cancelled_cb),
+					cb_data, NULL);
+
+on_error:
+
+	g_free(i_root);
+	g_free(i_id);
+
+	DLEYNA_LOG_DEBUG("Exit");
+}
+
