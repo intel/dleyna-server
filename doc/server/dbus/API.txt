@@ -446,7 +446,7 @@ in MediaServer2Spec specification (3).
 in case of Items:
  'video.musicclip', 'video.broadcast'
  'audio.broadcast', 'audio.book',
- 'playlist'
+ 'playlist', 'item'
 and in case of Containers:
  'album', 'album.music', 'album.photo'
  'person', 'person.musicartist'
@@ -513,7 +513,7 @@ grouped into two categories: unsupported properties and new methods.
 Unsupported Properties:
 -----------------------
 
-The properties org.gnome.UPnP.MediaContainer2.ChildCount and
+The properties org.gnome.UPnP.MediaContainer2.ItemCount and
 org.gnome.UPnP.MediaContainer2.ContainerCount are not implemented as
 there is no way to efficiently implement these properties in
 dleyna-server-service.
