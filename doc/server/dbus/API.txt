@@ -575,7 +575,7 @@ is given in the section "Transcoding and org.gnome.UPnP.MediaItem2".
 New Methods:
 ------------
 
-Seven new methods have been added.  These methods are:
+Eight new methods have been added.  These methods are:
 
 ListChildrenEx(u Offset, u Max, as Filter, s SortBy) -> aa{sv}
 
@@ -588,6 +588,8 @@ SearchObjectsEx(s Query, u Offset, u Max, as Filter, s SortBy) -> aa{sv}
 Upload(s DisplayName, s FilePath) -> (u UploadId, o ObjectPath)
 
 CreateContainer(s DisplayName, s Type, as ChildTypes) -> o ObjectPath
+
+CreateReference(o ObjectPath) -> o ObjectPath
 
 GetCompatibleResources(s protocol_info, as filter) -> a{sv}
 
@@ -659,6 +661,10 @@ in the new folder, e.g., ['video','container'].
 A special value of ['*'] indicates that no restriction is placed
 on the types of objects that can be stored in the container.
 The path of the newly created object is returned.
+
+The CreateReference method creates a reference from the object passed in
+parameter in the current container. This method returns an ObjectPath,
+which contains the path of the newly created objects.
 
 The GetCompatibleResources method: see description in MediaItem2.
 

@@ -135,4 +135,7 @@ void dls_device_get_object_metadata(dls_client_t *client,
 				    dls_task_t *task,
 				    const gchar *parent_id);
 
+void dls_device_create_reference(dls_client_t *client,
+				 dls_task_t *task);
+
 #endif /* DLS_DEVICE_H__ */

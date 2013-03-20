@@ -100,6 +100,10 @@ static void prv_delete(dls_task_t *task)
 		if (task->ut.update.to_delete)
 			g_variant_unref(task->ut.update.to_delete);
 		break;
+	case DLS_TASK_CREATE_REFERENCE:
+		if (task->ut.create_reference.item_path)
+			g_variant_unref(task->ut.create_reference.item_path);
+		break;
 	default:
 		break;
 	}
@@ -468,6 +472,27 @@ dls_task_t *dls_task_create_container_new_generic(
 finished:
 
 	return task;
+}
+
+dls_task_t *dls_task_create_reference_new(dleyna_connector_msg_id_t invocation,
+					  dls_task_type_t type,
+					  const gchar *path,
+					  GVariant *parameters,
+					  GError **error)
+{
+	dls_task_t *task;
+
+	task = prv_m2spec_task_new(type, invocation, path,
+				   "(@o)", error, FALSE);
+	if (!task)
+		goto finished;
+
+	g_variant_get(parameters, "(@o)", &task->ut.create_reference.item_path);
+
+finished:
+
+	return task;
+
 }
 
 dls_task_t *dls_task_update_new(dleyna_connector_msg_id_t invocation,
