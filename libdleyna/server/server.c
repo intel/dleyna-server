@@ -268,6 +268,12 @@ static const gchar g_server_introspection[] =
 	"      <arg type='a{sv}' name='"DLS_INTERFACE_PROPERTIES_VALUE"'"
 	"           direction='out'/>"
 	"    </method>"
+	"    <method name='"DLS_INTERFACE_CREATE_REFERENCE"'>"
+	"      <arg type='o' name='"DLS_INTERFACE_PATH"'"
+	"           direction='in'/>"
+	"      <arg type='o' name='"DLS_INTERFACE_REFPATH"'"
+	"           direction='out'/>"
+	"    </method>"
 	"    <property type='u' name='"DLS_INTERFACE_PROP_CHILD_COUNT"'"
 	"       access='read'/>"
 	"    <property type='b' name='"DLS_INTERFACE_PROP_SEARCHABLE"'"
@@ -609,6 +615,10 @@ static void prv_process_async_task(dls_task_t *task)
 		dls_upnp_get_object_metadata(g_context.upnp, client, task,
 					     prv_async_task_complete);
 		break;
+	case DLS_TASK_CREATE_REFERENCE:
+		dls_upnp_create_reference(g_context.upnp, client, task,
+					  prv_async_task_complete);
+		break;
 	default:
 		break;
 	}
@@ -947,6 +957,10 @@ static void prv_con_method_call(dleyna_connector_id_t conn,
 	else if (!strcmp(method, DLS_INTERFACE_GET_COMPATIBLE_RESOURCE))
 		task = dls_task_get_resource_new(invocation, object,
 						 parameters, &error);
+	else if (!strcmp(method, DLS_INTERFACE_CREATE_REFERENCE))
+		task = dls_task_create_reference_new(invocation,
+						    DLS_TASK_CREATE_REFERENCE,
+						    object, parameters, &error);
 	else
 		goto finished;
 
