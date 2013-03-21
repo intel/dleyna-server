@@ -419,10 +419,6 @@ dls_task_t *dls_task_get_upload_ids_new(dleyna_connector_msg_id_t invocation,
 
 	task = prv_m2spec_task_new(DLS_TASK_GET_UPLOAD_IDS, invocation, path,
 				   "(@au)", error, TRUE);
-	if (!task)
-		goto finished;
-
-finished:
 
 	return task;
 }
@@ -526,6 +522,17 @@ dls_task_t *dls_task_update_new(dleyna_connector_msg_id_t invocation,
 		      &task->ut.update.to_delete);
 
 finished:
+
+	return task;
+}
+
+dls_task_t *dls_task_get_metadata_new(dleyna_connector_msg_id_t invocation,
+				const gchar *path, GError **error)
+{
+	dls_task_t *task;
+
+	task = prv_m2spec_task_new(DLS_TASK_GET_OBJECT_METADATA, invocation,
+				   path, "(@s)", error, FALSE);
 
 	return task;
 }

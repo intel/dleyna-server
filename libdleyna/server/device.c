@@ -4346,3 +4346,78 @@ void dls_device_playlist_upload(dls_client_t *client,
 
 	DLEYNA_LOG_DEBUG("Exit");
 }
+
+static void prv_get_object_metadata_cb(GUPnPServiceProxy *proxy,
+				       GUPnPServiceProxyAction *action,
+				       gpointer user_data)
+{
+	GError *upnp_error = NULL;
+	dls_async_task_t *cb_data = user_data;
+	gchar *result = NULL;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	if (!gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
+					    &upnp_error,
+					    "Result", G_TYPE_STRING, &result,
+					    NULL)) {
+		DLEYNA_LOG_WARNING("Browse Object operation failed: %s",
+				   upnp_error->message);
+
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_OPERATION_FAILED,
+					     "Browse operation failed: %s",
+					     upnp_error->message);
+		goto on_complete;
+	}
+
+	cb_data->task.result = g_variant_ref_sink(g_variant_new_string(result));
+
+	DLEYNA_LOG_DEBUG("prv_get_object_metadata_cb result: %s", result);
+
+	g_free(result);
+
+on_complete:
+
+	(void) g_idle_add(dls_async_task_complete, cb_data);
+	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
+
+	if (upnp_error)
+		g_error_free(upnp_error);
+
+	DLEYNA_LOG_DEBUG("Exit");
+}
+
+void dls_device_get_object_metadata(dls_client_t *client,
+				    dls_task_t *task,
+				    const gchar *upnp_filter)
+{
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_device_context_t *context;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	context = dls_device_get_context(task->target.device, client);
+
+	cb_data->action = gupnp_service_proxy_begin_action(
+				context->service_proxy, "Browse",
+				prv_get_object_metadata_cb, cb_data,
+				"ObjectID", G_TYPE_STRING, task->target.id,
+				"BrowseFlag", G_TYPE_STRING, "BrowseMetadata",
+				"Filter", G_TYPE_STRING, "*",
+				"StartingIndex", G_TYPE_INT, 0,
+				"RequestedCount", G_TYPE_INT, 0,
+				"SortCriteria", G_TYPE_STRING, "",
+				NULL);
+
+	cb_data->proxy = context->service_proxy;
+
+	g_object_add_weak_pointer((G_OBJECT(context->service_proxy)),
+				  (gpointer *)&cb_data->proxy);
+
+	cb_data->cancel_id = g_cancellable_connect(cb_data->cancellable,
+					G_CALLBACK(dls_async_task_cancelled_cb),
+					cb_data, NULL);
+
+	DLEYNA_LOG_DEBUG("Exit");
+}
