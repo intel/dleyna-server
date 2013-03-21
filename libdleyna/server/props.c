@@ -540,7 +540,7 @@ static void prv_add_string_prop(GVariantBuilder *vb, const gchar *key,
 static void prv_add_strv_prop(GVariantBuilder *vb, const gchar *key,
 			      const gchar **value, unsigned int len)
 {
-	if (len > 0)
+	if (value && *value && len > 0)
 		g_variant_builder_add(vb, "{sv}", key,
 				      g_variant_new_strv(value, len));
 }
@@ -1323,10 +1323,8 @@ static GVariant *prv_compute_resources(GUPnPDIDLLiteObject *object,
 		res_vb = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 		if (filter_mask & DLS_UPNP_MASK_PROP_URL) {
 			str_val = gupnp_didl_lite_resource_get_uri(res);
-			if (str_val)
-				prv_add_string_prop(res_vb,
-						    DLS_INTERFACE_PROP_URL,
-						    str_val);
+			prv_add_string_prop(res_vb, DLS_INTERFACE_PROP_URL,
+					    str_val);
 		}
 		prv_parse_resources(res_vb, res, filter_mask);
 		g_variant_builder_add(res_array_vb, "@a{sv}",
@@ -1417,10 +1415,8 @@ void dls_props_add_item(GVariantBuilder *item_vb,
 	if (res) {
 		if (filter_mask & DLS_UPNP_MASK_PROP_URLS) {
 			str_val = gupnp_didl_lite_resource_get_uri(res);
-			if (str_val)
-				prv_add_strv_prop(item_vb,
-						  DLS_INTERFACE_PROP_URLS,
-						  &str_val, 1);
+			prv_add_strv_prop(item_vb, DLS_INTERFACE_PROP_URLS,
+					  &str_val, 1);
 		}
 		prv_parse_resources(item_vb, res, filter_mask);
 		g_object_unref(res);
@@ -1442,10 +1438,8 @@ void dls_props_add_resource(GVariantBuilder *item_vb,
 	if (res) {
 		if (filter_mask & DLS_UPNP_MASK_PROP_URL) {
 			str_val = gupnp_didl_lite_resource_get_uri(res);
-			if (str_val)
-				prv_add_string_prop(item_vb,
-						    DLS_INTERFACE_PROP_URL,
-						    str_val);
+			prv_add_string_prop(item_vb, DLS_INTERFACE_PROP_URL,
+					    str_val);
 		}
 		prv_parse_resources(item_vb, res, filter_mask);
 		g_object_unref(res);
