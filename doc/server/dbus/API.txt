@@ -497,6 +497,10 @@ The same property cannot appear in both ToAddUpdate and ToDelete.
 Only the following properties can be updated: 'Date', 'DisplayName',
 'Artists', 'Album', 'Type', 'TrackNumber'.
 
+GetMetaData() -> s
+
+Returns the object meta data information in DIDL-Lite XML format.
+
 
 org.gnome.MediaContainer2
 ----------------------
