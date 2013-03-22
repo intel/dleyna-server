@@ -559,11 +559,14 @@ Additional properties unsupported by org.gnome.MediaContainer2
 |                        |      |      |  deleted from a container object   |
 |                        |      |      |  since the last initialization     |
 |---------------------------------------------------------------------------|
+| Resources              |aa{sv}|  o   | Returns the set of resources       |
+|                        |      |      | associated with an item            |
+|---------------------------------------------------------------------------|
 
 New Methods:
 ------------
 
-Seven new methods have been added.  These methods are:
+Eight new methods have been added.  These methods are:
 
 ListChildrenEx(u Offset, u Max, as Filter, s SortBy) -> aa{sv}
 
@@ -579,6 +582,8 @@ CreateContainer(s DisplayName, s Type, as ChildTypes) -> o ObjectPath
 
 CreatePlayList(s Title, s Creator, s Genre, s Desc, ao PlaylistItems )
 	-> (u UploadId, o ObjectPath)
+
+GetCompatibleResources(s protocol_info, as filter) -> a{sv}
 
 The first four methods are identical in function and behaviour to
 existing the MediaServer2Spec functions ListChildren, ListItems,
@@ -657,6 +662,8 @@ exception that CreatePlayList allows the client to specify the server-side
 container into which the Playlist is to be uploaded whereas
 CreatePlaylistInAnyContainer leaves it up to the server to determine the most
 suitable location for the file.
+
+The GetCompatibleResources method: see description in MediaItem2.
 
 Recommended Usage:
 ------------------

@@ -274,18 +274,26 @@ static const gchar g_server_introspection[] =
 	"      <arg type='o' name='"DLS_INTERFACE_PATH"'"
 	"           direction='out'/>"
 	"    </method>"
+	"    <method name='"DLS_INTERFACE_GET_COMPATIBLE_RESOURCE"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_PROTOCOL_INFO"'"
+	"           direction='in'/>"
+	"      <arg type='as' name='"DLS_INTERFACE_FILTER"'"
+	"           direction='in'/>"
+	"      <arg type='a{sv}' name='"DLS_INTERFACE_PROPERTIES_VALUE"'"
+	"           direction='out'/>"
+	"    </method>"
 	"    <property type='u' name='"DLS_INTERFACE_PROP_CHILD_COUNT"'"
 	"       access='read'/>"
 	"    <property type='b' name='"DLS_INTERFACE_PROP_SEARCHABLE"'"
 	"       access='read'/>"
-	"    <property type='a(sb)' name='"
-	DLS_INTERFACE_PROP_CREATE_CLASSES"'"
+	"    <property type='a(sb)' name='"DLS_INTERFACE_PROP_CREATE_CLASSES"'"
 	"       access='read'/>"
-	"    <property type='u' name='"
-	DLS_INTERFACE_PROP_CONTAINER_UPDATE_ID"'"
+	"    <property type='u' name='"DLS_INTERFACE_PROP_CONTAINER_UPDATE_ID"'"
 	"       access='read'/>"
 	"    <property type='u' name='"
 	DLS_INTERFACE_PROP_TOTAL_DELETED_CHILD_COUNT"'"
+	"       access='read'/>"
+	"    <property type='aa{sv}' name='"DLS_INTERFACE_PROP_RESOURCES"'"
 	"       access='read'/>"
 	"  </interface>"
 	"  <interface name='"DLS_INTERFACE_MEDIA_ITEM"'>"
@@ -951,6 +959,9 @@ static void prv_con_method_call(dleyna_connector_id_t conn,
 		task = dls_task_create_playlist_new(invocation,
 						    DLS_TASK_CREATE_PLAYLIST,
 						    object, parameters, &error);
+	else if (!strcmp(method, DLS_INTERFACE_GET_COMPATIBLE_RESOURCE))
+		task = dls_task_get_resource_new(invocation, object,
+						 parameters, &error);
 	else
 		goto finished;
 

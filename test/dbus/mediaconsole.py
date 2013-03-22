@@ -145,6 +145,10 @@ class Container(MediaObject):
         print "Transfer ID: " + str(tid)
         print u"Path: " + path
 
+    def print_compatible_resource(self, protocol_info, fltr):
+        print_properties(self._containerIF.GetCompatibleResource(protocol_info,
+								 fltr))
+
 class Device(Container):
 
     def __init__(self, path):
