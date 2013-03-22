@@ -138,6 +138,10 @@ static const gchar g_server_introspection[] =
 	"      <arg type='as' name='"DLS_INTERFACE_TO_DELETE"'"
 	"           direction='in'/>"
 	"    </method>"
+	"    <method name='"DLS_INTERFACE_GET_METADATA"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_METADATA"'"
+	"           direction='out'/>"
+	"    </method>"
 	"  </interface>"
 	"  <interface name='"DLS_INTERFACE_MEDIA_CONTAINER"'>"
 	"    <method name='"DLS_INTERFACE_LIST_CHILDREN"'>"
@@ -607,6 +611,10 @@ static void prv_process_async_task(dls_task_t *task)
 		dls_upnp_create_playlist_in_any(g_context.upnp, client, task,
 						prv_async_task_complete);
 		break;
+	case DLS_TASK_GET_OBJECT_METADATA:
+		dls_upnp_get_object_metadata(g_context.upnp, client, task,
+					     prv_async_task_complete);
+		break;
 	default:
 		break;
 	}
@@ -843,6 +851,8 @@ static void prv_object_method_call(dleyna_connector_id_t conn,
 	else if (!strcmp(method, DLS_INTERFACE_UPDATE))
 		task = dls_task_update_new(invocation, object,
 					   parameters, &error);
+	else if (!strcmp(method, DLS_INTERFACE_GET_METADATA))
+		task = dls_task_get_metadata_new(invocation, object, &error);
 	else
 		goto finished;
 

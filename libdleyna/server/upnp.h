@@ -101,6 +101,10 @@ void dls_upnp_create_playlist_in_any(dls_upnp_t *upnp, dls_client_t *client,
 				     dls_task_t *task,
 				     dls_upnp_task_complete_t cb);
 
+void dls_upnp_get_object_metadata(dls_upnp_t *upnp, dls_client_t *client,
+				  dls_task_t *task,
+				  dls_upnp_task_complete_t cb);
+
 void dls_upnp_unsubscribe(dls_upnp_t *upnp);
 
 gboolean dls_upnp_device_context_exist(dls_device_t *device,
