@@ -64,6 +64,9 @@ class MediaObject(object):
     def update(self, to_add_update, to_delete):
         return self.__objIF.Update(to_add_update, to_delete)
 
+    def get_metadata(self):
+        return self.__objIF.GetMetaData()
+      
 class Item(MediaObject):
     def __init__(self, path):
         MediaObject.__init__(self, path)

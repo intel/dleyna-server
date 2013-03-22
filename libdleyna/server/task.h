@@ -50,6 +50,7 @@ enum dls_task_type_t_ {
 	DLS_TASK_CREATE_CONTAINER,
 	DLS_TASK_CREATE_CONTAINER_IN_ANY,
 	DLS_TASK_UPDATE_OBJECT,
+	DLS_TASK_GET_OBJECT_METADATA,
 	DLS_TASK_CREATE_PLAYLIST,
 	DLS_TASK_CREATE_PLAYLIST_IN_ANY
 };
@@ -255,6 +256,10 @@ dls_task_t *dls_task_create_playlist_new(dleyna_connector_msg_id_t invocation,
 dls_task_t *dls_task_update_new(dleyna_connector_msg_id_t invocation,
 				const gchar *path, GVariant *parameters,
 				GError **error);
+
+dls_task_t *dls_task_get_metadata_new(dleyna_connector_msg_id_t invocation,
+				      const gchar *path,
+				      GError **error);
 
 void dls_task_cancel(dls_task_t *task);
 

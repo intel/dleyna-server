@@ -530,6 +530,21 @@ finished:
 	return task;
 }
 
+dls_task_t *dls_task_get_metadata_new(dleyna_connector_msg_id_t invocation,
+				const gchar *path, GError **error)
+{
+	dls_task_t *task;
+
+	task = prv_m2spec_task_new(DLS_TASK_GET_OBJECT_METADATA, invocation,
+				   path, "(@s)", error, FALSE);
+	if (!task)
+		goto finished;
+
+finished:
+
+	return task;
+}
+
 void dls_task_complete(dls_task_t *task)
 {
 	GVariant *variant = NULL;
