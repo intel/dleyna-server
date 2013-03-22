@@ -88,3 +88,10 @@ Set the IPC mechanism to be used.
 
 This option is disabled by default. To enable use --enable-lib-only.
 When enabled, only the libdleyna-server library is built.
+
+--with-ua-prefix
+
+This option allows to add a prefix to the SOUP session user agent.
+As example, if the user agent string is: dLeyna/0.0.1 GUPnP/0.19.4 DLNADOC/1.50
+then with --with-ua-prefix=MyPrefix, the user agent value will be:
+MyPrefix dLeyna/0.0.1 GUPnP/0.19.4 DLNADOC/1.50
