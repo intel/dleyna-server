@@ -1178,6 +1178,56 @@ static GVariant *prv_props_get_dlna_managed_dict(GUPnPOCMFlags flags)
 	return g_variant_builder_end(&builder);
 }
 
+static GVariant *prv_compute_resources(GUPnPDIDLLiteObject *object,
+				       dls_upnp_prop_mask filter_mask)
+{
+	GUPnPDIDLLiteResource *res = NULL;
+	GList *resources;
+	GList *ptr;
+	GVariantBuilder *res_array_vb;
+	GVariantBuilder *res_vb;
+	const char *str_val;
+	GVariant *retval;
+
+	res_array_vb = g_variant_builder_new(G_VARIANT_TYPE("aa{sv}"));
+
+	resources = gupnp_didl_lite_object_get_resources(object);
+	ptr = resources;
+
+	while (ptr) {
+		res = ptr->data;
+		res_vb = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+		if (filter_mask & DLS_UPNP_MASK_PROP_URL) {
+			str_val = gupnp_didl_lite_resource_get_uri(res);
+			prv_add_string_prop(res_vb, DLS_INTERFACE_PROP_URL,
+					    str_val);
+		}
+		prv_parse_resources(res_vb, res, filter_mask);
+		g_variant_builder_add(res_array_vb, "@a{sv}",
+				      g_variant_builder_end(res_vb));
+		g_variant_builder_unref(res_vb);
+		g_object_unref(ptr->data);
+		ptr = g_list_next(ptr);
+	}
+	retval = g_variant_builder_end(res_array_vb);
+	g_variant_builder_unref(res_array_vb);
+
+	g_list_free(resources);
+
+	return retval;
+}
+
+static void prv_add_resources(GVariantBuilder *item_vb,
+			      GUPnPDIDLLiteObject *object,
+			      dls_upnp_prop_mask filter_mask)
+{
+	GVariant *val;
+
+	val = prv_compute_resources(object, filter_mask);
+	g_variant_builder_add(item_vb, "{sv}", DLS_INTERFACE_PROP_RESOURCES,
+			      val);
+}
+
 gboolean dls_props_add_object(GVariantBuilder *item_vb,
 			      GUPnPDIDLLiteObject *object,
 			      const char *root_path,
@@ -1300,56 +1350,9 @@ void dls_props_add_container(GVariantBuilder *item_vb,
 				  DLS_INTERFACE_PROP_TOTAL_DELETED_CHILD_COUNT,
 				  uint_val);
 	}
-}
 
-static GVariant *prv_compute_resources(GUPnPDIDLLiteObject *object,
-				       dls_upnp_prop_mask filter_mask)
-{
-	GUPnPDIDLLiteResource *res = NULL;
-	GList *resources;
-	GList *ptr;
-	GVariantBuilder *res_array_vb;
-	GVariantBuilder *res_vb;
-	const char *str_val;
-	GVariant *retval;
-
-	res_array_vb = g_variant_builder_new(G_VARIANT_TYPE("aa{sv}"));
-
-	resources = gupnp_didl_lite_object_get_resources(object);
-	ptr = resources;
-
-	while (ptr) {
-		res = ptr->data;
-		res_vb = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
-		if (filter_mask & DLS_UPNP_MASK_PROP_URL) {
-			str_val = gupnp_didl_lite_resource_get_uri(res);
-			prv_add_string_prop(res_vb, DLS_INTERFACE_PROP_URL,
-					    str_val);
-		}
-		prv_parse_resources(res_vb, res, filter_mask);
-		g_variant_builder_add(res_array_vb, "@a{sv}",
-				      g_variant_builder_end(res_vb));
-		g_variant_builder_unref(res_vb);
-		g_object_unref(ptr->data);
-		ptr = g_list_next(ptr);
-	}
-	retval = g_variant_builder_end(res_array_vb);
-	g_variant_builder_unref(res_array_vb);
-
-	g_list_free(resources);
-
-	return retval;
-}
-
-static void prv_add_resources(GVariantBuilder *item_vb,
-			      GUPnPDIDLLiteObject *object,
-			      dls_upnp_prop_mask filter_mask)
-{
-	GVariant *val;
-
-	val = prv_compute_resources(object, filter_mask);
-	g_variant_builder_add(item_vb, "{sv}", DLS_INTERFACE_PROP_RESOURCES,
-			      val);
+	if (filter_mask & DLS_UPNP_MASK_PROP_RESOURCES)
+		prv_add_resources(item_vb, GUPNP_DIDL_LITE_OBJECT(object), filter_mask);
 }
 
 void dls_props_add_item(GVariantBuilder *item_vb,
@@ -1626,6 +1629,9 @@ GVariant *dls_props_get_item_prop(const gchar *prop, const gchar *root_path,
 	GUPnPDIDLLiteResource *res;
 	GVariant *retval = NULL;
 	GList *list;
+#if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
+	gchar *prop_str;
+#endif
 
 	if (GUPNP_IS_DIDL_LITE_CONTAINER(object))
 		goto on_error;
@@ -1647,9 +1653,9 @@ GVariant *dls_props_get_item_prop(const gchar *prop, const gchar *root_path,
 		g_list_free_full(list, g_object_unref);
 
 #if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
-		path = g_variant_print(retval, FALSE);
-		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, path);
-		g_free(path);
+		prop_str = g_variant_print(retval, FALSE);
+		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, prop_str);
+		g_free(prop_str);
 #endif
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_ALBUM)) {
 		str = gupnp_didl_lite_object_get_album(object);
@@ -1706,6 +1712,11 @@ GVariant *dls_props_get_item_prop(const gchar *prop, const gchar *root_path,
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_RESOURCES)) {
 		retval = g_variant_ref_sink(
 			prv_compute_resources(object, DLS_UPNP_MASK_ALL_PROPS));
+#if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
+		prop_str = g_variant_print(retval, FALSE);
+		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, prop_str);
+		g_free(prop_str);
+#endif
 	} else {
 		res = prv_get_matching_resource(object, protocol_info);
 		if (!res)
@@ -1730,7 +1741,7 @@ GVariant *dls_props_get_container_prop(const gchar *prop,
 	GVariant *retval = NULL;
 	guint uint_val;
 #if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
-	gchar *create_classes;
+	gchar *prop_str;
 #endif
 	if (!GUPNP_IS_DIDL_LITE_CONTAINER(object))
 		goto on_error;
@@ -1758,9 +1769,9 @@ GVariant *dls_props_get_container_prop(const gchar *prop,
 		retval = g_variant_ref_sink(
 			prv_compute_create_classes(container));
 #if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
-		create_classes = g_variant_print(retval, FALSE);
-		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, create_classes);
-		g_free(create_classes);
+		prop_str = g_variant_print(retval, FALSE);
+		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, prop_str);
+		g_free(prop_str);
 #endif
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_CONTAINER_UPDATE_ID)) {
 		uint_val = gupnp_didl_lite_container_get_container_update_id(
@@ -1778,6 +1789,14 @@ GVariant *dls_props_get_container_prop(const gchar *prop,
 		DLEYNA_LOG_DEBUG("Prop %s = %u", prop, uint_val);
 
 		retval = g_variant_ref_sink(g_variant_new_uint32(uint_val));
+	} else if (!strcmp(prop, DLS_INTERFACE_PROP_RESOURCES)) {
+		retval = g_variant_ref_sink(
+			prv_compute_resources(object, DLS_UPNP_MASK_ALL_PROPS));
+#if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
+		prop_str = g_variant_print(retval, FALSE);
+		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, prop_str);
+		g_free(prop_str);
+#endif
 	}
 
 on_error:
