@@ -22,6 +22,8 @@ import dbus
 import sys
 import json
 
+from xml.dom import minidom
+
 def print_properties(props):
     print json.dumps(props, indent=4, sort_keys=True)
 
@@ -57,6 +59,10 @@ class MediaObject(object):
             sys.stdout.write(unichr(int(num, 16)))
             i = i + 2
         print
+
+    def print_metadata(self):
+        metadata = self.__objIF.GetMetaData()
+        print minidom.parseString(metadata).toprettyxml(indent=' '*4)
 
     def delete(self):
         return self.__objIF.Delete()
