@@ -260,22 +260,6 @@ static const gchar g_server_introspection[] =
 	"      <arg type='o' name='"DLS_INTERFACE_PATH"'"
 	"           direction='out'/>"
 	"    </method>"
-	"    <method name='"DLS_INTERFACE_CREATE_PLAYLIST"'>"
-	"      <arg type='s' name='"DLS_INTERFACE_TITLE"'"
-	"           direction='in'/>"
-	"      <arg type='s' name='"DLS_INTERFACE_CREATOR"'"
-	"           direction='in'/>"
-	"      <arg type='s' name='"DLS_INTERFACE_GENRE"'"
-	"           direction='in'/>"
-	"      <arg type='s' name='"DLS_INTERFACE_DESCRIPTION"'"
-	"           direction='in'/>"
-	"      <arg type='ao' name='"DLS_INTERFACE_PLAYLIST_ITEMS"'"
-	"           direction='in'/>"
-	"      <arg type='u' name='"DLS_INTERFACE_UPLOAD_ID"'"
-	"           direction='out'/>"
-	"      <arg type='o' name='"DLS_INTERFACE_PATH"'"
-	"           direction='out'/>"
-	"    </method>"
 	"    <method name='"DLS_INTERFACE_GET_COMPATIBLE_RESOURCE"'>"
 	"      <arg type='s' name='"DLS_INTERFACE_PROTOCOL_INFO"'"
 	"           direction='in'/>"
@@ -408,22 +392,6 @@ static const gchar g_server_introspection[] =
 	"           direction='out'/>"
 	"    </method>"
 	"    <method name='"DLS_INTERFACE_CANCEL"'>"
-	"    </method>"
-	"    <method name='"DLS_INTERFACE_CREATE_PLAYLIST_TO_ANY"'>"
-	"      <arg type='s' name='"DLS_INTERFACE_TITLE"'"
-	"           direction='in'/>"
-	"      <arg type='s' name='"DLS_INTERFACE_CREATOR"'"
-	"           direction='in'/>"
-	"      <arg type='s' name='"DLS_INTERFACE_GENRE"'"
-	"           direction='in'/>"
-	"      <arg type='s' name='"DLS_INTERFACE_DESCRIPTION"'"
-	"           direction='in'/>"
-	"      <arg type='ao' name='"DLS_INTERFACE_PLAYLIST_ITEMS"'"
-	"           direction='in'/>"
-	"      <arg type='u' name='"DLS_INTERFACE_UPLOAD_ID"'"
-	"           direction='out'/>"
-	"      <arg type='o' name='"DLS_INTERFACE_PATH"'"
-	"           direction='out'/>"
 	"    </method>"
 	"    <property type='s' name='"DLS_INTERFACE_PROP_LOCATION"'"
 	"       access='read'/>"
@@ -636,14 +604,6 @@ static void prv_process_async_task(dls_task_t *task)
 	case DLS_TASK_UPDATE_OBJECT:
 		dls_upnp_update_object(g_context.upnp, client, task,
 				       prv_async_task_complete);
-		break;
-	case DLS_TASK_CREATE_PLAYLIST:
-		dls_upnp_create_playlist(g_context.upnp, client, task,
-					 prv_async_task_complete);
-		break;
-	case DLS_TASK_CREATE_PLAYLIST_IN_ANY:
-		dls_upnp_create_playlist_in_any(g_context.upnp, client, task,
-						prv_async_task_complete);
 		break;
 	case DLS_TASK_GET_OBJECT_METADATA:
 		dls_upnp_get_object_metadata(g_context.upnp, client, task,
@@ -984,10 +944,6 @@ static void prv_con_method_call(dleyna_connector_id_t conn,
 		task = dls_task_create_container_new_generic(invocation,
 						DLS_TASK_CREATE_CONTAINER,
 						object, parameters, &error);
-	else if (!strcmp(method, DLS_INTERFACE_CREATE_PLAYLIST))
-		task = dls_task_create_playlist_new(invocation,
-						    DLS_TASK_CREATE_PLAYLIST,
-						    object, parameters, &error);
 	else if (!strcmp(method, DLS_INTERFACE_GET_COMPATIBLE_RESOURCE))
 		task = dls_task_get_resource_new(invocation, object,
 						 parameters, &error);
@@ -1071,11 +1027,6 @@ static void prv_device_method_call(dleyna_connector_id_t conn,
 	} else if (!strcmp(method, DLS_INTERFACE_CANCEL_UPLOAD)) {
 		task = dls_task_cancel_upload_new(invocation, object,
 						  parameters, &error);
-	} else if (!strcmp(method, DLS_INTERFACE_CREATE_PLAYLIST_TO_ANY)) {
-		task = dls_task_create_playlist_new(
-						invocation,
-						DLS_TASK_CREATE_PLAYLIST_IN_ANY,
-						object, parameters, &error);
 	} else if (!strcmp(method, DLS_INTERFACE_CANCEL)) {
 		task = NULL;
 

@@ -93,14 +93,6 @@ void dls_upnp_update_object(dls_upnp_t *upnp, dls_client_t *client,
 			    dls_task_t *task,
 			    dls_upnp_task_complete_t cb);
 
-void dls_upnp_create_playlist(dls_upnp_t *upnp, dls_client_t *client,
-			      dls_task_t *task,
-			      dls_upnp_task_complete_t cb);
-
-void dls_upnp_create_playlist_in_any(dls_upnp_t *upnp, dls_client_t *client,
-				     dls_task_t *task,
-				     dls_upnp_task_complete_t cb);
-
 void dls_upnp_get_object_metadata(dls_upnp_t *upnp, dls_client_t *client,
 				  dls_task_t *task,
 				  dls_upnp_task_complete_t cb);

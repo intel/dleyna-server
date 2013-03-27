@@ -183,14 +183,6 @@ enum dls_interface_type_ {
 #define DLS_INTERFACE_TO_DELETE "ToDelete"
 #define DLS_INTERFACE_CANCEL "Cancel"
 
-#define DLS_INTERFACE_CREATE_PLAYLIST "CreatePlaylist"
-#define DLS_INTERFACE_CREATE_PLAYLIST_TO_ANY "CreatePlaylistInAnyContainer"
-#define DLS_INTERFACE_TITLE "Title"
-#define DLS_INTERFACE_CREATOR "Creator"
-#define DLS_INTERFACE_GENRE "Genre"
-#define DLS_INTERFACE_DESCRIPTION "Description"
-#define DLS_INTERFACE_PLAYLIST_ITEMS "PlaylistItems"
-
 #define DLS_INTERFACE_GET_METADATA "GetMetaData"
 #define DLS_INTERFACE_METADATA "MetaData"
 

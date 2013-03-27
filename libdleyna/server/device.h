@@ -131,10 +131,6 @@ void dls_device_update_object(dls_client_t *client,
 			      dls_task_t *task,
 			      const gchar *upnp_filter);
 
-void dls_device_playlist_upload(dls_client_t *client,
-				dls_task_t *task,
-				const gchar *parent_id);
-
 void dls_device_get_object_metadata(dls_client_t *client,
 				    dls_task_t *task,
 				    const gchar *parent_id);
