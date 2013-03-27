@@ -438,11 +438,12 @@ in MediaServer2Spec specification (3).
 in case of Items:
  'video.musicclip', 'video.broadcast'
  'audio.broadcast', 'audio.book',
- 'playlist', 'item'
+ 'item.playlist', 'item'
 and in case of Containers:
  'album', 'album.music', 'album.photo'
  'person', 'person.musicartist'
  'genre', 'genre.music', 'genre.movie'
+ 'playlist'
 
 Additional Properties:
 ----------------------
