@@ -450,7 +450,7 @@ and in case of Containers:
  'album', 'album.music', 'album.photo'
  'person', 'person.musicartist'
  'genre', 'genre.music', 'genre.movie'
- 'playlist'
+ 'playlist', 'storage'
 
 Additional Properties:
 ----------------------
