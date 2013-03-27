@@ -242,7 +242,7 @@ is emitted when this property changes.
 Methods:
 ---------
 
-The com.intel.dLeynaServer.MediaDevice interface currently exposes seven methods:
+The com.intel.dLeynaServer.MediaDevice interface currently exposes six methods:
 
 UploadToAnyContainer(s DisplayName, s FilePath) -> (u UploadId, o ObjectPath)
 
@@ -265,20 +265,6 @@ in the new folder, e.g., ['video','container'].
 A special value of ['*'] indicates that no restriction is placed
 on the types of objects that can be stored in the container.
 The path of the newly created object is returned.
-
-CreatePlayListInAnyContainer(s Title, s Creator, s Genre, s Desc,
-			ao PlaylistItems )	-> (u UploadId, o ObjectPath)
-
-Create a new Playlist. The DMS chooses the best place to create this new
-container. Title is the name of the Playlist, Creator is the name of the
-creator of the Playlist, Genre is the genre of the playlist, Desc is a short
-description of the playlist and PlaylistItems is an array of Item path to be
-added in the playlist. Creator, Genre and Desc are optional, you can pass
-empty strings for these parameters.
-The successful completion of this method indicates that the upload has begun,
-but has not necessarily finished.  There are two return values.  The UploadId,
-which can be used to monitor the progress of the upload and to
-cancel it and ObjectPath, which contains the path of the newly created object.
 
 GetUploadStatus(u UploadId) -> (s UploadStatus, t Length, t Total)
 
@@ -589,7 +575,7 @@ is given in the section "Transcoding and org.gnome.UPnP.MediaItem2".
 New Methods:
 ------------
 
-Eight new methods have been added.  These methods are:
+Seven new methods have been added.  These methods are:
 
 ListChildrenEx(u Offset, u Max, as Filter, s SortBy) -> aa{sv}
 
@@ -602,9 +588,6 @@ SearchObjectsEx(s Query, u Offset, u Max, as Filter, s SortBy) -> aa{sv}
 Upload(s DisplayName, s FilePath) -> (u UploadId, o ObjectPath)
 
 CreateContainer(s DisplayName, s Type, as ChildTypes) -> o ObjectPath
-
-CreatePlayList(s Title, s Creator, s Genre, s Desc, ao PlaylistItems )
-	-> (u UploadId, o ObjectPath)
 
 GetCompatibleResources(s protocol_info, as filter) -> a{sv}
 
@@ -676,15 +659,6 @@ in the new folder, e.g., ['video','container'].
 A special value of ['*'] indicates that no restriction is placed
 on the types of objects that can be stored in the container.
 The path of the newly created object is returned.
-
-The CreatePlayList method allows the creation of a playlist to
-the org.gnome.UPnP.MediaContainer2 object upon which it was executed.
-It is identical in function and behavior to
-com.intel.dLeynaServer.MediaDevice CreatePlaylistInAnyContainer with the sole
-exception that CreatePlayList allows the client to specify the server-side
-container into which the Playlist is to be uploaded whereas
-CreatePlaylistInAnyContainer leaves it up to the server to determine the most
-suitable location for the file.
 
 The GetCompatibleResources method: see description in MediaItem2.
 
