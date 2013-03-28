@@ -932,7 +932,8 @@ static GUPnPDIDLLiteResource *prv_get_matching_resource
 
 static void prv_parse_resources(GVariantBuilder *item_vb,
 				GUPnPDIDLLiteResource *res,
-				dls_upnp_prop_mask filter_mask)
+				dls_upnp_prop_mask filter_mask,
+				gboolean tracking_on)
 {
 	GUPnPProtocolInfo *protocol_info;
 	int int_val;
@@ -983,7 +984,7 @@ static void prv_parse_resources(GVariantBuilder *item_vb,
 				 int_val);
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_UPDATE_COUNT) {
+	if (tracking_on && (filter_mask & DLS_UPNP_MASK_PROP_UPDATE_COUNT)) {
 		uint_val = gupnp_didl_lite_resource_get_update_count(res);
 		prv_add_uint_prop(item_vb, DLS_INTERFACE_PROP_UPDATE_COUNT,
 				  uint_val);
@@ -1182,6 +1183,7 @@ gboolean dls_props_add_object(GVariantBuilder *item_vb,
 			      GUPnPDIDLLiteObject *object,
 			      const char *root_path,
 			      const gchar *parent_path,
+			      gboolean tracking_on,
 			      dls_upnp_prop_mask filter_mask)
 {
 	gchar *path = NULL;
@@ -1239,7 +1241,8 @@ gboolean dls_props_add_object(GVariantBuilder *item_vb,
 				     prv_props_get_dlna_managed_dict(flags));
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_OBJECT_UPDATE_ID) {
+	if (tracking_on &&
+	    (filter_mask & DLS_UPNP_MASK_PROP_OBJECT_UPDATE_ID)) {
 		uint_val = gupnp_didl_lite_object_get_update_id(object);
 		prv_add_uint_prop(item_vb, DLS_INTERFACE_PROP_OBJECT_UPDATE_ID,
 				  uint_val);
@@ -1257,6 +1260,7 @@ on_error:
 void dls_props_add_container(GVariantBuilder *item_vb,
 			     GUPnPDIDLLiteContainer *object,
 			     dls_upnp_prop_mask filter_mask,
+			     gboolean tracking_on,
 			     gboolean *have_child_count)
 {
 	int child_count;
@@ -1285,7 +1289,8 @@ void dls_props_add_container(GVariantBuilder *item_vb,
 				     DLS_INTERFACE_PROP_CREATE_CLASSES,
 				     prv_compute_create_classes(object));
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_CONTAINER_UPDATE_ID) {
+	if (tracking_on &&
+	    (filter_mask & DLS_UPNP_MASK_PROP_CONTAINER_UPDATE_ID)) {
 		uint_val = gupnp_didl_lite_container_get_container_update_id(
 									object);
 		prv_add_uint_prop(item_vb,
@@ -1293,7 +1298,8 @@ void dls_props_add_container(GVariantBuilder *item_vb,
 				  uint_val);
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_TOTAL_DELETED_CHILD_COUNT) {
+	if (tracking_on &&
+	    (filter_mask & DLS_UPNP_MASK_PROP_TOTAL_DELETED_CHILD_COUNT)) {
 		uint_val =
 		gupnp_didl_lite_container_get_total_deleted_child_count(object);
 		prv_add_uint_prop(item_vb,
@@ -1303,7 +1309,8 @@ void dls_props_add_container(GVariantBuilder *item_vb,
 }
 
 static GVariant *prv_compute_resources(GUPnPDIDLLiteObject *object,
-				       dls_upnp_prop_mask filter_mask)
+				       dls_upnp_prop_mask filter_mask,
+				       gboolean tracking_on)
 {
 	GUPnPDIDLLiteResource *res = NULL;
 	GList *resources;
@@ -1328,7 +1335,7 @@ static GVariant *prv_compute_resources(GUPnPDIDLLiteObject *object,
 						    DLS_INTERFACE_PROP_URL,
 						    str_val);
 		}
-		prv_parse_resources(res_vb, res, filter_mask);
+		prv_parse_resources(res_vb, res, filter_mask, tracking_on);
 		g_variant_builder_add(res_array_vb, "@a{sv}",
 				      g_variant_builder_end(res_vb));
 		g_variant_builder_unref(res_vb);
@@ -1345,11 +1352,12 @@ static GVariant *prv_compute_resources(GUPnPDIDLLiteObject *object,
 
 static void prv_add_resources(GVariantBuilder *item_vb,
 			      GUPnPDIDLLiteObject *object,
-			      dls_upnp_prop_mask filter_mask)
+			      dls_upnp_prop_mask filter_mask,
+			      gboolean tracking_on)
 {
 	GVariant *val;
 
-	val = prv_compute_resources(object, filter_mask);
+	val = prv_compute_resources(object, filter_mask, tracking_on);
 	g_variant_builder_add(item_vb, "{sv}", DLS_INTERFACE_PROP_RESOURCES,
 			      val);
 }
@@ -1358,7 +1366,8 @@ void dls_props_add_item(GVariantBuilder *item_vb,
 			GUPnPDIDLLiteObject *object,
 			const gchar *root_path,
 			dls_upnp_prop_mask filter_mask,
-			const gchar *protocol_info)
+			const gchar *protocol_info,
+			gboolean tracking_on)
 {
 	int track_number;
 	GUPnPDIDLLiteResource *res;
@@ -1422,18 +1431,19 @@ void dls_props_add_item(GVariantBuilder *item_vb,
 						  DLS_INTERFACE_PROP_URLS,
 						  &str_val, 1);
 		}
-		prv_parse_resources(item_vb, res, filter_mask);
+		prv_parse_resources(item_vb, res, filter_mask, tracking_on);
 		g_object_unref(res);
 	}
 
 	if (filter_mask & DLS_UPNP_MASK_PROP_RESOURCES)
-		prv_add_resources(item_vb, object, filter_mask);
+		prv_add_resources(item_vb, object, filter_mask, tracking_on);
 }
 
 void dls_props_add_resource(GVariantBuilder *item_vb,
 			    GUPnPDIDLLiteObject *object,
 			    dls_upnp_prop_mask filter_mask,
-			    const gchar *protocol_info)
+			    const gchar *protocol_info,
+			    gboolean tracking_on)
 {
 	GUPnPDIDLLiteResource *res;
 	const char *str_val;
@@ -1447,7 +1457,7 @@ void dls_props_add_resource(GVariantBuilder *item_vb,
 						    DLS_INTERFACE_PROP_URL,
 						    str_val);
 		}
-		prv_parse_resources(item_vb, res, filter_mask);
+		prv_parse_resources(item_vb, res, filter_mask, tracking_on);
 		g_object_unref(res);
 	}
 }
@@ -1614,7 +1624,9 @@ GVariant *dls_props_get_object_prop(const gchar *prop, const gchar *root_path,
 
 		DLEYNA_LOG_DEBUG("Prop %s = %u", prop, uint_val);
 
-		retval = g_variant_ref_sink(g_variant_new_uint32(uint_val));
+		if (uint_val)
+			retval = g_variant_ref_sink(g_variant_new_uint32(
+								uint_val));
 	}
 
 on_error:
@@ -1624,7 +1636,8 @@ on_error:
 
 GVariant *dls_props_get_item_prop(const gchar *prop, const gchar *root_path,
 				  GUPnPDIDLLiteObject *object,
-				  const gchar *protocol_info)
+				  const gchar *protocol_info,
+				  gboolean tracking_on)
 {
 	const gchar *str;
 	gchar *path;
@@ -1711,7 +1724,9 @@ GVariant *dls_props_get_item_prop(const gchar *prop, const gchar *root_path,
 		g_free(path);
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_RESOURCES)) {
 		retval = g_variant_ref_sink(
-			prv_compute_resources(object, DLS_UPNP_MASK_ALL_PROPS));
+			prv_compute_resources(object,
+					      DLS_UPNP_MASK_ALL_PROPS,
+					      tracking_on));
 	} else {
 		res = prv_get_matching_resource(object, protocol_info);
 		if (!res)
@@ -1728,6 +1743,7 @@ on_error:
 }
 
 GVariant *dls_props_get_container_prop(const gchar *prop,
+				       gboolean tracking_on,
 				       GUPnPDIDLLiteObject *object)
 {
 	gint child_count;
@@ -1768,15 +1784,17 @@ GVariant *dls_props_get_container_prop(const gchar *prop,
 		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, create_classes);
 		g_free(create_classes);
 #endif
-	} else if (!strcmp(prop, DLS_INTERFACE_PROP_CONTAINER_UPDATE_ID)) {
+	} else if (tracking_on &&
+		   !strcmp(prop, DLS_INTERFACE_PROP_CONTAINER_UPDATE_ID)) {
 		uint_val = gupnp_didl_lite_container_get_container_update_id(
 								container);
 
 		DLEYNA_LOG_DEBUG("Prop %s = %u", prop, uint_val);
 
 		retval = g_variant_ref_sink(g_variant_new_uint32(uint_val));
-	} else if (!strcmp(prop,
-				DLS_INTERFACE_PROP_TOTAL_DELETED_CHILD_COUNT)) {
+	} else if (tracking_on &&
+		   !strcmp(prop,
+			   DLS_INTERFACE_PROP_TOTAL_DELETED_CHILD_COUNT)) {
 		uint_val =
 			gupnp_didl_lite_container_get_total_deleted_child_count(
 								container);

@@ -56,6 +56,7 @@ struct dls_device_t_ {
 	GVariant *sort_ext_caps;
 	GVariant *feature_list;
 	gboolean shutting_down;
+	gboolean tracking_on;
 };
 
 dls_device_context_t *dls_device_append_new_context(dls_device_t *device,
