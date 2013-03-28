@@ -336,6 +336,8 @@ static void prv_last_change_cb(GUPnPServiceProxy *proxy,
 
 	last_change = g_value_get_string(value);
 
+	device->tracking_on = TRUE;
+
 	DLEYNA_LOG_DEBUG_NL();
 	DLEYNA_LOG_DEBUG("LastChange XML: %s", last_change);
 	DLEYNA_LOG_DEBUG_NL();
@@ -1090,13 +1092,16 @@ static void prv_found_child(GUPnPDIDLLiteParser *parser,
 	builder->vb = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 
 	if (!dls_props_add_object(builder->vb, object, task->target.root_path,
-				  task->target.path, cb_task_data->filter_mask))
+				  task->target.path,
+				  task->target.device->tracking_on,
+			          cb_task_data->filter_mask))
 		goto on_error;
 
 	if (GUPNP_IS_DIDL_LITE_CONTAINER(object)) {
 		dls_props_add_container(builder->vb,
 					(GUPnPDIDLLiteContainer *)object,
 					cb_task_data->filter_mask,
+					task->target.device->tracking_on,
 					&have_child_count);
 
 		if (!have_child_count && (cb_task_data->filter_mask &
@@ -1110,7 +1115,8 @@ static void prv_found_child(GUPnPDIDLLiteParser *parser,
 		dls_props_add_item(builder->vb, object,
 				   task->target.root_path,
 				   cb_task_data->filter_mask,
-				   cb_task_data->protocol_info);
+				   cb_task_data->protocol_info,
+				   task->target.device->tracking_on);
 	}
 
 	g_ptr_array_add(cb_task_data->vbs, builder);
@@ -1331,7 +1337,8 @@ static void prv_get_item(GUPnPDIDLLiteParser *parser,
 		dls_props_add_item(cb_task_data->vb, object,
 				   cb_data->task.target.root_path,
 				   DLS_UPNP_MASK_ALL_PROPS,
-				   cb_task_data->protocol_info);
+				   cb_task_data->protocol_info,
+				   cb_data->task.target.device->tracking_on);
 	else
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_UNKNOWN_INTERFACE,
@@ -1347,10 +1354,12 @@ static void prv_get_container(GUPnPDIDLLiteParser *parser,
 	gboolean have_child_count;
 
 	if (GUPNP_IS_DIDL_LITE_CONTAINER(object)) {
-		dls_props_add_container(cb_task_data->vb,
-					(GUPnPDIDLLiteContainer *)object,
-					DLS_UPNP_MASK_ALL_PROPS,
-					&have_child_count);
+		dls_props_add_container(
+				cb_task_data->vb,
+				(GUPnPDIDLLiteContainer *)object,
+				DLS_UPNP_MASK_ALL_PROPS,
+				cb_data->task.target.device->tracking_on,
+				&have_child_count);
 		if (!have_child_count)
 			cb_task_data->need_child_count = TRUE;
 	} else {
@@ -1381,7 +1390,9 @@ static void prv_get_object(GUPnPDIDLLiteParser *parser,
 
 	if (!dls_props_add_object(cb_task_data->vb, object,
 				  cb_data->task.target.root_path,
-				  parent_path, DLS_UPNP_MASK_ALL_PROPS))
+				  parent_path,
+				  cb_data->task.target.device->tracking_on,
+				  DLS_UPNP_MASK_ALL_PROPS))
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_BAD_RESULT,
 					     "Unable to retrieve mandatory object properties");
@@ -1404,15 +1415,18 @@ static void prv_get_all(GUPnPDIDLLiteParser *parser,
 				cb_task_data->vb,
 				(GUPnPDIDLLiteContainer *)
 				object, DLS_UPNP_MASK_ALL_PROPS,
+				cb_data->task.target.device->tracking_on,
 				&have_child_count);
 			if (!have_child_count)
 				cb_task_data->need_child_count = TRUE;
 		} else {
-			dls_props_add_item(cb_task_data->vb,
-					   object,
-					   cb_data->task.target.root_path,
-					   DLS_UPNP_MASK_ALL_PROPS,
-					   cb_task_data->protocol_info);
+			dls_props_add_item(
+				cb_task_data->vb,
+				object,
+				cb_data->task.target.root_path,
+				DLS_UPNP_MASK_ALL_PROPS,
+				cb_task_data->protocol_info,
+				cb_data->task.target.device->tracking_on);
 		}
 	}
 }
@@ -2067,10 +2081,11 @@ static void prv_get_item_property(GUPnPDIDLLiteParser *parser,
 		goto on_error;
 
 	cb_data->task.result = dls_props_get_item_prop(
-						task_data->prop_name,
-						task->target.root_path,
-						object,
-						cb_task_data->protocol_info);
+				task_data->prop_name,
+				task->target.root_path,
+				object,
+				cb_task_data->protocol_info,
+				cb_data->task.target.device->tracking_on);
 
 on_error:
 
@@ -2089,8 +2104,9 @@ static void prv_get_container_property(GUPnPDIDLLiteParser *parser,
 		goto on_error;
 
 	cb_data->task.result = dls_props_get_container_prop(
-							task_data->prop_name,
-							object);
+				task_data->prop_name,
+				cb_data->task.target.device->tracking_on,
+				object);
 
 on_error:
 
@@ -2514,14 +2530,18 @@ static void prv_found_target(GUPnPDIDLLiteParser *parser,
 
 	if (!dls_props_add_object(builder->vb, object,
 				  cb_data->task.target.root_path,
-				  parent_path, cb_task_data->filter_mask))
+				  parent_path,
+				  cb_data->task.target.device->tracking_on,
+				  cb_task_data->filter_mask))
 		goto on_error;
 
 	if (GUPNP_IS_DIDL_LITE_CONTAINER(object)) {
-		dls_props_add_container(builder->vb,
-					(GUPnPDIDLLiteContainer *)object,
-					cb_task_data->filter_mask,
-					&have_child_count);
+		dls_props_add_container(
+				builder->vb,
+				(GUPnPDIDLLiteContainer *)object,
+				cb_task_data->filter_mask,
+				cb_data->task.target.device->tracking_on,
+				&have_child_count);
 
 		if (!have_child_count && (cb_task_data->filter_mask &
 					  DLS_UPNP_MASK_PROP_CHILD_COUNT)) {
@@ -2535,7 +2555,8 @@ static void prv_found_target(GUPnPDIDLLiteParser *parser,
 				   object,
 				   cb_data->task.target.root_path,
 				   cb_task_data->filter_mask,
-				   cb_task_data->protocol_info);
+				   cb_task_data->protocol_info,
+				   cb_data->task.target.device->tracking_on);
 	}
 
 	g_ptr_array_add(cb_task_data->vbs, builder);
@@ -2690,7 +2711,8 @@ static void prv_get_resource(GUPnPDIDLLiteParser *parser,
 
 	dls_props_add_resource(cb_task_data->vb, object,
 			       cb_task_data->filter_mask,
-			       task_data->protocol_info);
+			       task_data->protocol_info,
+			       cb_data->task.target.device->tracking_on);
 }
 
 void dls_device_get_resource(dls_client_t *client,
