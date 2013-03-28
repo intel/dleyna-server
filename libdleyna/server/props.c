@@ -944,7 +944,8 @@ static void prv_parse_common_resources(GVariantBuilder *item_vb,
 		prv_add_int64_prop(item_vb, DLS_INTERFACE_PROP_SIZE, int64_val);
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_UPDATE_COUNT) {
+	if ((filter_mask & DLS_UPNP_MASK_PROP_UPDATE_COUNT) &&
+	    gupnp_didl_lite_resource_update_count_is_set(res)) {
 		uint_val = gupnp_didl_lite_resource_get_update_count(res);
 		prv_add_uint_prop(item_vb, DLS_INTERFACE_PROP_UPDATE_COUNT,
 				  uint_val);
@@ -1304,7 +1305,8 @@ gboolean dls_props_add_object(GVariantBuilder *item_vb,
 				     prv_props_get_dlna_managed_dict(flags));
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_OBJECT_UPDATE_ID) {
+	if ((filter_mask & DLS_UPNP_MASK_PROP_OBJECT_UPDATE_ID) &&
+	    gupnp_didl_lite_object_update_id_is_set(object)) {
 		uint_val = gupnp_didl_lite_object_get_update_id(object);
 		prv_add_uint_prop(item_vb, DLS_INTERFACE_PROP_OBJECT_UPDATE_ID,
 				  uint_val);
@@ -1353,7 +1355,8 @@ void dls_props_add_container(GVariantBuilder *item_vb,
 				     DLS_INTERFACE_PROP_CREATE_CLASSES,
 				     prv_compute_create_classes(object));
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_CONTAINER_UPDATE_ID) {
+	if ((filter_mask & DLS_UPNP_MASK_PROP_CONTAINER_UPDATE_ID) &&
+	    gupnp_didl_lite_container_container_update_id_is_set(object)) {
 		uint_val = gupnp_didl_lite_container_get_container_update_id(
 									object);
 		prv_add_uint_prop(item_vb,
@@ -1361,9 +1364,12 @@ void dls_props_add_container(GVariantBuilder *item_vb,
 				  uint_val);
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_TOTAL_DELETED_CHILD_COUNT) {
+	if ((filter_mask & DLS_UPNP_MASK_PROP_TOTAL_DELETED_CHILD_COUNT) &&
+	    gupnp_didl_lite_container_total_deleted_child_count_is_set(
+								object)) {
 		uint_val =
 		gupnp_didl_lite_container_get_total_deleted_child_count(object);
+
 		prv_add_uint_prop(item_vb,
 				  DLS_INTERFACE_PROP_TOTAL_DELETED_CHILD_COUNT,
 				  uint_val);
@@ -1521,7 +1527,8 @@ static GVariant *prv_get_common_resource_property(const gchar *prop,
 		if (str_val)
 			retval = g_variant_ref_sink(g_variant_new_strv(&str_val,
 								       1));
-	} else if (!strcmp(prop, DLS_INTERFACE_PROP_UPDATE_COUNT)) {
+	} else if (!strcmp(prop, DLS_INTERFACE_PROP_UPDATE_COUNT) &&
+		   gupnp_didl_lite_resource_update_count_is_set(res)) {
 		uint_val = gupnp_didl_lite_resource_get_update_count(res);
 		retval = g_variant_ref_sink(g_variant_new_uint32(uint_val));
 	}
@@ -1664,7 +1671,8 @@ GVariant *dls_props_get_object_prop(const gchar *prop, const gchar *root_path,
 
 		retval = g_variant_ref_sink(
 				prv_props_get_dlna_managed_dict(dlna_managed));
-	} else if (!strcmp(prop, DLS_INTERFACE_PROP_OBJECT_UPDATE_ID)) {
+	} else if (!strcmp(prop, DLS_INTERFACE_PROP_OBJECT_UPDATE_ID) &&
+		   gupnp_didl_lite_object_update_id_is_set(object)) {
 		uint_val = gupnp_didl_lite_object_get_update_id(object);
 
 		DLEYNA_LOG_DEBUG("Prop %s = %u", prop, uint_val);
@@ -1841,7 +1849,9 @@ GVariant *dls_props_get_container_prop(const gchar *prop,
 		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, prop_str);
 		g_free(prop_str);
 #endif
-	} else if (!strcmp(prop, DLS_INTERFACE_PROP_CONTAINER_UPDATE_ID)) {
+	} else if (!strcmp(prop, DLS_INTERFACE_PROP_CONTAINER_UPDATE_ID) &&
+		gupnp_didl_lite_container_container_update_id_is_set(
+								container)) {
 		uint_val = gupnp_didl_lite_container_get_container_update_id(
 								container);
 
@@ -1849,7 +1859,9 @@ GVariant *dls_props_get_container_prop(const gchar *prop,
 
 		retval = g_variant_ref_sink(g_variant_new_uint32(uint_val));
 	} else if (!strcmp(prop,
-				DLS_INTERFACE_PROP_TOTAL_DELETED_CHILD_COUNT)) {
+				DLS_INTERFACE_PROP_TOTAL_DELETED_CHILD_COUNT) &&
+		   gupnp_didl_lite_container_total_deleted_child_count_is_set(
+								container)) {
 		uint_val =
 			gupnp_didl_lite_container_get_total_deleted_child_count(
 								container);
