@@ -747,19 +747,23 @@ static void prv_get_capabilities_analyze(GHashTable *property_map,
 
 	g_variant_builder_init(&caps_vb, G_VARIANT_TYPE("as"));
 
-	caps = g_strsplit(result, ",", 0);
-	saved = caps;
+	if (!strcmp(result, "*")) {
+		g_variant_builder_add(&caps_vb, "s", "*");
+	} else {
+		caps = g_strsplit(result, ",", 0);
+		saved = caps;
 
-	while (caps && *caps) {
-		prop_name = g_hash_table_lookup(property_map, *caps);
+		while (caps && *caps) {
+			prop_name = g_hash_table_lookup(property_map, *caps);
 
-		if (prop_name)
-			g_variant_builder_add(&caps_vb, "s", prop_name);
+			if (prop_name)
+				g_variant_builder_add(&caps_vb, "s", prop_name);
 
-		caps++;
+			caps++;
+		}
+
+		g_strfreev(saved);
 	}
-
-	g_strfreev(saved);
 
 	*variant = g_variant_ref_sink(g_variant_builder_end(&caps_vb));
 

@@ -198,11 +198,17 @@ below:
 |------------------------------------------------------------------------------|
 | SearchCaps        |     as    | m  | List of property names that can be used |
 |                   |           |    | in search queries.                      |
+|                   |           |    | A wildcard (“*”) indicates that the     |
+|                   |           |    | device supports search queries using    |
+|                   |           |    | any property name(s).                   |
 |                   |           |    | Empty if not supported by the device.   |
 |------------------------------------------------------------------------------|
 | SortCaps          |     as    | m  | List of property names that can be used |
 |                   |           |    | to sort Search() or Browse() action     |
 |                   |           |    | results.                                |
+|                   |           |    | A wildcard (“*”) indicates that the     |
+|                   |           |    | device supports sorting using all       |
+|                   |           |    | property names.                         |
 |                   |           |    | Empty if not supported by the device.   |
 |------------------------------------------------------------------------------|
 | SortExtCaps       |     as    | o  | List of sort modifiers that can be used |
