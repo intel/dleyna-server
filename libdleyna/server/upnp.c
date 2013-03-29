@@ -580,6 +580,8 @@ void dls_upnp_get_resource(dls_upnp_t *upnp, dls_client_t *client,
 
 	dls_device_get_resource(client, task, upnp_filter);
 
+	g_free(upnp_filter);
+
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
