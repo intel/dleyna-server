@@ -2746,6 +2746,7 @@ static gchar *prv_create_new_container_didl(const gchar *parent_id,
 	GVariantIter iter;
 	GVariant *child_type;
 	const gchar *actual_type;
+	GUPnPOCMFlags flags;
 
 	writer = gupnp_didl_lite_writer_new(NULL);
 	item = GUPNP_DIDL_LITE_OBJECT(
@@ -2761,7 +2762,12 @@ static gchar *prv_create_new_container_didl(const gchar *parent_id,
 						task->ut.create_container.type);
 	gupnp_didl_lite_object_set_upnp_class(item, actual_type);
 	gupnp_didl_lite_object_set_restricted(item, FALSE);
-	gupnp_didl_lite_object_set_dlna_managed(item, GUPNP_OCM_FLAGS_UPLOAD);
+	flags = GUPNP_OCM_FLAGS_UPLOAD |
+		GUPNP_OCM_FLAGS_CREATE_CONTAINER |
+		GUPNP_OCM_FLAGS_DESTROYABLE |
+		GUPNP_OCM_FLAGS_UPLOAD_DESTROYABLE |
+		GUPNP_OCM_FLAGS_CHANGE_METADATA;
+	gupnp_didl_lite_object_set_dlna_managed(item, flags);
 
 	g_variant_iter_init(&iter, task->ut.create_container.child_types);
 	while ((child_type = g_variant_iter_next_value(&iter))) {
