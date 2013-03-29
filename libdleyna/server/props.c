@@ -1738,7 +1738,7 @@ GVariant *dls_props_get_container_prop(const gchar *prop,
 	GVariant *retval = NULL;
 	guint uint_val;
 #if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
-	gchar *create_classes;
+	gchar *prop_str;
 #endif
 	if (!GUPNP_IS_DIDL_LITE_CONTAINER(object))
 		goto on_error;
@@ -1766,9 +1766,9 @@ GVariant *dls_props_get_container_prop(const gchar *prop,
 		retval = g_variant_ref_sink(
 			prv_compute_create_classes(container));
 #if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
-		create_classes = g_variant_print(retval, FALSE);
-		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, create_classes);
-		g_free(create_classes);
+		prop_str = g_variant_print(retval, FALSE);
+		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, prop_str);
+		g_free(prop_str);
 #endif
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_CONTAINER_UPDATE_ID)) {
 		uint_val = gupnp_didl_lite_container_get_container_update_id(
@@ -1790,9 +1790,9 @@ GVariant *dls_props_get_container_prop(const gchar *prop,
 		retval = g_variant_ref_sink(
 			prv_compute_resources(object, DLS_UPNP_MASK_ALL_PROPS));
 #if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
-		create_classes = g_variant_print(retval, FALSE);
-		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, create_classes);
-		g_free(create_classes);
+		prop_str = g_variant_print(retval, FALSE);
+		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, prop_str);
+		g_free(prop_str);
 #endif
 	}
 

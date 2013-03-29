@@ -560,7 +560,7 @@ Additional properties unsupported by org.gnome.MediaContainer2
 |                        |      |      |  since the last initialization     |
 |---------------------------------------------------------------------------|
 | Resources              |aa{sv}|  o   | Returns the set of resources       |
-|                        |      |      | associated with an item            |
+|                        |      |      | associated with a container        |
 |---------------------------------------------------------------------------|
 
 New Methods:
