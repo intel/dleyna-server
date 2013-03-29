@@ -1629,6 +1629,9 @@ GVariant *dls_props_get_item_prop(const gchar *prop, const gchar *root_path,
 	GUPnPDIDLLiteResource *res;
 	GVariant *retval = NULL;
 	GList *list;
+#if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
+	gchar *prop_str;
+#endif
 
 	if (GUPNP_IS_DIDL_LITE_CONTAINER(object))
 		goto on_error;
@@ -1650,9 +1653,9 @@ GVariant *dls_props_get_item_prop(const gchar *prop, const gchar *root_path,
 		g_list_free_full(list, g_object_unref);
 
 #if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
-		path = g_variant_print(retval, FALSE);
-		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, path);
-		g_free(path);
+		prop_str = g_variant_print(retval, FALSE);
+		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, prop_str);
+		g_free(prop_str);
 #endif
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_ALBUM)) {
 		str = gupnp_didl_lite_object_get_album(object);
@@ -1710,9 +1713,9 @@ GVariant *dls_props_get_item_prop(const gchar *prop, const gchar *root_path,
 		retval = g_variant_ref_sink(
 			prv_compute_resources(object, DLS_UPNP_MASK_ALL_PROPS));
 #if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
-		path = g_variant_print(retval, FALSE);
-		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, path);
-		g_free(path);
+		prop_str = g_variant_print(retval, FALSE);
+		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, prop_str);
+		g_free(prop_str);
 #endif
 	} else {
 		res = prv_get_matching_resource(object, protocol_info);
