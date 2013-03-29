@@ -1101,6 +1101,7 @@ static void prv_found_child(GUPnPDIDLLiteParser *parser,
 		dls_props_add_container(builder->vb,
 					(GUPnPDIDLLiteContainer *)object,
 					cb_task_data->filter_mask,
+					cb_task_data->protocol_info,
 					&have_child_count);
 
 		if (!have_child_count && (cb_task_data->filter_mask &
@@ -1354,6 +1355,7 @@ static void prv_get_container(GUPnPDIDLLiteParser *parser,
 		dls_props_add_container(cb_task_data->vb,
 					(GUPnPDIDLLiteContainer *)object,
 					DLS_UPNP_MASK_ALL_PROPS,
+					cb_task_data->protocol_info,
 					&have_child_count);
 		if (!have_child_count)
 			cb_task_data->need_child_count = TRUE;
@@ -1408,6 +1410,7 @@ static void prv_get_all(GUPnPDIDLLiteParser *parser,
 				cb_task_data->vb,
 				(GUPnPDIDLLiteContainer *)
 				object, DLS_UPNP_MASK_ALL_PROPS,
+				cb_task_data->protocol_info,
 				&have_child_count);
 			if (!have_child_count)
 				cb_task_data->need_child_count = TRUE;
@@ -2088,13 +2091,15 @@ static void prv_get_container_property(GUPnPDIDLLiteParser *parser,
 	dls_async_task_t *cb_data = user_data;
 	dls_task_t *task = &cb_data->task;
 	dls_task_get_prop_t *task_data = &task->ut.get_prop;
+	dls_async_get_prop_t *cb_task_data = &cb_data->ut.get_prop;
 
 	if (cb_data->task.result)
 		goto on_error;
 
 	cb_data->task.result = dls_props_get_container_prop(
-							task_data->prop_name,
-							object);
+						task_data->prop_name,
+						object,
+						cb_task_data->protocol_info);
 
 on_error:
 
@@ -2525,6 +2530,7 @@ static void prv_found_target(GUPnPDIDLLiteParser *parser,
 		dls_props_add_container(builder->vb,
 					(GUPnPDIDLLiteContainer *)object,
 					cb_task_data->filter_mask,
+					cb_task_data->protocol_info,
 					&have_child_count);
 
 		if (!have_child_count && (cb_task_data->filter_mask &

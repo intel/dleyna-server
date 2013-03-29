@@ -565,9 +565,22 @@ Additional properties unsupported by org.gnome.MediaContainer2
 |                        |      |      |  deleted from a container object   |
 |                        |      |      |  since the last initialization     |
 |---------------------------------------------------------------------------|
-| Resources              |aa{sv}|  o   | Returns the set of resources       |
-|                        |      |      | associated with a container        |
+| Resources              |aa{sv}|  o   |  Returns the set of resources      |
+|                        |      |      |  associated with a container       |
 |---------------------------------------------------------------------------|
+| DLNAProfile            |  s   |  o   |                                    |
+| MIMEType               |  s   |  o   |  See "Container properties"        |
+| Size                   |  x   |  o   |  paragraph below.                  |
+| UpdateCount            |  u   |  o   |                                    |
+| URLs                   |  as  |  o   |                                    |
+|---------------------------------------------------------------------------|
+
+Container properties:
+---------------------
+ The properties of one of the Resources properties may be duplicated in the
+ Container object.  The algorithm for selecting the resource whose properties
+ are exposed directly in the Container object is given in the section
+ "Transcoding and org.gnome.UPnP.MediaItem2".
 
 New Methods:
 ------------
