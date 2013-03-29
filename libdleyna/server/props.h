@@ -105,12 +105,14 @@ GVariant *dls_props_get_object_prop(const gchar *prop, const gchar *root_path,
 void dls_props_add_container(GVariantBuilder *item_vb,
 			     GUPnPDIDLLiteContainer *object,
 			     dls_upnp_prop_mask filter_mask,
+			     const gchar *protocol_info,
 			     gboolean *have_child_count);
 
 void dls_props_add_child_count(GVariantBuilder *item_vb, gint value);
 
 GVariant *dls_props_get_container_prop(const gchar *prop,
-				       GUPnPDIDLLiteObject *object);
+				       GUPnPDIDLLiteObject *object,
+				       const gchar *protocol_info);
 
 void dls_props_add_resource(GVariantBuilder *item_vb,
 			    GUPnPDIDLLiteObject *object,
