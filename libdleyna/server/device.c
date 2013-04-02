@@ -221,6 +221,8 @@ void dls_device_delete(void *device)
 	dls_device_t *dev = device;
 
 	if (dev) {
+		DLEYNA_LOG_DEBUG("Deleting device");
+
 		dev->shutting_down = TRUE;
 		g_hash_table_unref(dev->upload_jobs);
 		g_hash_table_unref(dev->uploads);
@@ -628,6 +630,8 @@ static void prv_get_feature_list_cb(GUPnPServiceProxy *proxy,
 	GError *error = NULL;
 	prv_new_device_ct_t *priv_t = (prv_new_device_ct_t *)user_data;
 
+	priv_t->dev->construct_step++;
+
 	if (!gupnp_service_proxy_end_action(proxy, action, &error,
 					    "FeatureList", G_TYPE_STRING,
 					    &result, NULL)) {
@@ -700,6 +704,8 @@ static void prv_get_sort_ext_capabilities_cb(GUPnPServiceProxy *proxy,
 	gchar *result = NULL;
 	GError *error = NULL;
 	prv_new_device_ct_t *priv_t = (prv_new_device_ct_t *)user_data;
+
+	priv_t->dev->construct_step++;
 
 	if (!gupnp_service_proxy_end_action(proxy, action, &error,
 					    "SortExtensionCaps",
@@ -782,6 +788,8 @@ static void prv_get_sort_capabilities_cb(GUPnPServiceProxy *proxy,
 	GError *error = NULL;
 	prv_new_device_ct_t *priv_t = (prv_new_device_ct_t *)user_data;
 
+	priv_t->dev->construct_step++;
+
 	if (!gupnp_service_proxy_end_action(proxy, action, &error, "SortCaps",
 					    G_TYPE_STRING, &result, NULL)) {
 		DLEYNA_LOG_WARNING("GetSortCapabilities operation failed: %s",
@@ -824,6 +832,8 @@ static void prv_get_search_capabilities_cb(GUPnPServiceProxy *proxy,
 	GError *error = NULL;
 	prv_new_device_ct_t *priv_t = (prv_new_device_ct_t *)user_data;
 
+	priv_t->dev->construct_step++;
+
 	if (!gupnp_service_proxy_end_action(proxy, action, &error, "SearchCaps",
 					    G_TYPE_STRING, &result, NULL)) {
 		DLEYNA_LOG_WARNING("GetSearchCapabilities operation failed: %s",
@@ -864,6 +874,8 @@ static GUPnPServiceProxyAction *prv_subscribe(dleyna_service_task_t *task,
 	dls_device_t *device;
 
 	device = (dls_device_t *)dleyna_service_task_get_user_data(task);
+
+	device->construct_step++;
 	dls_device_subscribe_to_contents_change(device);
 
 	*failed = FALSE;
@@ -916,6 +928,7 @@ static GUPnPServiceProxyAction *prv_declare(dleyna_service_task_t *task,
 
 	priv_t = (prv_new_device_ct_t *)dleyna_service_task_get_user_data(task);
 	device = priv_t->dev;
+	device->construct_step++;
 
 	id = dls_server_get_connector()->publish_subtree(priv_t->connection,
 						  device->path,
@@ -945,6 +958,61 @@ static GUPnPServiceProxyAction *prv_declare(dleyna_service_task_t *task,
 	return NULL;
 }
 
+void dls_device_construct(
+			dls_device_t *dev,
+			dls_device_context_t *context,
+			dleyna_connector_id_t connection,
+			const dleyna_connector_dispatch_cb_t *dispatch_table,
+			GHashTable *property_map,
+			const dleyna_task_queue_key_t *queue_id)
+{
+	prv_new_device_ct_t *priv_t;
+	GUPnPServiceProxy *s_proxy;
+
+	DLEYNA_LOG_DEBUG("Current step: %d", dev->construct_step);
+
+	priv_t = g_new0(prv_new_device_ct_t, 1);
+
+	priv_t->dev = dev;
+	priv_t->connection = connection;
+	priv_t->vtable = dispatch_table;
+	priv_t->property_map = property_map;
+
+	s_proxy = context->service_proxy;
+
+	if (dev->construct_step < 1)
+		dleyna_service_task_add(queue_id, prv_get_search_capabilities,
+					s_proxy,
+					prv_get_search_capabilities_cb, NULL,
+					priv_t);
+
+	if (dev->construct_step < 2)
+		dleyna_service_task_add(queue_id, prv_get_sort_capabilities,
+					s_proxy,
+					prv_get_sort_capabilities_cb, NULL,
+					priv_t);
+
+	if (dev->construct_step < 3)
+		dleyna_service_task_add(queue_id, prv_get_sort_ext_capabilities,
+					s_proxy,
+					prv_get_sort_ext_capabilities_cb, NULL,
+					priv_t);
+
+	if (dev->construct_step < 4)
+		dleyna_service_task_add(queue_id, prv_get_feature_list, s_proxy,
+					prv_get_feature_list_cb, NULL, priv_t);
+
+	/* The following task should always be completed */
+	dleyna_service_task_add(queue_id, prv_subscribe, s_proxy,
+				NULL, NULL, dev);
+
+	if (dev->construct_step < 6)
+		dleyna_service_task_add(queue_id, prv_declare, s_proxy,
+					NULL, g_free, priv_t);
+
+	dleyna_task_queue_start(queue_id);
+}
+
 dls_device_t *dls_device_new(
 			dleyna_connector_id_t connection,
 			GUPnPDeviceProxy *proxy,
@@ -955,10 +1023,8 @@ dls_device_t *dls_device_new(
 			const dleyna_task_queue_key_t *queue_id)
 {
 	dls_device_t *dev;
-	prv_new_device_ct_t *priv_t;
 	gchar *new_path;
 	dls_device_context_t *context;
-	GUPnPServiceProxy *s_proxy;
 
 	DLEYNA_LOG_DEBUG("New Device on %s", ip_address);
 
@@ -966,42 +1032,15 @@ dls_device_t *dls_device_new(
 	DLEYNA_LOG_DEBUG("Server Path %s", new_path);
 
 	dev = g_new0(dls_device_t, 1);
-	priv_t = g_new0(prv_new_device_ct_t, 1);
 
 	dev->connection = connection;
 	dev->contexts = g_ptr_array_new_with_free_func(prv_context_delete);
 	dev->path = new_path;
 
-	priv_t->dev = dev;
-	priv_t->connection = connection;
-	priv_t->vtable = dispatch_table;
-	priv_t->property_map = property_map;
-
 	context = dls_device_append_new_context(dev, ip_address, proxy);
-	s_proxy = context->service_proxy;
 
-	dleyna_service_task_add(queue_id, prv_get_search_capabilities,
-				s_proxy,
-				prv_get_search_capabilities_cb, NULL, priv_t);
-
-	dleyna_service_task_add(queue_id, prv_get_sort_capabilities,
-				s_proxy,
-				prv_get_sort_capabilities_cb, NULL, priv_t);
-
-	dleyna_service_task_add(queue_id, prv_get_sort_ext_capabilities,
-				s_proxy,
-				prv_get_sort_ext_capabilities_cb, NULL, priv_t);
-
-	dleyna_service_task_add(queue_id, prv_get_feature_list, s_proxy,
-				prv_get_feature_list_cb, NULL, priv_t);
-
-	dleyna_service_task_add(queue_id, prv_subscribe, s_proxy,
-				NULL, NULL, dev);
-
-	dleyna_service_task_add(queue_id, prv_declare, s_proxy,
-				NULL, g_free, priv_t);
-
-	dleyna_task_queue_start(queue_id);
+	dls_device_construct(dev, context, connection, dispatch_table,
+			     property_map, queue_id);
 
 	return dev;
 }

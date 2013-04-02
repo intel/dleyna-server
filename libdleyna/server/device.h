@@ -56,6 +56,7 @@ struct dls_device_t_ {
 	GVariant *sort_ext_caps;
 	GVariant *feature_list;
 	gboolean shutting_down;
+	guint construct_step;
 };
 
 dls_device_context_t *dls_device_append_new_context(dls_device_t *device,
@@ -64,6 +65,14 @@ dls_device_context_t *dls_device_append_new_context(dls_device_t *device,
 void dls_device_delete(void *device);
 
 void dls_device_unsubscribe(void *device);
+
+void dls_device_construct(
+			dls_device_t *dev,
+			dls_device_context_t *context,
+			dleyna_connector_id_t connection,
+			const dleyna_connector_dispatch_cb_t *dispatch_table,
+			GHashTable *property_map,
+			const dleyna_task_queue_key_t *queue_id);
 
 dls_device_t *dls_device_new(
 			dleyna_connector_id_t connection,
