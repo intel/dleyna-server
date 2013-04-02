@@ -57,7 +57,9 @@ typedef struct prv_device_new_ct_t_ prv_device_new_ct_t;
 struct prv_device_new_ct_t_ {
 	dls_upnp_t *upnp;
 	char *udn;
+	gchar *ip_address;
 	dls_device_t *device;
+	gboolean keep_instance;
 	const dleyna_task_queue_key_t *queue_id;
 };
 
@@ -65,6 +67,7 @@ static void prv_device_new_free(prv_device_new_ct_t *priv_t)
 {
 	if (priv_t) {
 		g_free(priv_t->udn);
+		g_free(priv_t->ip_address);
 		g_free(priv_t);
 	}
 }
@@ -89,10 +92,11 @@ static void prv_device_chain_end(gboolean cancelled, gpointer data)
 on_clear:
 
 	g_hash_table_remove(priv_t->upnp->server_uc_map, priv_t->udn);
-	prv_device_new_free(priv_t);
 
-	if (cancelled)
+	if (cancelled && !priv_t->keep_instance)
 		dls_device_delete(device);
+
+	prv_device_new_free(priv_t);
 
 	DLEYNA_LOG_DEBUG_NL();
 }
@@ -155,6 +159,7 @@ static void prv_server_available_cb(GUPnPControlPoint *cp,
 
 		priv_t->upnp = upnp;
 		priv_t->udn = g_strdup(udn);
+		priv_t->ip_address = g_strdup(ip_address);
 		priv_t->queue_id = queue_id;
 		priv_t->device = device;
 
@@ -203,8 +208,10 @@ static void prv_server_unavailable_cb(GUPnPControlPoint *cp,
 	unsigned int i;
 	dls_device_context_t *context;
 	gboolean subscribed;
+	gboolean construction_ctx = FALSE;
 	gboolean under_construction = FALSE;
 	prv_device_new_ct_t *priv_t;
+	const dleyna_task_queue_key_t *queue_id;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -244,6 +251,9 @@ static void prv_server_unavailable_cb(GUPnPControlPoint *cp,
 		goto on_error;
 
 	subscribed = context->subscribed;
+	if (under_construction)
+		construction_ctx = !strcmp(context->ip_address,
+					   priv_t->ip_address);
 
 	(void) g_ptr_array_remove_index(device->contexts, i);
 
@@ -258,6 +268,45 @@ static void prv_server_unavailable_cb(GUPnPControlPoint *cp,
 
 			dleyna_task_processor_cancel_queue(priv_t->queue_id);
 		}
+	} else if (under_construction && construction_ctx) {
+		DLEYNA_LOG_WARNING(
+			"Device under construction. Switching context");
+
+		/* Cancel previous contruction task chain */
+		g_hash_table_remove(priv_t->upnp->server_uc_map, priv_t->udn);
+		priv_t->keep_instance = TRUE;
+		dleyna_task_processor_cancel_queue(priv_t->queue_id);
+
+		/* Create a new construction task chain */
+		priv_t = g_new0(prv_device_new_ct_t, 1);
+
+		queue_id = dleyna_task_processor_add_queue(
+				dls_server_get_task_processor(),
+				dleyna_service_task_create_source(),
+				DLS_SERVER_SINK,
+				DLEYNA_TASK_QUEUE_FLAG_AUTO_REMOVE,
+				dleyna_service_task_process_cb,
+				dleyna_service_task_cancel_cb,
+				dleyna_service_task_delete_cb);
+		dleyna_task_queue_set_finally(queue_id, prv_device_chain_end);
+		dleyna_task_queue_set_user_data(queue_id, priv_t);
+
+		context = dls_device_get_context(device, NULL);
+		priv_t->upnp = upnp;
+		priv_t->udn = g_strdup(udn);
+		priv_t->ip_address = g_strdup(context->ip_address);
+		priv_t->queue_id = queue_id;
+		priv_t->device = device;
+
+		/* Start tasks from current construction step */
+		dls_device_construct(device,
+				     context,
+				     upnp->connection,
+				     upnp->interface_info,
+				     upnp->property_map,
+				     queue_id);
+
+		g_hash_table_insert(upnp->server_uc_map, g_strdup(udn), priv_t);
 	} else if (subscribed && !device->timeout_id) {
 		DLEYNA_LOG_DEBUG("Subscribe on new context");
 
