@@ -936,11 +936,18 @@ static void prv_parse_common_resources(GVariantBuilder *item_vb,
 {
 	GUPnPProtocolInfo *protocol_info;
 	gint64 int64_val;
+	guint uint_val;
 	const char *str_val;
 
 	if (filter_mask & DLS_UPNP_MASK_PROP_SIZE) {
 		int64_val = gupnp_didl_lite_resource_get_size64(res);
 		prv_add_int64_prop(item_vb, DLS_INTERFACE_PROP_SIZE, int64_val);
+	}
+
+	if (filter_mask & DLS_UPNP_MASK_PROP_UPDATE_COUNT) {
+		uint_val = gupnp_didl_lite_resource_get_update_count(res);
+		prv_add_uint_prop(item_vb, DLS_INTERFACE_PROP_UPDATE_COUNT,
+				  uint_val);
 	}
 
 	protocol_info = gupnp_didl_lite_resource_get_protocol_info(res);
@@ -1481,6 +1488,7 @@ static GVariant *prv_get_common_resource_property(const gchar *prop,
 						GUPnPDIDLLiteResource *res)
 {
 	gint64 int64_val;
+	guint uint_val;
 	const char *str_val;
 	GVariant *retval = NULL;
 	GUPnPProtocolInfo *protocol_info;
@@ -1510,6 +1518,9 @@ static GVariant *prv_get_common_resource_property(const gchar *prop,
 		str_val = gupnp_didl_lite_resource_get_uri(res);
 		if (str_val)
 			retval = g_variant_new_strv(&str_val, 1);
+	} else if (!strcmp(prop, DLS_INTERFACE_PROP_UPDATE_COUNT)) {
+		uint_val = gupnp_didl_lite_resource_get_update_count(res);
+		retval = g_variant_new_uint32(uint_val);
 	}
 
 on_error:
