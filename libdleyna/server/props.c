@@ -1517,10 +1517,11 @@ static GVariant *prv_get_common_resource_property(const gchar *prop,
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_URLS)) {
 		str_val = gupnp_didl_lite_resource_get_uri(res);
 		if (str_val)
-			retval = g_variant_new_strv(&str_val, 1);
+			retval = g_variant_ref_sink(g_variant_new_strv(&str_val,
+								       1));
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_UPDATE_COUNT)) {
 		uint_val = gupnp_didl_lite_resource_get_update_count(res);
-		retval = g_variant_new_uint32(uint_val);
+		retval = g_variant_ref_sink(g_variant_new_uint32(uint_val));
 	}
 
 on_error:
