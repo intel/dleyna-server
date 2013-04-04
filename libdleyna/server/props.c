@@ -1214,7 +1214,8 @@ static GVariant *prv_compute_resources(GUPnPDIDLLiteObject *object,
 
 		if (all_res)
 			prv_parse_all_resources(res_vb, res, filter_mask);
-		else prv_parse_common_resources(res_vb, res, filter_mask);
+		else
+			prv_parse_common_resources(res_vb, res, filter_mask);
 
 		g_variant_builder_add(res_array_vb, "@a{sv}",
 				      g_variant_builder_end(res_vb));
@@ -1477,7 +1478,8 @@ void dls_props_add_resource(GVariantBuilder *item_vb,
 
 		if (GUPNP_IS_DIDL_LITE_CONTAINER(object))
 			prv_parse_common_resources(item_vb, res, filter_mask);
-		else prv_parse_all_resources(item_vb, res, filter_mask);
+		else
+			prv_parse_all_resources(item_vb, res, filter_mask);
 
 		g_object_unref(res);
 	}
