@@ -1500,15 +1500,23 @@ static void prv_get_system_update_id_for_prop(GUPnPServiceProxy *proxy,
 		goto on_complete;
 	}
 
-	gupnp_service_proxy_begin_action(proxy, "GetSystemUpdateID",
-					 prv_system_update_id_for_prop_cb,
-					 cb_data,
-					 NULL);
+	cb_data->action = gupnp_service_proxy_begin_action(
+					proxy, "GetSystemUpdateID",
+					prv_system_update_id_for_prop_cb,
+					cb_data,
+					NULL);
+
+	if (cb_data->proxy != NULL)
+		g_object_remove_weak_pointer((G_OBJECT(cb_data->proxy)),
+					     (gpointer *)&cb_data->proxy);
 
 	cb_data->proxy = proxy;
-
 	g_object_add_weak_pointer((G_OBJECT(proxy)),
 				  (gpointer *)&cb_data->proxy);
+
+	if (cb_data->cancel_id)
+		g_cancellable_disconnect(cb_data->cancellable,
+					 cb_data->cancel_id);
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
@@ -1595,15 +1603,23 @@ static void prv_get_system_update_id_for_props(GUPnPServiceProxy *proxy,
 		goto on_complete;
 	}
 
-	gupnp_service_proxy_begin_action(proxy, "GetSystemUpdateID",
-					 prv_system_update_id_for_props_cb,
-					 cb_data,
-					 NULL);
+	cb_data->action = gupnp_service_proxy_begin_action(
+					proxy, "GetSystemUpdateID",
+					prv_system_update_id_for_props_cb,
+					cb_data,
+					NULL);
+
+	if (cb_data->proxy != NULL)
+		g_object_remove_weak_pointer((G_OBJECT(cb_data->proxy)),
+					     (gpointer *)&cb_data->proxy);
 
 	cb_data->proxy = proxy;
-
 	g_object_add_weak_pointer((G_OBJECT(proxy)),
 				  (gpointer *)&cb_data->proxy);
+
+	if (cb_data->cancel_id)
+		g_cancellable_disconnect(cb_data->cancellable,
+					 cb_data->cancel_id);
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
@@ -1698,15 +1714,23 @@ static void prv_get_sr_token_for_prop(GUPnPServiceProxy *proxy,
 		goto on_error;
 	}
 
-	gupnp_service_proxy_begin_action(proxy, "GetServiceResetToken",
-					 prv_service_reset_for_prop_cb,
-					 cb_data,
-					 NULL);
+	cb_data->action = gupnp_service_proxy_begin_action(
+					proxy, "GetServiceResetToken",
+					prv_service_reset_for_prop_cb,
+					cb_data,
+					NULL);
+
+	if (cb_data->proxy != NULL)
+		g_object_remove_weak_pointer((G_OBJECT(cb_data->proxy)),
+					     (gpointer *)&cb_data->proxy);
 
 	cb_data->proxy = proxy;
-
 	g_object_add_weak_pointer((G_OBJECT(proxy)),
 				  (gpointer *)&cb_data->proxy);
+
+	if (cb_data->cancel_id)
+		g_cancellable_disconnect(cb_data->cancellable,
+					 cb_data->cancel_id);
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
@@ -1786,15 +1810,23 @@ static void prv_get_sr_token_for_props(GUPnPServiceProxy *proxy,
 		goto on_complete; /* No error here, just skip the property */
 	}
 
-	gupnp_service_proxy_begin_action(proxy, "GetServiceResetToken",
-					 prv_service_reset_for_props_cb,
-					 cb_data,
-					 NULL);
+	cb_data->action = gupnp_service_proxy_begin_action(
+					proxy, "GetServiceResetToken",
+					prv_service_reset_for_props_cb,
+					cb_data,
+					NULL);
+
+	if (cb_data->proxy != NULL)
+		g_object_remove_weak_pointer((G_OBJECT(cb_data->proxy)),
+					     (gpointer *)&cb_data->proxy);
 
 	cb_data->proxy = proxy;
-
 	g_object_add_weak_pointer((G_OBJECT(proxy)),
 				  (gpointer *)&cb_data->proxy);
+
+	if (cb_data->cancel_id)
+		g_cancellable_disconnect(cb_data->cancellable,
+					 cb_data->cancel_id);
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
