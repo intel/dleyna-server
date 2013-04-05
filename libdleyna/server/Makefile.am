@@ -27,6 +27,7 @@ libdleyna_server_1_0_la_SOURCES =	$(libdleyna_serverinc_HEADERS)	\
 					device.c	 		\
 					path.c		 		\
 					props.c		 		\
+					props_def.c	 		\
 					search.c	 		\
 					sort.c		 		\
 					task.c		 		\
@@ -63,6 +64,7 @@ EXTRA_DIST = 	$(sysconf_DATA)			\
 		interface.h			\
 		path.h				\
 		props.h				\
+		props_def.h			\
 		search.h			\
 		server.h			\
 		sort.h				\

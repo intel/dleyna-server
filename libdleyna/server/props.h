@@ -70,6 +70,7 @@
 typedef struct dls_prop_map_t_ dls_prop_map_t;
 struct dls_prop_map_t_ {
 	const gchar *upnp_prop_name;
+	const gchar *dls_prop_name;
 	dls_upnp_prop_mask type;
 	gboolean filter;
 	gboolean searchable;
