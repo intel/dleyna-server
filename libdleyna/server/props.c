@@ -1169,19 +1169,19 @@ static GVariant *prv_props_get_dlna_managed_dict(GUPnPOCMFlags flags)
 
 	g_variant_builder_init(&builder, G_VARIANT_TYPE("a{sb}"));
 
-	managed = (flags & GUPNP_OCM_FLAGS_UPLOAD);
+	managed = (flags & GUPNP_OCM_FLAGS_UPLOAD) != 0;
 	g_variant_builder_add(&builder, "{sb}", "Upload", managed);
 
-	managed = (flags & GUPNP_OCM_FLAGS_CREATE_CONTAINER);
+	managed = (flags & GUPNP_OCM_FLAGS_CREATE_CONTAINER) != 0;
 	g_variant_builder_add(&builder, "{sb}", "CreateContainer", managed);
 
-	managed = (flags & GUPNP_OCM_FLAGS_DESTROYABLE);
+	managed = (flags & GUPNP_OCM_FLAGS_DESTROYABLE) != 0;
 	g_variant_builder_add(&builder, "{sb}", "Delete", managed);
 
-	managed = (flags & GUPNP_OCM_FLAGS_UPLOAD_DESTROYABLE);
+	managed = (flags & GUPNP_OCM_FLAGS_UPLOAD_DESTROYABLE) != 0;
 	g_variant_builder_add(&builder, "{sb}", "UploadDelete", managed);
 
-	managed = (flags & GUPNP_OCM_FLAGS_CHANGE_METADATA);
+	managed = (flags & GUPNP_OCM_FLAGS_CHANGE_METADATA) != 0;
 	g_variant_builder_add(&builder, "{sb}", "ChangeMeta", managed);
 
 	return g_variant_builder_end(&builder);
