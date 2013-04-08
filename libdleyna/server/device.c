@@ -1506,16 +1506,11 @@ static void prv_get_system_update_id_for_prop(GUPnPServiceProxy *proxy,
 					cb_data,
 					NULL);
 
-	if (cb_data->proxy != NULL)
-		g_object_remove_weak_pointer((G_OBJECT(cb_data->proxy)),
-					     (gpointer *)&cb_data->proxy);
-
 	cb_data->proxy = proxy;
 	g_object_add_weak_pointer((G_OBJECT(proxy)),
 				  (gpointer *)&cb_data->proxy);
 
-	if (!cb_data->cancel_id)
-		cb_data->cancel_id = g_cancellable_connect(
+	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
 					G_CALLBACK(dls_async_task_cancelled_cb),
 					cb_data, NULL);
@@ -1714,16 +1709,11 @@ static void prv_get_sr_token_for_prop(GUPnPServiceProxy *proxy,
 					cb_data,
 					NULL);
 
-	if (cb_data->proxy != NULL)
-		g_object_remove_weak_pointer((G_OBJECT(cb_data->proxy)),
-					     (gpointer *)&cb_data->proxy);
-
 	cb_data->proxy = proxy;
 	g_object_add_weak_pointer((G_OBJECT(proxy)),
 				  (gpointer *)&cb_data->proxy);
 
-	if (!cb_data->cancel_id)
-		cb_data->cancel_id = g_cancellable_connect(
+	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
 					G_CALLBACK(dls_async_task_cancelled_cb),
 					cb_data, NULL);
