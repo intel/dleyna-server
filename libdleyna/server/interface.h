@@ -89,6 +89,9 @@ enum dls_interface_type_ {
 /* Resources Properties */
 #define DLS_INTERFACE_PROP_MIME_TYPE "MIMEType"
 #define DLS_INTERFACE_PROP_DLNA_PROFILE "DLNAProfile"
+#define DLS_INTERFACE_PROP_DLNA_CONVERSION "DLNAConversion"
+#define DLS_INTERFACE_PROP_DLNA_OPERATION "DLNAOperation"
+#define DLS_INTERFACE_PROP_DLNA_FLAGS "DLNAFlags"
 #define DLS_INTERFACE_PROP_SIZE "Size"
 #define DLS_INTERFACE_PROP_DURATION "Duration"
 #define DLS_INTERFACE_PROP_BITRATE "Bitrate"
