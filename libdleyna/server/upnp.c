@@ -112,7 +112,7 @@ static void prv_device_context_switch_end(gboolean cancelled, gpointer data)
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-static const dleyna_task_queue_key_t * prv_create_device_queue(
+static const dleyna_task_queue_key_t *prv_create_device_queue(
 						prv_device_new_ct_t **priv_t)
 {
 	const dleyna_task_queue_key_t *queue_id;

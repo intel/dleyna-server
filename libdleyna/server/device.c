@@ -1002,13 +1002,13 @@ void dls_device_construct(
 		dleyna_service_task_add(queue_id, prv_get_feature_list, s_proxy,
 					prv_get_feature_list_cb, NULL, priv_t);
 
-	/* The following tasks should always be completed */
-
+	/* The following task should always be completed */
 	dleyna_service_task_add(queue_id, prv_subscribe, s_proxy,
 				NULL, NULL, dev);
 
-	dleyna_service_task_add(queue_id, prv_declare, s_proxy,
-				NULL, g_free, priv_t);
+	if (dev->construct_step < 6)
+		dleyna_service_task_add(queue_id, prv_declare, s_proxy,
+					NULL, g_free, priv_t);
 
 	dleyna_task_queue_start(queue_id);
 }
