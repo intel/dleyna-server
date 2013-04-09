@@ -119,6 +119,13 @@ need  non-local  addresses  to  pass  to renderers  running  on  other
 devices.   DMCs should  therefore call  this function  with  the value
 FALSE before requesting any URLs from any servers.
 
+Rescan()
+
+Calls a rescan to be performed by gupnp library to make sure every server is
+still alive. Every server that hasn't responded after a certain amount of
+time (see gupnp_context_manager_rescan_control_points() and
+gssdp_resource_browser_rescan() code) is considered as unavailable.
+
 
 Signals:
 ---------
