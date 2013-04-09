@@ -224,3 +224,6 @@ class UPNP(object):
 
     def prefer_local_addresses(self, prefer):
         self._manager.PreferLocalAddresses(prefer)
+
+    def rescan(self):
+        self.__manager.Rescan()
