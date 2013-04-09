@@ -1196,3 +1196,9 @@ gboolean dls_upnp_device_context_exist(dls_device_t *device,
 on_exit:
 	return found;
 }
+
+void dls_upnp_rescan(dls_upnp_t *upnp)
+{
+	DLEYNA_LOG_DEBUG("re-scanning every known server");
+	gupnp_context_manager_rescan_control_points(upnp->context_manager);
+}

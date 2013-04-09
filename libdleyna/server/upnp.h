@@ -110,4 +110,6 @@ void dls_upnp_unsubscribe(dls_upnp_t *upnp);
 gboolean dls_upnp_device_context_exist(dls_device_t *device,
 				       dls_device_context_t *context);
 
+void dls_upnp_rescan(dls_upnp_t *upnp);
+
 #endif /* DLS_UPNP_H__ */
