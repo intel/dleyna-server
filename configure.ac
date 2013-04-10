@@ -186,7 +186,6 @@ AC_ARG_WITH(ua-prefix,
 		[])
 
 
-
 AC_ARG_ENABLE(lib-only,
 		AS_HELP_STRING(
 			[--enable-lib-only],
@@ -194,15 +193,16 @@ AC_ARG_ENABLE(lib-only,
 		[],
 		[enable_lib_only=no])
 
-AS_IF([test "x$[]enable_lib_only" = "xno"],
+AS_IF([test "x$enable_lib_only" = "xno"],
       [PKG_CHECK_MODULES([DBUS], [dbus-1],
 			 [DBUS_SESSION_DIR=`$PKG_CONFIG --variable=session_bus_services_dir dbus-1`;
 			  AC_SUBST(DBUS_SESSION_DIR)
 			 ],
-			 [enable_lib_only=yes])
+			 [enable_lib_only=yes]);
+      PKG_CHECK_MODULES([DLEYNA_CONNECTOR_DBUS], [dleyna-connector-dbus-1.0])
       ])
 
-AM_CONDITIONAL([BUILD_SERVER], [test "x$[]enable_lib_only" = "xno"])
+AM_CONDITIONAL([BUILD_SERVER], [test "x$enable_lib_only" = "xno"])
 
 AC_DEFINE([DLEYNA_SERVER_OBJECT], "/com/intel/dLeynaServer", [Name of object exposed by dleyna-server])
 AC_DEFINE([DLEYNA_SERVER_PATH], "/com/intel/dLeynaServer/server", [Path of server objects])
