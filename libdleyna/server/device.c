@@ -2797,11 +2797,16 @@ static gchar *prv_create_new_container_didl(const gchar *parent_id,
 	GUPnPDIDLLiteWriter *writer;
 	GUPnPDIDLLiteObject *item;
 	GUPnPDIDLLiteContainer *container;
-	gchar *retval;
 	GVariantIter iter;
 	GVariant *child_type;
 	const gchar *actual_type;
 	GUPnPOCMFlags flags;
+	gchar *retval = NULL;
+
+	actual_type = dls_props_media_spec_to_upnp_class(
+						task->ut.create_container.type);
+	if (!actual_type)
+		goto on_error;
 
 	writer = gupnp_didl_lite_writer_new(NULL);
 	item = GUPNP_DIDL_LITE_OBJECT(
@@ -2813,8 +2818,6 @@ static gchar *prv_create_new_container_didl(const gchar *parent_id,
 					item,
 					task->ut.create_container.display_name);
 	gupnp_didl_lite_object_set_parent_id(item, parent_id);
-	actual_type = dls_props_media_spec_to_upnp_class(
-						task->ut.create_container.type);
 	gupnp_didl_lite_object_set_upnp_class(item, actual_type);
 	gupnp_didl_lite_object_set_restricted(item, FALSE);
 	flags = GUPNP_OCM_FLAGS_UPLOAD |
@@ -2838,6 +2841,8 @@ static gchar *prv_create_new_container_didl(const gchar *parent_id,
 
 	g_object_unref(item);
 	g_object_unref(writer);
+
+on_error:
 
 	return retval;
 }
@@ -3639,6 +3644,14 @@ void dls_device_create_container(dls_client_t *client,
 	context = dls_device_get_context(task->target.device, client);
 
 	didl = prv_create_new_container_didl(parent_id, task);
+	if (!didl) {
+		DLEYNA_LOG_WARNING("Unable to create didl");
+
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_OPERATION_FAILED,
+					     "Unable to create didl");
+		goto on_error;
+	}
 
 	DLEYNA_LOG_DEBUG("DIDL: %s", didl);
 
@@ -3661,7 +3674,11 @@ void dls_device_create_container(dls_client_t *client,
 
 	g_free(didl);
 
+on_error:
+
 	DLEYNA_LOG_DEBUG("Exit");
+
+	return;
 }
 
 static void prv_update_object_update_cb(GUPnPServiceProxy *proxy,
@@ -3749,11 +3766,13 @@ static gchar *prv_get_new_xml_fragment(GUPnPDIDLLiteObject *object,
 	} else if (mask & DLS_UPNP_MASK_PROP_TYPE) {
 		upnp_class = dls_props_media_spec_to_upnp_class(
 					g_variant_get_string(value, NULL));
+		if (!upnp_class)
+			goto on_error;
 
 		gupnp_didl_lite_object_set_upnp_class(object, upnp_class);
 
 		retval = gupnp_didl_lite_object_get_upnp_class_xml_string(
-								object);
+			object);
 	} else if (mask & DLS_UPNP_MASK_PROP_TRACK_NUMBER) {
 		gupnp_didl_lite_object_set_track_number(
 						object,
@@ -3775,6 +3794,8 @@ static gchar *prv_get_new_xml_fragment(GUPnPDIDLLiteObject *object,
 
 		retval = gupnp_didl_lite_object_get_artists_xml_string(object);
 	}
+
+on_error:
 
 	return retval;
 }
