@@ -627,14 +627,15 @@ static void prv_get_feature_list_cb(GUPnPServiceProxy *proxy,
 				    gpointer user_data)
 {
 	gchar *result = NULL;
+	gboolean end;
 	GError *error = NULL;
 	prv_new_device_ct_t *priv_t = (prv_new_device_ct_t *)user_data;
 
 	priv_t->dev->construct_step++;
-
-	if (!gupnp_service_proxy_end_action(proxy, action, &error,
-					    "FeatureList", G_TYPE_STRING,
-					    &result, NULL)) {
+	end = gupnp_service_proxy_end_action(proxy, action, &error,
+					     "FeatureList", G_TYPE_STRING,
+					     &result, NULL);
+	if (!end || (result == NULL)) {
 		DLEYNA_LOG_WARNING("GetFeatureList operation failed: %s",
 				   error->message);
 		goto on_error;
@@ -702,14 +703,15 @@ static void prv_get_sort_ext_capabilities_cb(GUPnPServiceProxy *proxy,
 					   gpointer user_data)
 {
 	gchar *result = NULL;
+	gboolean end;
 	GError *error = NULL;
 	prv_new_device_ct_t *priv_t = (prv_new_device_ct_t *)user_data;
 
 	priv_t->dev->construct_step++;
-
-	if (!gupnp_service_proxy_end_action(proxy, action, &error,
-					    "SortExtensionCaps",
-					    G_TYPE_STRING, &result, NULL)) {
+	end = gupnp_service_proxy_end_action(proxy, action, &error,
+					     "SortExtensionCaps",
+					     G_TYPE_STRING, &result, NULL);
+	if (!end || (result == NULL)) {
 		DLEYNA_LOG_WARNING(
 			"GetSortExtensionCapabilities operation failed: %s",
 			error->message);
@@ -785,13 +787,14 @@ static void prv_get_sort_capabilities_cb(GUPnPServiceProxy *proxy,
 					 gpointer user_data)
 {
 	gchar *result = NULL;
+	gboolean end;
 	GError *error = NULL;
 	prv_new_device_ct_t *priv_t = (prv_new_device_ct_t *)user_data;
 
 	priv_t->dev->construct_step++;
-
-	if (!gupnp_service_proxy_end_action(proxy, action, &error, "SortCaps",
-					    G_TYPE_STRING, &result, NULL)) {
+	end = gupnp_service_proxy_end_action(proxy, action, &error, "SortCaps",
+					     G_TYPE_STRING, &result, NULL);
+	if (!end || (result == NULL)) {
 		DLEYNA_LOG_WARNING("GetSortCapabilities operation failed: %s",
 				   error->message);
 		goto on_error;
@@ -829,13 +832,15 @@ static void prv_get_search_capabilities_cb(GUPnPServiceProxy *proxy,
 					   gpointer user_data)
 {
 	gchar *result = NULL;
+	gboolean end;
 	GError *error = NULL;
 	prv_new_device_ct_t *priv_t = (prv_new_device_ct_t *)user_data;
 
 	priv_t->dev->construct_step++;
-
-	if (!gupnp_service_proxy_end_action(proxy, action, &error, "SearchCaps",
-					    G_TYPE_STRING, &result, NULL)) {
+	end = gupnp_service_proxy_end_action(proxy, action, &error,
+					     "SearchCaps", G_TYPE_STRING,
+					     &result, NULL);
+	if (!end || (result == NULL)) {
 		DLEYNA_LOG_WARNING("GetSearchCapabilities operation failed: %s",
 				   error->message);
 		goto on_error;
@@ -1247,6 +1252,7 @@ static void prv_get_children_cb(GUPnPServiceProxy *proxy,
 				gpointer user_data)
 {
 	gchar *result = NULL;
+	gboolean end;
 	GUPnPDIDLLiteParser *parser = NULL;
 	GError *upnp_error = NULL;
 	dls_async_task_t *cb_data = user_data;
@@ -1254,10 +1260,10 @@ static void prv_get_children_cb(GUPnPServiceProxy *proxy,
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	if (!gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
-					    &upnp_error,
-					    "Result", G_TYPE_STRING,
-					    &result, NULL)) {
+	end = gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
+					     &upnp_error, "Result",
+					     G_TYPE_STRING, &result, NULL);
+	if (!end || (result == NULL)) {
 		DLEYNA_LOG_WARNING("Browse operation failed: %s",
 				   upnp_error->message);
 
@@ -1687,14 +1693,15 @@ static void prv_service_reset_for_prop_cb(GUPnPServiceProxy *proxy,
 {
 	GError *upnp_error = NULL;
 	gchar *token = NULL;
+	gboolean end;
 	dls_async_task_t *cb_data = user_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	if (!gupnp_service_proxy_end_action(proxy, action, &upnp_error,
-					    "ResetToken", G_TYPE_STRING,
-					    &token,
-					    NULL)) {
+	end = gupnp_service_proxy_end_action(proxy, action, &upnp_error,
+					     "ResetToken", G_TYPE_STRING,
+					     &token, NULL);
+	if (!end || (token == NULL)) {
 		DLEYNA_LOG_WARNING(
 			"Unable to retrieve ServiceResetToken: %s %s",
 			g_quark_to_string(upnp_error->domain),
@@ -1768,15 +1775,16 @@ static void prv_service_reset_for_props_cb(GUPnPServiceProxy *proxy,
 {
 	GError *upnp_error = NULL;
 	gchar *token = NULL;
+	gboolean end;
 	dls_async_task_t *cb_data = user_data;
 	dls_async_get_all_t *cb_task_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	if (!gupnp_service_proxy_end_action(proxy, action, &upnp_error,
+	end = gupnp_service_proxy_end_action(proxy, action, &upnp_error,
 					    "ResetToken", G_TYPE_STRING,
-					    &token,
-					    NULL)) {
+					    &token, NULL);
+	if (!end || (token == NULL)) {
 		DLEYNA_LOG_WARNING(
 			"Unable to retrieve ServiceResetToken: %s %s",
 			g_quark_to_string(upnp_error->domain),
@@ -1884,16 +1892,17 @@ static void prv_get_all_ms2spec_props_cb(GUPnPServiceProxy *proxy,
 {
 	GError *upnp_error = NULL;
 	gchar *result = NULL;
+	gboolean end;
 	GUPnPDIDLLiteParser *parser = NULL;
 	dls_async_task_t *cb_data = user_data;
 	dls_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	if (!gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
-					    &upnp_error,
-					    "Result", G_TYPE_STRING,
-					    &result, NULL)) {
+	end = gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
+					    &upnp_error, "Result",
+					    G_TYPE_STRING, &result, NULL);
+	if (!end || (result == NULL)) {
 		DLEYNA_LOG_WARNING("Browse operation failed: %s",
 				   upnp_error->message);
 
@@ -2205,8 +2214,7 @@ static void prv_count_children_cb(GUPnPServiceProxy *proxy,
 
 	if (!gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
 					    &upnp_error,
-					    "TotalMatches", G_TYPE_INT,
-					    &count,
+					    "TotalMatches", G_TYPE_INT, &count,
 					    NULL)) {
 		DLEYNA_LOG_WARNING("Browse operation failed: %s",
 				   upnp_error->message);
@@ -2276,6 +2284,7 @@ static void prv_get_ms2spec_prop_cb(GUPnPServiceProxy *proxy,
 {
 	GError *upnp_error = NULL;
 	gchar *result = NULL;
+	gboolean end;
 	GUPnPDIDLLiteParser *parser = NULL;
 	dls_async_task_t *cb_data = user_data;
 	dls_async_get_prop_t *cb_task_data = &cb_data->ut.get_prop;
@@ -2283,10 +2292,10 @@ static void prv_get_ms2spec_prop_cb(GUPnPServiceProxy *proxy,
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	if (!gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
-					    &upnp_error,
-					    "Result", G_TYPE_STRING,
-					    &result, NULL)) {
+	end = gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
+					    &upnp_error, "Result",
+					    G_TYPE_STRING, &result, NULL);
+	if (!end || (result == NULL)) {
 		DLEYNA_LOG_WARNING("Browse operation failed: %s",
 				   upnp_error->message);
 
@@ -2617,6 +2626,7 @@ static void prv_search_cb(GUPnPServiceProxy *proxy,
 			  gpointer user_data)
 {
 	gchar *result = NULL;
+	gboolean end;
 	GUPnPDIDLLiteParser *parser = NULL;
 	GError *upnp_error = NULL;
 	dls_async_task_t *cb_data = user_data;
@@ -2624,13 +2634,12 @@ static void prv_search_cb(GUPnPServiceProxy *proxy,
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	if (!gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
-					    &upnp_error,
-					    "Result", G_TYPE_STRING,
-					    &result,
-					    "TotalMatches", G_TYPE_INT,
-					    &cb_task_data->max_count,
-					    NULL)) {
+	end = gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
+					     &upnp_error,
+					     "Result", G_TYPE_STRING, &result,
+					     "TotalMatches", G_TYPE_INT,
+					     &cb_task_data->max_count, NULL);
+	if (!end || (result == NULL)) {
 
 		DLEYNA_LOG_WARNING("Search operation failed %s",
 				   upnp_error->message);
@@ -3235,16 +3244,16 @@ static void prv_create_container_cb(GUPnPServiceProxy *proxy,
 	gchar *result = NULL;
 	gchar *object_id = NULL;
 	gchar *object_path;
+	gboolean end;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	if (!gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
-					    &upnp_error,
-					    "ObjectID", G_TYPE_STRING,
-					    &object_id,
-					    "Result", G_TYPE_STRING,
-					    &result,
-					    NULL)) {
+	end = gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
+					     &upnp_error, "ObjectID",
+					     G_TYPE_STRING, &object_id,
+					     "Result", G_TYPE_STRING, &result,
+					     NULL);
+	if (!end || (object_id == NULL)) {
 		DLEYNA_LOG_WARNING("Create Object operation failed: %s",
 				   upnp_error->message);
 
@@ -3266,11 +3275,8 @@ on_error:
 	(void) g_idle_add(dls_async_task_complete, cb_data);
 	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
 
-	if (object_id)
-		g_free(object_id);
-
-	if (result)
-		g_free(result);
+	g_free(object_id);
+	g_free(result);
 
 	if (upnp_error)
 		g_error_free(upnp_error);
@@ -3290,6 +3296,7 @@ static void prv_generic_upload_cb(dls_async_task_t *cb_data,
 	gchar *object_path;
 	GError *error = NULL;
 	gboolean delete_needed = FALSE;
+	gboolean end;
 	gint *upload_id;
 	GUPnPDIDLLiteParser *parser = NULL;
 	GVariant *out_p[2];
@@ -3298,13 +3305,12 @@ static void prv_generic_upload_cb(dls_async_task_t *cb_data,
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	if (!gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
-					    &error,
-					    "ObjectID", G_TYPE_STRING,
-					    &object_id,
-					    "Result", G_TYPE_STRING,
-					    &result,
-					    NULL)) {
+	end = gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
+					     &error, "ObjectID",
+					     G_TYPE_STRING, &object_id,
+					     "Result", G_TYPE_STRING, &result,
+					     NULL);
+	if (!end || (object_id == NULL) || (result == NULL)) {
 		DLEYNA_LOG_WARNING("Create Object operation failed: %s",
 				   error->message);
 
@@ -3889,13 +3895,15 @@ static void prv_update_object_browse_cb(GUPnPServiceProxy *proxy,
 	dls_async_update_t *cb_task_data = &cb_data->ut.update;
 	GUPnPDIDLLiteParser *parser = NULL;
 	gchar *result = NULL;
+	gboolean end;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	if (!gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
-					    &upnp_error,
-					    "Result", G_TYPE_STRING,
-					    &result, NULL)) {
+	end = gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
+					     &upnp_error,
+					     "Result", G_TYPE_STRING, &result,
+					     NULL);
+	if (!end || (result == NULL)) {
 		DLEYNA_LOG_WARNING("Browse Object operation failed: %s",
 				   upnp_error->message);
 
@@ -4103,10 +4111,12 @@ static void prv_create_didls_item_browse_cb(GUPnPServiceProxy *proxy,
 	dls_async_task_t *cb_data = priv_t->cb_data;
 	GUPnPDIDLLiteParser *parser = NULL;
 	gchar *result = NULL;
+	gboolean end;
 
-	if (!gupnp_service_proxy_end_action(proxy, action, &error,
-					    "Result", G_TYPE_STRING,
-					    &result, NULL)) {
+	end = gupnp_service_proxy_end_action(proxy, action, &error,
+					     "Result", G_TYPE_STRING,
+					     &result, NULL);
+	if (!end || (result == NULL)) {
 		DLEYNA_LOG_WARNING("Browse Object operation failed: %s",
 				   error->message);
 		DLEYNA_LOG_DEBUG_NL();
@@ -4419,13 +4429,15 @@ static void prv_get_object_metadata_cb(GUPnPServiceProxy *proxy,
 	GError *upnp_error = NULL;
 	dls_async_task_t *cb_data = user_data;
 	gchar *result = NULL;
+	gboolean end;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	if (!gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
-					    &upnp_error,
-					    "Result", G_TYPE_STRING, &result,
-					    NULL)) {
+	end = gupnp_service_proxy_end_action(cb_data->proxy, cb_data->action,
+					     &upnp_error,
+					     "Result", G_TYPE_STRING, &result,
+					     NULL);
+	if (!end || (result == NULL)) {
 		DLEYNA_LOG_WARNING("Browse Object operation failed: %s",
 				   upnp_error->message);
 
