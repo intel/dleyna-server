@@ -91,7 +91,8 @@ static void prv_delete(dls_task_t *task)
 	case DLS_TASK_CREATE_CONTAINER_IN_ANY:
 		g_free(task->ut.create_container.display_name);
 		g_free(task->ut.create_container.type);
-		g_variant_unref(task->ut.create_container.child_types);
+		if (task->ut.create_container.child_types)
+			g_variant_unref(task->ut.create_container.child_types);
 		break;
 	case DLS_TASK_UPDATE_OBJECT:
 		if (task->ut.update.to_add_update)

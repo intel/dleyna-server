@@ -916,6 +916,9 @@ void dls_upnp_create_container(dls_upnp_t *upnp, dls_client_t *client,
 
 	dls_device_create_container(client, task, task->target.id);
 
+	if (!cb_data->action)
+		(void) g_idle_add(dls_async_task_complete, cb_data);
+
 	DLEYNA_LOG_DEBUG("Exit");
 }
 

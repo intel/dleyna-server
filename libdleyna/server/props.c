@@ -1047,6 +1047,9 @@ const gchar *dls_props_media_spec_to_upnp_class(const gchar *m2spec_class)
 {
 	const gchar *retval = NULL;
 
+	if (!m2spec_class)
+		goto on_error;
+
 	if (!strcmp(m2spec_class, gMediaSpec2AlbumPhoto))
 		retval = gUPnPPhotoAlbum;
 	else if (!strcmp(m2spec_class, gMediaSpec2AlbumMusic))
@@ -1090,6 +1093,8 @@ const gchar *dls_props_media_spec_to_upnp_class(const gchar *m2spec_class)
 	else if (!strcmp(m2spec_class, gMediaSpec2Item))
 		retval = gUPnPItem;
 
+on_error:
+
 	return retval;
 }
 
@@ -1097,6 +1102,9 @@ const gchar *dls_props_upnp_class_to_media_spec(const gchar *upnp_class)
 {
 	const gchar *retval = NULL;
 	const gchar *ptr;
+
+	if (!upnp_class)
+		goto on_error;
 
 	if (!strncmp(upnp_class, gUPnPAlbum, gUPnPAlbumLen)) {
 		ptr = upnp_class + gUPnPAlbumLen;
@@ -1158,6 +1166,8 @@ const gchar *dls_props_upnp_class_to_media_spec(const gchar *upnp_class)
 		if (!*ptr || *ptr == '.')
 			retval = gMediaSpec2Item;
 	}
+
+on_error:
 
 	return retval;
 }
