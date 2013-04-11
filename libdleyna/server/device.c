@@ -627,7 +627,6 @@ static void prv_get_feature_list_cb(GUPnPServiceProxy *proxy,
 				    gpointer user_data)
 {
 	gchar *result = NULL;
-	const gchar *message;
 	gboolean end;
 	GError *error = NULL;
 	prv_new_device_ct_t *priv_t = (prv_new_device_ct_t *)user_data;
@@ -638,9 +637,9 @@ static void prv_get_feature_list_cb(GUPnPServiceProxy *proxy,
 					     &result, NULL);
 
 	if (!end || (result == NULL)) {
-		message = (error != NULL) ? error->message : "Invalid result";
 		DLEYNA_LOG_WARNING("GetFeatureList operation failed: %s",
-				   message);
+				   ((error != NULL) ? error->message
+						    : "Invalid result"));
 		goto on_error;
 	}
 
@@ -706,7 +705,6 @@ static void prv_get_sort_ext_capabilities_cb(GUPnPServiceProxy *proxy,
 					   gpointer user_data)
 {
 	gchar *result = NULL;
-	const gchar *message;
 	gboolean end;
 	GError *error = NULL;
 	prv_new_device_ct_t *priv_t = (prv_new_device_ct_t *)user_data;
@@ -717,10 +715,9 @@ static void prv_get_sort_ext_capabilities_cb(GUPnPServiceProxy *proxy,
 					     G_TYPE_STRING, &result, NULL);
 
 	if (!end || (result == NULL)) {
-		message = (error != NULL) ? error->message : "Invalid result";
 		DLEYNA_LOG_WARNING(
 			"GetSortExtensionCapabilities operation failed: %s",
-			message);
+			((error != NULL) ? error->message : "Invalid result"));
 		goto on_error;
 	}
 
@@ -793,7 +790,6 @@ static void prv_get_sort_capabilities_cb(GUPnPServiceProxy *proxy,
 					 gpointer user_data)
 {
 	gchar *result = NULL;
-	const gchar *message;
 	gboolean end;
 	GError *error = NULL;
 	prv_new_device_ct_t *priv_t = (prv_new_device_ct_t *)user_data;
@@ -803,9 +799,9 @@ static void prv_get_sort_capabilities_cb(GUPnPServiceProxy *proxy,
 					     G_TYPE_STRING, &result, NULL);
 
 	if (!end || (result == NULL)) {
-		message = (error != NULL) ? error->message : "Invalid result";
 		DLEYNA_LOG_WARNING("GetSortCapabilities operation failed: %s",
-				   message);
+				   ((error != NULL) ? error->message
+						    : "Invalid result"));
 		goto on_error;
 	}
 
@@ -841,7 +837,6 @@ static void prv_get_search_capabilities_cb(GUPnPServiceProxy *proxy,
 					   gpointer user_data)
 {
 	gchar *result = NULL;
-	const gchar *message;
 	gboolean end;
 	GError *error = NULL;
 	prv_new_device_ct_t *priv_t = (prv_new_device_ct_t *)user_data;
@@ -852,9 +847,9 @@ static void prv_get_search_capabilities_cb(GUPnPServiceProxy *proxy,
 					     &result, NULL);
 
 	if (!end || (result == NULL)) {
-		message = (error != NULL) ? error->message : "Invalid result";
 		DLEYNA_LOG_WARNING("GetSearchCapabilities operation failed: %s",
-				   message);
+				   ((error != NULL) ? error->message
+						    : "Invalid result"));
 		goto on_error;
 	}
 
