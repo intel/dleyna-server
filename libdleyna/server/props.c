@@ -34,6 +34,8 @@ static const gchar gUPnPContainer[] = "object.container";
 static const gchar gUPnPAlbum[] = "object.container.album";
 static const gchar gUPnPPerson[] = "object.container.person";
 static const gchar gUPnPGenre[] = "object.container.genre";
+static const gchar gUPnPPlaylist[] = "object.container.playlistContainer";
+static const gchar gUPnPStorage[] = "object.container.storageFolder";
 static const gchar gUPnPAudioItem[] = "object.item.audioItem";
 static const gchar gUPnPVideoItem[] = "object.item.videoItem";
 static const gchar gUPnPImageItem[] = "object.item.imageItem";
@@ -48,6 +50,10 @@ static const unsigned int gUPnPPersonLen =
 	(sizeof(gUPnPPerson) / sizeof(gchar)) - 1;
 static const unsigned int gUPnPGenreLen =
 	(sizeof(gUPnPGenre) / sizeof(gchar)) - 1;
+static const unsigned int gUPnPPlaylistLen =
+	(sizeof(gUPnPPlaylist) / sizeof(gchar)) - 1;
+static const unsigned int gUPnPStorageLen =
+	(sizeof(gUPnPStorage) / sizeof(gchar)) - 1;
 static const unsigned int gUPnPAudioItemLen =
 	(sizeof(gUPnPAudioItem) / sizeof(gchar)) - 1;
 static const unsigned int gUPnPVideoItemLen =
@@ -86,16 +92,18 @@ static const gchar gMediaSpec2GenreMovie[] = "genre.movie";
 static const gchar gMediaSpec2GenreMusic[] = "genre.music";
 static const gchar gMediaSpec2AudioMusic[] = "audio.music";
 static const gchar gMediaSpec2AudioBroadcast[] = "audio.broadcast";
-static const gchar gMediaSpec2AudioBook[] = "audio.book";
 static const gchar gMediaSpec2Audio[] = "audio";
+static const gchar gMediaSpec2AudioBook[] = "audio.book";
+static const gchar gMediaSpec2Video[] = "video";
 static const gchar gMediaSpec2VideoMovie[] = "video.movie";
 static const gchar gMediaSpec2VideoMusicClip[] = "video.musicclip";
 static const gchar gMediaSpec2VideoBroadcast[] = "video.broadcast";
-static const gchar gMediaSpec2Video[] = "video";
-static const gchar gMediaSpec2ImagePhoto[] = "image.photo";
 static const gchar gMediaSpec2Image[] = "image";
+static const gchar gMediaSpec2ImagePhoto[] = "image.photo";
 static const gchar gMediaSpec2Playlist[] = "playlist";
+static const gchar gMediaSpec2PlaylistItem[] = "item.playlist";
 static const gchar gMediaSpec2Item[] = "item";
+static const gchar gMediaSpec2Storage[] = "storage";
 
 static dls_prop_map_t *prv_prop_map_new(const gchar *prop_name,
 					    dls_upnp_prop_mask type,
@@ -1089,9 +1097,13 @@ const gchar *dls_props_media_spec_to_upnp_class(const gchar *m2spec_class)
 	else if (!strcmp(m2spec_class, gMediaSpec2Image))
 		retval = gUPnPImageItem;
 	else if (!strcmp(m2spec_class, gMediaSpec2Playlist))
+		retval = gUPnPPlaylist;
+	else if (!strcmp(m2spec_class, gMediaSpec2PlaylistItem))
 		retval = gUPnPPlaylistItem;
 	else if (!strcmp(m2spec_class, gMediaSpec2Item))
 		retval = gUPnPItem;
+	else if (!strcmp(m2spec_class, gMediaSpec2Storage))
+		retval = gUPnPStorage;
 
 on_error:
 
@@ -1158,13 +1170,19 @@ const gchar *dls_props_upnp_class_to_media_spec(const gchar *upnp_class)
 			retval = gMediaSpec2ImagePhoto;
 		else
 			retval = gMediaSpec2Image;
+	}  else if (!strncmp(upnp_class, gUPnPPlaylist,
+			     gUPnPPlaylistLen)) {
+		retval = gMediaSpec2Playlist;
 	}  else if (!strncmp(upnp_class, gUPnPPlaylistItem,
 			     gUPnPPlaylistItemLen)) {
-		retval = gMediaSpec2Playlist;
+		retval = gMediaSpec2PlaylistItem;
 	} else if (!strncmp(upnp_class, gUPnPItem, gUPnPItemLen)) {
 		ptr = upnp_class + gUPnPItemLen;
 		if (!*ptr || *ptr == '.')
 			retval = gMediaSpec2Item;
+	}  else if (!strncmp(upnp_class, gUPnPStorage,
+			     gUPnPStorageLen)) {
+		retval = gMediaSpec2Storage;
 	}
 
 on_error:
