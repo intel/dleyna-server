@@ -568,7 +568,7 @@ Additional properties unsupported by org.gnome.MediaContainer2
 | Resources              |aa{sv}|  o   |  Returns the set of resources      |
 |                        |      |      |  associated with a container       |
 |---------------------------------------------------------------------------|
-| DLNAConversion         |   b  |  o   |                                    |
+| DLNAConversion         | a{sb}|  o   |                                    |
 | DLNAFlags              | a{sb}|  o   |                                    |
 | DLNAOperation          | a{sb}|  o   |  See "Container properties"        |
 | DLNAProfile            |  s   |  o   |  paragraph below.                  |
@@ -841,9 +841,10 @@ Additional property
 |---------------------------------------------------------------------------|
 |     Name        | Type  | m/o* |              Description                 |
 |---------------------------------------------------------------------------|
-| DLNAConversion  |   b   |  o   |  Indicates whether the content of the    |
+| DLNAConversion  | a{sb} |  o   |  Indicates whether the content of the    |
 |                 |       |      |  Resource is in original source format   |
 |                 |       |      |  or if the content is transcoded.        |
+|                 |       |      |  There are 1 key: Transcoded.            |
 |                 |       |      |  See Reference (4): DLNA.ORG_CI.         |
 |---------------------------------------------------------------------------|
 | DLNAFlags       | a{sb} |  o   |  A dictionary of boolean values          |
