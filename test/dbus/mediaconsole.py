@@ -203,6 +203,25 @@ class UPNP(object):
                 '/com/intel/dLeynaServer'),
                                         'com.intel.dLeynaServer.Manager')
 
+    def server_from_name(self, friendly_name):
+        retval = None
+        for i in self._manager.GetServers():
+            server = Device(i)
+            server_name = server.get_prop("FriendlyName").lower()
+            if server_name.find(friendly_name.lower()) != -1:
+                retval = server
+                break
+        return retval
+
+    def server_from_udn(self, udn):
+        retval = None
+        for i in self._manager.GetServers():
+            server = Device(i)
+            if server.get_prop("UDN") == udn:
+                retval = server
+                break
+        return retval
+
     def servers(self):
         for i in self._manager.GetServers():
             try:
