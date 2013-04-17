@@ -105,31 +105,40 @@ struct dls_prop_dlna_t_ {
 	const gchar *prop_name;
 };
 
-static const dls_prop_dlna_t g_prop_dlna[] = {
-{GUPNP_DLNA_CONVERSION_TRANSCODED,		"Transcoded"},		/* 0 */
-{0,						NULL},			/* 1 */
-{GUPNP_DLNA_OPERATION_RANGE,			"RangeSeek"},		/* 2 */
-{GUPNP_DLNA_OPERATION_TIMESEEK,			"TimeSeek"},		/* 3 */
-{0,						NULL},			/* 4 */
-{GUPNP_DLNA_FLAGS_SENDER_PACED,			"SenderPaced"},		/* 5 */
-{GUPNP_DLNA_FLAGS_TIME_BASED_SEEK,		"TimeBased"},		/* 6 */
-{GUPNP_DLNA_FLAGS_BYTE_BASED_SEEK,		"ByteBased"},		/* 7 */
-{GUPNP_DLNA_FLAGS_PLAY_CONTAINER,		"PlayContainer"},	/* 8 */
-{GUPNP_DLNA_FLAGS_S0_INCREASE,			"S0Increase"},		/* 9 */
-{GUPNP_DLNA_FLAGS_SN_INCREASE,			"SNIncrease"},		/* 10 */
-{GUPNP_DLNA_FLAGS_RTSP_PAUSE,			"RTSPPause"},		/* 11 */
-{GUPNP_DLNA_FLAGS_STREAMING_TRANSFER_MODE,	"StreamingTM"},		/* 12 */
-{GUPNP_DLNA_FLAGS_INTERACTIVE_TRANSFER_MODE,	"InteractiveTM"},	/* 13 */
-{GUPNP_DLNA_FLAGS_BACKGROUND_TRANSFER_MODE,	"BackgroundTM"},	/* 14 */
-{GUPNP_DLNA_FLAGS_CONNECTION_STALL,		"ConnectionStall"},	/* 15 */
-{GUPNP_DLNA_FLAGS_DLNA_V15,			"DLNA_V15"},		/* 16 */
-{0,						NULL},			/* 17 */
-{GUPNP_OCM_FLAGS_UPLOAD,			"Upload"},		/* 18 */
-{GUPNP_OCM_FLAGS_CREATE_CONTAINER,		"CreateContainer"},	/* 19 */
-{GUPNP_OCM_FLAGS_DESTROYABLE,			"Delete"},		/* 20 */
-{GUPNP_OCM_FLAGS_UPLOAD_DESTROYABLE,		"UploadDelete"},	/* 21 */
-{GUPNP_OCM_FLAGS_CHANGE_METADATA,		"ChangeMeta"},		/* 22 */
-{0,						NULL}			/* 23 */
+static const dls_prop_dlna_t g_prop_dlna_ci[] = {
+{GUPNP_DLNA_CONVERSION_TRANSCODED,		"Transcoded"},
+{0,						NULL}
+};
+
+static const dls_prop_dlna_t g_prop_dlna_op[] = {
+{GUPNP_DLNA_OPERATION_RANGE,			"RangeSeek"},
+{GUPNP_DLNA_OPERATION_TIMESEEK,			"TimeSeek"},
+{0,						NULL}
+};
+
+static const dls_prop_dlna_t g_prop_dlna_flags[] = {
+{GUPNP_DLNA_FLAGS_SENDER_PACED,			"SenderPaced"},
+{GUPNP_DLNA_FLAGS_TIME_BASED_SEEK,		"TimeBased"},
+{GUPNP_DLNA_FLAGS_BYTE_BASED_SEEK,		"ByteBased"},
+{GUPNP_DLNA_FLAGS_PLAY_CONTAINER,		"PlayContainer"},
+{GUPNP_DLNA_FLAGS_S0_INCREASE,			"S0Increase"},
+{GUPNP_DLNA_FLAGS_SN_INCREASE,			"SNIncrease"},
+{GUPNP_DLNA_FLAGS_RTSP_PAUSE,			"RTSPPause"},
+{GUPNP_DLNA_FLAGS_STREAMING_TRANSFER_MODE,	"StreamingTM"},
+{GUPNP_DLNA_FLAGS_INTERACTIVE_TRANSFER_MODE,	"InteractiveTM"},
+{GUPNP_DLNA_FLAGS_BACKGROUND_TRANSFER_MODE,	"BackgroundTM"},
+{GUPNP_DLNA_FLAGS_CONNECTION_STALL,		"ConnectionStall"},
+{GUPNP_DLNA_FLAGS_DLNA_V15,			"DLNA_V15"},
+{0,						NULL}
+};
+
+static const dls_prop_dlna_t g_prop_dlna_ocm[] = {
+{GUPNP_OCM_FLAGS_UPLOAD,			"Upload"},
+{GUPNP_OCM_FLAGS_CREATE_CONTAINER,		"CreateContainer"},
+{GUPNP_OCM_FLAGS_DESTROYABLE,			"Delete"},
+{GUPNP_OCM_FLAGS_UPLOAD_DESTROYABLE,		"UploadDelete"},
+{GUPNP_OCM_FLAGS_CHANGE_METADATA,		"ChangeMeta"},
+{0,						NULL}
 };
 
 #define DLEYNA_PROPS_DLNA_CI_INDEX	0
@@ -694,21 +703,19 @@ static GVariant *prv_add_list_dlna_prop(GList *list)
 	return g_variant_builder_end(&vb);
 }
 
-static GVariant *prv_props_get_dlna_info_dict(guint flags, gint index)
+static GVariant *prv_props_get_dlna_info_dict(guint flags,
+					      const dls_prop_dlna_t *dfa)
 {
 	GVariantBuilder builder;
 	gboolean set;
-	const dls_prop_dlna_t *prop;
+	gint i = 0;
 
 	g_variant_builder_init(&builder, G_VARIANT_TYPE("a{sb}"));
 
-	prop = &g_prop_dlna[index];
-
-	while (prop->dlna_flag) {
-
-		set = (flags & prop->dlna_flag) != 0;
-		g_variant_builder_add(&builder, "{sb}", prop->prop_name, set);
-		prop = &g_prop_dlna[++index];
+	while (dfa[i].dlna_flag) {
+		set = (flags & dfa[i].dlna_flag) != 0;
+		g_variant_builder_add(&builder, "{sb}", dfa[i].prop_name, set);
+		i++;
 	}
 
 	return g_variant_builder_end(&builder);
@@ -1045,8 +1052,7 @@ static void prv_parse_common_resources(GVariantBuilder *item_vb,
 		prv_add_variant_prop(item_vb,
 				     DLS_INTERFACE_PROP_DLNA_CONVERSION,
 				     prv_props_get_dlna_info_dict(
-						conv,
-						DLEYNA_PROPS_DLNA_CI_INDEX));
+						conv, g_prop_dlna_ci));
 	}
 
 	if (filter_mask & DLS_UPNP_MASK_PROP_DLNA_OPERATION) {
@@ -1054,8 +1060,7 @@ static void prv_parse_common_resources(GVariantBuilder *item_vb,
 		prv_add_variant_prop(item_vb,
 				     DLS_INTERFACE_PROP_DLNA_OPERATION,
 				     prv_props_get_dlna_info_dict(
-						ope,
-						DLEYNA_PROPS_DLNA_OP_INDEX));
+						ope, g_prop_dlna_op));
 	}
 
 	if (filter_mask & DLS_UPNP_MASK_PROP_DLNA_FLAGS) {
@@ -1063,8 +1068,7 @@ static void prv_parse_common_resources(GVariantBuilder *item_vb,
 		prv_add_variant_prop(item_vb,
 				     DLS_INTERFACE_PROP_DLNA_FLAGS,
 				     prv_props_get_dlna_info_dict(
-						flags,
-						DLEYNA_PROPS_DLNA_FLAGS_INDEX));
+						flags, g_prop_dlna_flags));
 	}
 
 	if (filter_mask & DLS_UPNP_MASK_PROP_MIME_TYPE) {
@@ -1396,8 +1400,7 @@ gboolean dls_props_add_object(GVariantBuilder *item_vb,
 		prv_add_variant_prop(item_vb,
 				     DLS_INTERFACE_PROP_DLNA_MANAGED,
 				     prv_props_get_dlna_info_dict(
-						flags,
-						DLEYNA_PROPS_DLNA_OCM_INDEX));
+						flags, g_prop_dlna_ocm));
 	}
 
 	if ((filter_mask & DLS_UPNP_MASK_PROP_OBJECT_UPDATE_ID) &&
@@ -1610,25 +1613,20 @@ static GVariant *prv_get_common_resource_property(const gchar *prop,
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_DLNA_CONVERSION)) {
 		protocol_info = gupnp_didl_lite_resource_get_protocol_info(res);
 		conv = gupnp_protocol_info_get_dlna_conversion(protocol_info);
-		retval = prv_props_get_dlna_info_dict(
-						conv,
-						DLEYNA_PROPS_DLNA_CI_INDEX);
+		retval = prv_props_get_dlna_info_dict(conv, g_prop_dlna_ci);
 		if (retval)
 			retval = g_variant_ref_sink(retval);
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_DLNA_OPERATION)) {
 		protocol_info = gupnp_didl_lite_resource_get_protocol_info(res);
 		ope = gupnp_protocol_info_get_dlna_operation(protocol_info);
-		retval = prv_props_get_dlna_info_dict(
-						ope,
-						DLEYNA_PROPS_DLNA_OP_INDEX);
+		retval = prv_props_get_dlna_info_dict(ope, g_prop_dlna_op);
 		if (retval)
 			retval = g_variant_ref_sink(retval);
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_DLNA_FLAGS)) {
 		protocol_info = gupnp_didl_lite_resource_get_protocol_info(res);
 		flags = gupnp_protocol_info_get_dlna_flags(protocol_info);
-		retval =  prv_props_get_dlna_info_dict(
-						flags,
-						DLEYNA_PROPS_DLNA_FLAGS_INDEX);
+		retval =  prv_props_get_dlna_info_dict(flags,
+						       g_prop_dlna_flags);
 		if (retval)
 			retval = g_variant_ref_sink(retval);
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_MIME_TYPE)) {
@@ -1792,8 +1790,7 @@ GVariant *dls_props_get_object_prop(const gchar *prop, const gchar *root_path,
 		DLEYNA_LOG_DEBUG("Prop %s = %0x", prop, dlna_managed);
 
 		retval = g_variant_ref_sink(prv_props_get_dlna_info_dict(
-						dlna_managed,
-						DLEYNA_PROPS_DLNA_OCM_INDEX));
+						dlna_managed, g_prop_dlna_ocm));
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_OBJECT_UPDATE_ID) &&
 		   gupnp_didl_lite_object_update_id_is_set(object)) {
 		uint_val = gupnp_didl_lite_object_get_update_id(object);
