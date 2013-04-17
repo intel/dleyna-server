@@ -141,11 +141,6 @@ static const dls_prop_dlna_t g_prop_dlna_ocm[] = {
 {0,						NULL}
 };
 
-#define DLEYNA_PROPS_DLNA_CI_INDEX	0
-#define DLEYNA_PROPS_DLNA_OP_INDEX	2
-#define DLEYNA_PROPS_DLNA_FLAGS_INDEX	5
-#define DLEYNA_PROPS_DLNA_OCM_INDEX	18
-
 static dls_prop_map_t *prv_prop_map_new(const gchar *prop_name,
 					dls_upnp_prop_mask type,
 					gboolean filter,
