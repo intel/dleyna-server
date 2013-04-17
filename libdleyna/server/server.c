@@ -72,6 +72,8 @@ static const gchar g_root_introspection[] =
 	"      <arg type='ao' name='"DLS_INTERFACE_SERVERS"'"
 	"           direction='out'/>"
 	"    </method>"
+	"    <method name='"DLS_INTERFACE_RESCAN"'>"
+	"    </method>"
 	"    <method name='"DLS_INTERFACE_SET_PROTOCOL_INFO"'>"
 	"      <arg type='s' name='"DLS_INTERFACE_PROTOCOL_INFO"'"
 	"           direction='in'/>"
@@ -517,6 +519,10 @@ static void prv_process_sync_task(dls_task_t *task)
 		task->result = dls_upnp_get_server_ids(g_context.upnp);
 		prv_sync_task_complete(task);
 		break;
+	case DLS_TASK_RESCAN:
+		dls_upnp_rescan(g_context.upnp);
+		prv_sync_task_complete(task);
+		break;
 	case DLS_TASK_SET_PROTOCOL_INFO:
 		client_name = dleyna_task_queue_get_source(task->atom.queue_id);
 		client = g_hash_table_lookup(g_context.watchers, client_name);
@@ -791,6 +797,9 @@ static void prv_method_call(dleyna_connector_id_t conn,
 	if (!strcmp(method, DLS_INTERFACE_RELEASE)) {
 		prv_remove_client(sender);
 		g_context.connector->return_response(invocation, NULL);
+	} else if (!strcmp(method, DLS_INTERFACE_RESCAN)) {
+		task = dls_task_rescan_new(invocation);
+		prv_add_task(task, sender, DLS_SERVER_SINK);
 	} else if (!strcmp(method, DLS_INTERFACE_GET_VERSION)) {
 		task = dls_task_get_version_new(invocation);
 		prv_add_task(task, sender, DLS_SERVER_SINK);

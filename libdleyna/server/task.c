@@ -24,6 +24,17 @@
 
 #include "async.h"
 
+dls_task_t *dls_task_rescan_new(dleyna_connector_msg_id_t invocation)
+{
+	dls_task_t *task = g_new0(dls_task_t, 1);
+
+	task->type = DLS_TASK_RESCAN;
+	task->invocation = invocation;
+	task->synchronous = TRUE;
+
+	return task;
+}
+
 dls_task_t *dls_task_get_version_new(dleyna_connector_msg_id_t invocation)
 {
 	dls_task_t *task = g_new0(dls_task_t, 1);

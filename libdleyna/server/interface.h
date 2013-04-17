@@ -109,6 +109,7 @@ enum dls_interface_type_ {
 
 #define DLS_INTERFACE_GET_VERSION "GetVersion"
 #define DLS_INTERFACE_GET_SERVERS "GetServers"
+#define DLS_INTERFACE_RESCAN "Rescan"
 #define DLS_INTERFACE_RELEASE "Release"
 #define DLS_INTERFACE_SET_PROTOCOL_INFO "SetProtocolInfo"
 #define DLS_INTERFACE_PREFER_LOCAL_ADDRESSES "PreferLocalAddresses"
