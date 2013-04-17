@@ -34,6 +34,7 @@
 enum dls_task_type_t_ {
 	DLS_TASK_GET_VERSION,
 	DLS_TASK_GET_SERVERS,
+	DLS_TASK_RESCAN,
 	DLS_TASK_GET_CHILDREN,
 	DLS_TASK_GET_ALL_PROPS,
 	DLS_TASK_GET_PROP,
@@ -171,6 +172,8 @@ struct dls_task_t_ {
 		dls_task_create_playlist_t playlist;
 	} ut;
 };
+
+dls_task_t *dls_task_rescan_new(dleyna_connector_msg_id_t invocation);
 
 dls_task_t *dls_task_get_version_new(dleyna_connector_msg_id_t invocation);
 
