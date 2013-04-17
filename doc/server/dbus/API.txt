@@ -588,6 +588,9 @@ support different playlist formats, e.g., M3U, DIDL-S, etc. The
 properties of one of these resources may be duplicated directly in the
 Container object itself. The algorithm for selecting this resource
 is given in the section "Transcoding and org.gnome.UPnP.MediaItem2".
+In this section also, you will find the definition for the 3 properties
+DLNAConversion, DLNAFlags and DLNAOperation (in Resources/Additional
+properties).
 
 New Methods:
 ------------
