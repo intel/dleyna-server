@@ -42,7 +42,6 @@ dls_task_t *dls_task_get_version_new(dleyna_connector_msg_id_t invocation)
 	task->type = DLS_TASK_GET_VERSION;
 	task->invocation = invocation;
 	task->result_format = "(@s)";
-	task->result = g_variant_ref_sink(g_variant_new_string(VERSION));
 	task->synchronous = TRUE;
 
 	return task;
