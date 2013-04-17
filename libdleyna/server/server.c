@@ -486,12 +486,6 @@ dleyna_task_processor_t *dls_server_get_task_processor(void)
 	return g_context.processor;
 }
 
-static void prv_sync_task_complete(dls_task_t *task)
-{
-	dls_task_complete(task);
-	dleyna_task_queue_task_completed(task->atom.queue_id);
-}
-
 static void prv_process_sync_task(dls_task_t *task)
 {
 	dls_client_t *client;
@@ -499,15 +493,17 @@ static void prv_process_sync_task(dls_task_t *task)
 
 	switch (task->type) {
 	case DLS_TASK_GET_VERSION:
-		prv_sync_task_complete(task);
+		task->result = g_variant_ref_sink(g_variant_new_string(
+								VERSION));
+		dls_task_complete(task);
 		break;
 	case DLS_TASK_GET_SERVERS:
 		task->result = dls_upnp_get_server_ids(g_context.upnp);
-		prv_sync_task_complete(task);
+		dls_task_complete(task);
 		break;
 	case DLS_TASK_RESCAN:
 		dls_upnp_rescan(g_context.upnp);
-		prv_sync_task_complete(task);
+		dls_task_complete(task);
 		break;
 	case DLS_TASK_SET_PROTOCOL_INFO:
 		client_name = dleyna_task_queue_get_source(task->atom.queue_id);
@@ -522,7 +518,7 @@ static void prv_process_sync_task(dls_task_t *task)
 				client->protocol_info = NULL;
 			}
 		}
-		prv_sync_task_complete(task);
+		dls_task_complete(task);
 		break;
 	case DLS_TASK_SET_PREFER_LOCAL_ADDRESSES:
 		client_name = dleyna_task_queue_get_source(task->atom.queue_id);
@@ -531,34 +527,37 @@ static void prv_process_sync_task(dls_task_t *task)
 			client->prefer_local_addresses =
 					task->ut.prefer_local_addresses.prefer;
 		}
-		prv_sync_task_complete(task);
+		dls_task_complete(task);
 		break;
 	case DLS_TASK_GET_UPLOAD_STATUS:
 		dls_upnp_get_upload_status(g_context.upnp, task);
-		dleyna_task_queue_task_completed(task->atom.queue_id);
 		break;
 	case DLS_TASK_GET_UPLOAD_IDS:
 		dls_upnp_get_upload_ids(g_context.upnp, task);
-		dleyna_task_queue_task_completed(task->atom.queue_id);
 		break;
 	case DLS_TASK_CANCEL_UPLOAD:
 		dls_upnp_cancel_upload(g_context.upnp, task);
-		dleyna_task_queue_task_completed(task->atom.queue_id);
 		break;
 	default:
+		goto finished;
 		break;
 	}
+
+	dleyna_task_queue_task_completed(task->atom.queue_id);
+
+finished:
+	return;
 }
 
 static void prv_async_task_complete(dls_task_t *task, GError *error)
 {
 	DLEYNA_LOG_DEBUG("Enter");
 
-	if (error) {
+	if (!error) {
+		dls_task_complete(task);
+	} else {
 		dls_task_fail(task, error);
 		g_error_free(error);
-	} else {
-		dls_task_complete(task);
 	}
 
 	dleyna_task_queue_task_completed(task->atom.queue_id);
@@ -783,24 +782,28 @@ static void prv_method_call(dleyna_connector_id_t conn,
 	if (!strcmp(method, DLS_INTERFACE_RELEASE)) {
 		prv_remove_client(sender);
 		g_context.connector->return_response(invocation, NULL);
+		goto finished;
 	} else if (!strcmp(method, DLS_INTERFACE_RESCAN)) {
 		task = dls_task_rescan_new(invocation);
-		prv_add_task(task, sender, DLS_SERVER_SINK);
 	} else if (!strcmp(method, DLS_INTERFACE_GET_VERSION)) {
 		task = dls_task_get_version_new(invocation);
-		prv_add_task(task, sender, DLS_SERVER_SINK);
 	} else if (!strcmp(method, DLS_INTERFACE_GET_SERVERS)) {
 		task = dls_task_get_servers_new(invocation);
-		prv_add_task(task, sender, DLS_SERVER_SINK);
 	} else if (!strcmp(method, DLS_INTERFACE_SET_PROTOCOL_INFO)) {
 		task = dls_task_set_protocol_info_new(invocation,
 						      parameters);
-		prv_add_task(task, sender, DLS_SERVER_SINK);
 	} else if (!strcmp(method, DLS_INTERFACE_PREFER_LOCAL_ADDRESSES)) {
 		task = dls_task_prefer_local_addresses_new(invocation,
 							   parameters);
-		prv_add_task(task, sender, DLS_SERVER_SINK);
+	} else {
+		goto finished;
 	}
+
+	prv_add_task(task, sender, DLS_SERVER_SINK);
+
+finished:
+
+	return;
 }
 
 gboolean dls_server_get_object_info(const gchar *object_path,
@@ -1148,18 +1151,14 @@ static gboolean prv_control_point_start_service(
 							0,
 							g_root_vtables);
 
-	if (!g_context.dls_id) {
-		retval = FALSE;
-		goto out;
-	} else {
+	if (g_context.dls_id)
 		g_context.upnp = dls_upnp_new(connection,
 					      g_server_vtables,
 					      prv_found_media_server,
 					      prv_lost_media_server,
 					      NULL);
-	}
-
-out:
+	else
+		retval = FALSE;
 
 	return retval;
 }
