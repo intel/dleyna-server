@@ -34,6 +34,7 @@
 #include "device.h"
 #include "interface.h"
 #include "path.h"
+#include "props_def.h"
 #include "search.h"
 #include "sort.h"
 #include "upnp.h"
@@ -129,7 +130,6 @@ static const dleyna_task_queue_key_t *prv_create_device_queue(
 			dleyna_service_task_delete_cb);
 	dleyna_task_queue_set_finally(queue_id, prv_device_chain_end);
 	dleyna_task_queue_set_user_data(queue_id, *priv_t);
-
 
 	return queue_id;
 }
@@ -491,61 +491,40 @@ on_error:
 	DLEYNA_LOG_DEBUG("Exit with %s", !cb_data->action ? "FAIL" : "SUCCESS");
 }
 
-void dls_upnp_get_all_props(dls_upnp_t *upnp, dls_client_t *client,
-			    dls_task_t *task,
-			    dls_upnp_task_complete_t cb)
+void dls_upnp_get_new_prop(dls_upnp_t *upnp, dls_client_t *client,
+			   dls_task_t *task,
+			   dls_upnp_task_complete_t cb)
 {
 	gboolean root_object;
 	dls_async_task_t *cb_data = (dls_async_task_t *)task;
-	dls_async_get_all_t *cb_task_data;
-
-	DLEYNA_LOG_DEBUG("Enter");
-
-	DLEYNA_LOG_DEBUG("Path: %s", task->target.path);
-	DLEYNA_LOG_DEBUG("Interface %s", task->ut.get_prop.interface_name);
-
-	cb_data->cb = cb;
-	cb_task_data = &cb_data->ut.get_all;
-
-	root_object = task->target.id[0] == '0' && task->target.id[1] == 0;
-
-	DLEYNA_LOG_DEBUG("Root Object = %d", root_object);
-
-	cb_task_data->protocol_info = client->protocol_info;
-
-	dls_device_get_all_props(client, task, root_object);
-
-	DLEYNA_LOG_DEBUG("Exit with SUCCESS");
-}
-
-void dls_upnp_get_prop(dls_upnp_t *upnp, dls_client_t *client,
-		       dls_task_t *task,
-		       dls_upnp_task_complete_t cb)
-{
-	gboolean root_object;
-	dls_async_task_t *cb_data = (dls_async_task_t *)task;
-	dls_async_get_prop_t *cb_task_data;
+	dls_async_get_new_prop_t *cb_task_data;
 	dls_prop_map_t *prop_map;
-	dls_task_get_prop_t *task_data;
+	dls_upnp_prop_mask mask;
 
-	DLEYNA_LOG_DEBUG("Enter");
+	DLEYNA_LOG_DEBUG("####################### Enter");
 
 	DLEYNA_LOG_DEBUG("Path: %s", task->target.path);
-	DLEYNA_LOG_DEBUG("Interface %s", task->ut.get_prop.interface_name);
-	DLEYNA_LOG_DEBUG("Prop.%s", task->ut.get_prop.prop_name);
+	DLEYNA_LOG_DEBUG("Interface %s", task->ut.get_new_prop.interface_name);
+	if (!task->ut.get_new_prop.all)
+		DLEYNA_LOG_DEBUG("Prop.%s", task->ut.get_new_prop.prop_name);
 
-	task_data = &task->ut.get_prop;
 	cb_data->cb = cb;
-	cb_task_data = &cb_data->ut.get_prop;
+	cb_task_data = &cb_data->ut.get_new_prop;
 
 	root_object = task->target.id[0] == '0' && task->target.id[1] == 0;
 
 	DLEYNA_LOG_DEBUG("Root Object = %d", root_object);
 
 	cb_task_data->protocol_info = client->protocol_info;
-	prop_map = g_hash_table_lookup(upnp->filter_map, task_data->prop_name);
 
-	dls_device_get_prop(client, task, prop_map, root_object);
+	if (!task->ut.get_new_prop.all) {
+		prop_map = g_hash_table_lookup(upnp->filter_map, task->ut.get_new_prop.prop_name);
+		mask = (prop_map != NULL) ? prop_map->type : 0;
+	} else {
+		mask = DLS_PROP_MASK_ALL_PROPS;
+	}
+
+	dls_device_get_new_prop(client, task, mask, root_object);
 
 	DLEYNA_LOG_DEBUG("Exit with SUCCESS");
 }
@@ -624,7 +603,7 @@ void dls_upnp_get_resource(dls_upnp_t *upnp, dls_client_t *client,
 			   dls_upnp_task_complete_t cb)
 {
 	dls_async_task_t *cb_data = (dls_async_task_t *)task;
-	dls_async_get_all_t *cb_task_data;
+	dls_async_get_new_prop_t *cb_task_data;
 	gchar *upnp_filter = NULL;
 
 	DLEYNA_LOG_DEBUG("Enter");
@@ -632,7 +611,7 @@ void dls_upnp_get_resource(dls_upnp_t *upnp, dls_client_t *client,
 	DLEYNA_LOG_DEBUG("Protocol Info: %s ", task->ut.resource.protocol_info);
 
 	cb_data->cb = cb;
-	cb_task_data = &cb_data->ut.get_all;
+	cb_task_data = &cb_data->ut.get_new_prop;
 
 	DLEYNA_LOG_DEBUG("Root Path %s Id %s", task->target.root_path,
 			 task->target.id);

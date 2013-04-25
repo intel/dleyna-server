@@ -295,7 +295,7 @@ static const gchar g_server_introspection[] =
 	"    <property type='u' name='"
 	DLS_INTERFACE_PROP_TOTAL_DELETED_CHILD_COUNT"'"
 	"       access='read'/>"
-	"    <property type='aa{sv}' name='"DLS_INTERFACE_PROP_RESOURCES"'"
+	"    <property type='aa{sv}' name='"DLS_INTERFACE_PROP_RES_RESOURCES"'"
 	"       access='read'/>"
 	"    <property type='as' name='"DLS_INTERFACE_PROP_URLS"'"
 	"       access='read'/>"
@@ -365,7 +365,7 @@ static const gchar g_server_introspection[] =
 	"       access='read'/>"
 	"    <property type='o' name='"DLS_INTERFACE_PROP_REFPATH"'"
 	"       access='read'/>"
-	"    <property type='aa{sv}' name='"DLS_INTERFACE_PROP_RESOURCES"'"
+	"    <property type='aa{sv}' name='"DLS_INTERFACE_PROP_RES_RESOURCES"'"
 	"       access='read'/>"
 	"  </interface>"
 	"  <interface name='"DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE"'>"
@@ -597,13 +597,9 @@ static void prv_process_async_task(dls_task_t *task)
 		dls_upnp_get_children(g_context.upnp, client, task,
 				      prv_async_task_complete);
 		break;
-	case DLS_TASK_GET_PROP:
-		dls_upnp_get_prop(g_context.upnp, client, task,
-				  prv_async_task_complete);
-		break;
-	case DLS_TASK_GET_ALL_PROPS:
-		dls_upnp_get_all_props(g_context.upnp, client, task,
-				       prv_async_task_complete);
+	case DLS_TASK_GET_NEW_PROP:
+		dls_upnp_get_new_prop(g_context.upnp, client, task,
+				      prv_async_task_complete);
 		break;
 	case DLS_TASK_SEARCH:
 		dls_upnp_search(g_context.upnp, client, task,
@@ -1020,7 +1016,7 @@ static void prv_props_method_call(dleyna_connector_id_t conn,
 	GError *error = NULL;
 
 	if (!strcmp(method, DLS_INTERFACE_GET_ALL))
-		task = dls_task_get_props_new(invocation, object,
+		task = dls_task_get_all_props_new(invocation, object,
 					      parameters, &error);
 	else if (!strcmp(method, DLS_INTERFACE_GET))
 		task = dls_task_get_prop_new(invocation, object,

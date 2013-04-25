@@ -71,12 +71,9 @@ static void prv_delete(dls_task_t *task)
 			g_variant_unref(task->ut.get_children.filter);
 		g_free(task->ut.get_children.sort_by);
 		break;
-	case DLS_TASK_GET_ALL_PROPS:
-		g_free(task->ut.get_props.interface_name);
-		break;
-	case DLS_TASK_GET_PROP:
-		g_free(task->ut.get_prop.interface_name);
-		g_free(task->ut.get_prop.prop_name);
+	case DLS_TASK_GET_NEW_PROP:
+		g_free(task->ut.get_new_prop.interface_name);
+		g_free(task->ut.get_new_prop.prop_name);
 		break;
 	case DLS_TASK_SEARCH:
 		g_free(task->ut.search.query);
@@ -237,35 +234,37 @@ dls_task_t *dls_task_get_prop_new(dleyna_connector_msg_id_t invocation,
 {
 	dls_task_t *task;
 
-	task = prv_m2spec_task_new(DLS_TASK_GET_PROP, invocation, path, "(v)",
-				   error, FALSE);
+	task = prv_m2spec_task_new(DLS_TASK_GET_NEW_PROP, invocation, path,
+				   "(v)", error, FALSE);
 	if (!task)
 		goto finished;
 
-	g_variant_get(parameters, "(ss)", &task->ut.get_prop.interface_name,
-		      &task->ut.get_prop.prop_name);
+	g_variant_get(parameters, "(ss)", &task->ut.get_new_prop.interface_name,
+		      &task->ut.get_new_prop.prop_name);
 
-	g_strstrip(task->ut.get_prop.interface_name);
-	g_strstrip(task->ut.get_prop.prop_name);
+	g_strstrip(task->ut.get_new_prop.interface_name);
+	g_strstrip(task->ut.get_new_prop.prop_name);
+	task->ut.get_new_prop.all = FALSE;
 
 finished:
 
 	return task;
 }
 
-dls_task_t *dls_task_get_props_new(dleyna_connector_msg_id_t invocation,
-				   const gchar *path, GVariant *parameters,
-				   GError **error)
+dls_task_t *dls_task_get_all_props_new(dleyna_connector_msg_id_t invocation,
+				       const gchar *path, GVariant *parameters,
+				       GError **error)
 {
 	dls_task_t *task;
 
-	task = prv_m2spec_task_new(DLS_TASK_GET_ALL_PROPS, invocation, path,
+	task = prv_m2spec_task_new(DLS_TASK_GET_NEW_PROP, invocation, path,
 				   "(@a{sv})", error, FALSE);
 	if (!task)
 		goto finished;
 
-	g_variant_get(parameters, "(s)", &task->ut.get_props.interface_name);
-	g_strstrip(task->ut.get_props.interface_name);
+	g_variant_get(parameters, "(s)", &task->ut.get_new_prop.interface_name);
+	g_strstrip(task->ut.get_new_prop.interface_name);
+	task->ut.get_new_prop.all = TRUE;
 
 finished:
 

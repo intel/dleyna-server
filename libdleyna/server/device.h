@@ -92,14 +92,6 @@ void dls_device_get_children(dls_client_t *client,
 			     dls_task_t *task,
 			     const gchar *upnp_filter, const gchar *sort_by);
 
-void dls_device_get_all_props(dls_client_t *client,
-			      dls_task_t *task,
-			      gboolean root_object);
-
-void dls_device_get_prop(dls_client_t *client,
-			 dls_task_t *task,
-			 dls_prop_map_t *prop_map, gboolean root_object);
-
 void dls_device_search(dls_client_t *client,
 		       dls_task_t *task,
 		       const gchar *upnp_filter, const gchar *upnp_query,
@@ -138,5 +130,7 @@ void dls_device_playlist_upload(dls_client_t *client,
 void dls_device_get_object_metadata(dls_client_t *client,
 				    dls_task_t *task,
 				    const gchar *parent_id);
+
+void dls_device_get_new_prop(dls_client_t *client, dls_task_t *task, dls_upnp_prop_mask mask, gboolean root_object);
 
 #endif /* DLS_DEVICE_H__ */

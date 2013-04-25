@@ -48,20 +48,17 @@ struct dls_async_bas_t_ {
 	dls_async_cb_t get_children_cb;
 };
 
-typedef struct dls_async_get_prop_t_ dls_async_get_prop_t;
-struct dls_async_get_prop_t_ {
-	GCallback prop_func;
-	const gchar *protocol_info;
-};
-
-typedef struct dls_async_get_all_t_ dls_async_get_all_t;
-struct dls_async_get_all_t_ {
+typedef struct dls_async_get_new_prop_t_ dls_async_get_new_prop_t;
+struct dls_async_get_new_prop_t_ {
+	GUPnPDeviceProxy *device_proxy;
 	GCallback prop_func;
 	GVariantBuilder *vb;
 	dls_upnp_prop_mask filter_mask;
+	dls_upnp_prop_mask get_mask;
 	const gchar *protocol_info;
 	gboolean need_child_count;
 	gboolean device_object;
+	const dleyna_task_queue_key_t *queue_id;
 };
 
 typedef struct dls_async_upload_t_ dls_async_upload_t;
@@ -94,8 +91,7 @@ struct dls_async_task_t_ {
 	gulong cancel_id;
 	union {
 		dls_async_bas_t bas;
-		dls_async_get_prop_t get_prop;
-		dls_async_get_all_t get_all;
+		dls_async_get_new_prop_t get_new_prop;
 		dls_async_upload_t upload;
 		dls_async_update_t update;
 		dls_async_playlist_t playlist;
