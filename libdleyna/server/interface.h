@@ -56,7 +56,7 @@ enum dls_interface_type_ {
 #define DLS_INTERFACE_PROP_GENRE "Genre"
 #define DLS_INTERFACE_PROP_TRACK_NUMBER "TrackNumber"
 #define DLS_INTERFACE_PROP_ALBUM_ART_URL "AlbumArtURL"
-#define DLS_INTERFACE_PROP_RESOURCES "Resources"
+#define DLS_INTERFACE_PROP_RES_RESOURCES "Resources"
 
 /* Container Properties */
 #define DLS_INTERFACE_PROP_SEARCHABLE "Searchable"

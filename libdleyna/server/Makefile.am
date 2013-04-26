@@ -22,11 +22,12 @@ libdleyna_server_1_0_la_LDFLAGS =	-version-info $(DLEYNA_SERVER_VERSION) \
 					-no-undefined
 
 libdleyna_server_1_0_la_SOURCES =	$(libdleyna_serverinc_HEADERS)	\
-					server.c		\
+					server.c			\
 					async.c				\
 					device.c	 		\
 					path.c		 		\
 					props.c		 		\
+					props_def.c	 		\
 					search.c	 		\
 					sort.c		 		\
 					task.c		 		\
@@ -63,6 +64,7 @@ EXTRA_DIST = 	$(sysconf_DATA)			\
 		interface.h			\
 		path.h				\
 		props.h				\
+		props_def.h			\
 		search.h			\
 		server.h			\
 		sort.h				\

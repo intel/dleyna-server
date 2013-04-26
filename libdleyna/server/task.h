@@ -36,8 +36,7 @@ enum dls_task_type_t_ {
 	DLS_TASK_GET_SERVERS,
 	DLS_TASK_RESCAN,
 	DLS_TASK_GET_CHILDREN,
-	DLS_TASK_GET_ALL_PROPS,
-	DLS_TASK_GET_PROP,
+	DLS_TASK_GET_NEW_PROP,
 	DLS_TASK_SEARCH,
 	DLS_TASK_GET_RESOURCE,
 	DLS_TASK_SET_PREFER_LOCAL_ADDRESSES,
@@ -69,15 +68,12 @@ struct dls_task_get_children_t_ {
 	gchar *sort_by;
 };
 
-typedef struct dls_task_get_props_t_ dls_task_get_props_t;
-struct dls_task_get_props_t_ {
-	gchar *interface_name;
-};
-
-typedef struct dls_task_get_prop_t_ dls_task_get_prop_t;
-struct dls_task_get_prop_t_ {
+typedef struct dls_task_get_new_prop_t_ dls_task_get_new_prop_t;
+struct dls_task_get_new_prop_t_ {
+	gboolean all;
 	gchar *prop_name;
 	gchar *interface_name;
+	gint interface_type;
 };
 
 typedef struct dls_task_search_t_ dls_task_search_t;
@@ -159,8 +155,7 @@ struct dls_task_t_ {
 	gboolean multiple_retvals;
 	union {
 		dls_task_get_children_t get_children;
-		dls_task_get_props_t get_props;
-		dls_task_get_prop_t get_prop;
+		dls_task_get_new_prop_t get_new_prop;
 		dls_task_search_t search;
 		dls_task_get_resource_t resource;
 		dls_task_set_prefer_local_addresses_t prefer_local_addresses;
@@ -194,9 +189,9 @@ dls_task_t *dls_task_get_prop_new(dleyna_connector_msg_id_t invocation,
 				  const gchar *path, GVariant *parameters,
 				  GError **error);
 
-dls_task_t *dls_task_get_props_new(dleyna_connector_msg_id_t invocation,
-				   const gchar *path, GVariant *parameters,
-				   GError **error);
+dls_task_t *dls_task_get_all_props_new(dleyna_connector_msg_id_t invocation,
+				       const gchar *path, GVariant *parameters,
+				       GError **error);
 
 dls_task_t *dls_task_search_new(dleyna_connector_msg_id_t invocation,
 				const gchar *path, GVariant *parameters,

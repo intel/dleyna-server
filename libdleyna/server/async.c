@@ -34,10 +34,10 @@ void dls_async_task_delete(dls_async_task_t *cb_data)
 		if (cb_data->ut.bas.vbs)
 			g_ptr_array_unref(cb_data->ut.bas.vbs);
 		break;
-	case DLS_TASK_GET_ALL_PROPS:
+	case DLS_TASK_GET_NEW_PROP:
 	case DLS_TASK_GET_RESOURCE:
-		if (cb_data->ut.get_all.vb)
-			g_variant_builder_unref(cb_data->ut.get_all.vb);
+		if (cb_data->ut.get_new_prop.vb)
+			g_variant_builder_unref(cb_data->ut.get_new_prop.vb);
 		break;
 	case DLS_TASK_UPLOAD_TO_ANY:
 	case DLS_TASK_UPLOAD:

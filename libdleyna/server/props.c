@@ -31,6 +31,7 @@
 #include "interface.h"
 #include "path.h"
 #include "props.h"
+#include "props_def.h"
 
 static const gchar gUPnPContainer[] = "object.container";
 static const gchar gUPnPAlbum[] = "object.container.album";
@@ -141,19 +142,29 @@ static const dls_prop_dlna_t g_prop_dlna_ocm[] = {
 {0,						NULL}
 };
 
-static dls_prop_map_t *prv_prop_map_new(const gchar *prop_name,
-					dls_upnp_prop_mask type,
-					gboolean filter,
-					gboolean searchable,
-					gboolean updateable)
+static void test_prop(dls_upnp_prop_mask filter_mask)
 {
-	dls_prop_map_t *retval = g_new(dls_prop_map_t, 1);
-	retval->upnp_prop_name = prop_name;
-	retval->type = type;
-	retval->filter = filter;
-	retval->searchable = searchable;
-	retval->updateable = updateable;
-	return retval;
+	dls_upnp_prop_mask current_mask = (1LL << 0);
+	int x = 0;
+	dls_prop_map_t *prop_t;
+
+	DLEYNA_LOG_DEBUG("##### ENTER ####");
+
+	prop_t = dls_props_def_get();
+
+	while (filter_mask)
+	{
+		if (filter_mask & 1) {
+			DLEYNA_LOG_DEBUG("##### MASK 0x%lX - %"G_GUINT64_FORMAT" Index %d", current_mask, current_mask, x);
+			DLEYNA_LOG_DEBUG("##### PROPNAME %s", prop_t[x].dls_prop_name);
+		}
+
+		x++;
+		current_mask = current_mask << 1;
+		filter_mask = filter_mask >> 1;
+	}
+
+	DLEYNA_LOG_DEBUG("##### EXIT ####");
 }
 
 void dls_prop_maps_new(GHashTable **property_map, GHashTable **filter_map)
@@ -161,286 +172,45 @@ void dls_prop_maps_new(GHashTable **property_map, GHashTable **filter_map)
 	dls_prop_map_t *prop_t;
 	GHashTable *p_map;
 	GHashTable *f_map;
+	int i = 0;
+
+	DLEYNA_LOG_DEBUG("##### ENTER ####");
+
+	prop_t = dls_props_def_get();
 
 	p_map = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
-	f_map = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
+	f_map = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
 
-	/* @childCount */
-	prop_t = prv_prop_map_new("@childCount",
-					DLS_UPNP_MASK_PROP_CHILD_COUNT,
-					TRUE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_CHILD_COUNT, prop_t);
-	g_hash_table_insert(p_map, "@childCount",
-			    DLS_INTERFACE_PROP_CHILD_COUNT);
+	while (prop_t[i].upnp_prop_name) {
 
-	/* @id */
-	prop_t = prv_prop_map_new("@id",
-					DLS_UPNP_MASK_PROP_PATH,
-					FALSE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_PATH, prop_t);
-	g_hash_table_insert(p_map, "@id", DLS_INTERFACE_PROP_PATH);
+		g_hash_table_insert(f_map,
+				    (gpointer)prop_t[i].dls_prop_name,
+				    (gpointer)(prop_t + i));
 
-	/* @parentID */
-	prop_t = prv_prop_map_new("@parentID",
-					DLS_UPNP_MASK_PROP_PARENT,
-					FALSE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_PARENT, prop_t);
-	g_hash_table_insert(p_map, "@parentID", DLS_INTERFACE_PROP_PARENT);
+		if (prop_t[i].searchable)
+			g_hash_table_insert(p_map,
+					    (gpointer)prop_t[i].upnp_prop_name,
+					    (gpointer)prop_t[i].dls_prop_name);
 
-	/* @refID */
-	prop_t = prv_prop_map_new("@refID",
-					DLS_UPNP_MASK_PROP_REFPATH,
-					TRUE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_REFPATH, prop_t);
-	g_hash_table_insert(p_map, "@refID", DLS_INTERFACE_PROP_REFPATH);
-
-	/* @restricted */
-	prop_t = prv_prop_map_new("@restricted",
-					DLS_UPNP_MASK_PROP_RESTRICTED,
-					TRUE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_RESTRICTED, prop_t);
-	g_hash_table_insert(p_map, "@restricted",
-			    DLS_INTERFACE_PROP_RESTRICTED);
-
-	/* @searchable */
-	prop_t = prv_prop_map_new("@searchable",
-					DLS_UPNP_MASK_PROP_SEARCHABLE,
-					TRUE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_SEARCHABLE, prop_t);
-	g_hash_table_insert(p_map, "@searchable",
-			    DLS_INTERFACE_PROP_SEARCHABLE);
-
-	/* dc:creator */
-	prop_t = prv_prop_map_new("dc:creator",
-					DLS_UPNP_MASK_PROP_CREATOR,
-					TRUE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_CREATOR, prop_t);
-	g_hash_table_insert(p_map, "dc:creator", DLS_INTERFACE_PROP_CREATOR);
-
-	/* dc:date */
-	prop_t = prv_prop_map_new("dc:date",
-					DLS_UPNP_MASK_PROP_DATE,
-					TRUE, TRUE, TRUE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_DATE, prop_t);
-	g_hash_table_insert(p_map, "dc:date", DLS_INTERFACE_PROP_DATE);
-
-	/* dc:title */
-	prop_t = prv_prop_map_new("dc:title",
-					DLS_UPNP_MASK_PROP_DISPLAY_NAME,
-					FALSE, TRUE, TRUE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_DISPLAY_NAME, prop_t);
-	g_hash_table_insert(p_map, "dc:title", DLS_INTERFACE_PROP_DISPLAY_NAME);
-
-	/* dlna:dlnaManaged */
-	prop_t = prv_prop_map_new("dlna:dlnaManaged",
-					DLS_UPNP_MASK_PROP_DLNA_MANAGED,
-					TRUE, FALSE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_DLNA_MANAGED, prop_t);
-	g_hash_table_insert(p_map, "dlna:dlnaManaged",
-			    DLS_INTERFACE_PROP_DLNA_MANAGED);
-
-	/* res */
-	/* res - RES */
-	prop_t = prv_prop_map_new("res",
-					DLS_UPNP_MASK_PROP_RESOURCES,
-					TRUE, FALSE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_RESOURCES, prop_t);
-
-	/* res - URL */
-	prop_t = prv_prop_map_new("res",
-					DLS_UPNP_MASK_PROP_URL,
-					TRUE, FALSE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_URL, prop_t);
-
-	/* res - URLS */
-	prop_t = prv_prop_map_new("res",
-					DLS_UPNP_MASK_PROP_URLS,
-					TRUE, FALSE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_URLS, prop_t);
-
-	/* res@bitrate */
-	prop_t = prv_prop_map_new("res@bitrate",
-					DLS_UPNP_MASK_PROP_BITRATE,
-					TRUE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_BITRATE, prop_t);
-	g_hash_table_insert(p_map, "res@bitrate", DLS_INTERFACE_PROP_BITRATE);
-
-	/* res@bitsPerSample */
-	prop_t = prv_prop_map_new("res@bitsPerSample",
-					DLS_UPNP_MASK_PROP_BITS_PER_SAMPLE,
-					TRUE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_BITS_PER_SAMPLE, prop_t);
-	g_hash_table_insert(p_map, "res@bitsPerSample",
-			    DLS_INTERFACE_PROP_BITS_PER_SAMPLE);
-
-	/* res@colorDepth */
-	prop_t = prv_prop_map_new("res@colorDepth",
-					DLS_UPNP_MASK_PROP_COLOR_DEPTH,
-					TRUE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_COLOR_DEPTH, prop_t);
-	g_hash_table_insert(p_map, "res@colorDepth",
-			    DLS_INTERFACE_PROP_COLOR_DEPTH);
-
-	/* res@duration */
-	prop_t = prv_prop_map_new("res@duration",
-					DLS_UPNP_MASK_PROP_DURATION,
-					TRUE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_DURATION, prop_t);
-	g_hash_table_insert(p_map, "res@duration",
-			    DLS_INTERFACE_PROP_DURATION);
-
-	/* res@protocolInfo */
-	/* res@protocolInfo - DLNA PROFILE*/
-	prop_t = prv_prop_map_new("res@protocolInfo",
-				       DLS_UPNP_MASK_PROP_DLNA_PROFILE,
-				       TRUE, FALSE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_DLNA_PROFILE, prop_t);
-
-	/* res@protocolInfo - DLNA CONVERSION*/
-	prop_t = prv_prop_map_new("res@protocolInfo",
-				       DLS_UPNP_MASK_PROP_DLNA_CONVERSION,
-				       TRUE, FALSE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_DLNA_CONVERSION, prop_t);
-
-		/* res@protocolInfo - DLNA OPERATION*/
-	prop_t = prv_prop_map_new("res@protocolInfo",
-				       DLS_UPNP_MASK_PROP_DLNA_OPERATION,
-				       TRUE, FALSE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_DLNA_OPERATION, prop_t);
-
-		/* res@protocolInfo - DLNA FLAGS*/
-	prop_t = prv_prop_map_new("res@protocolInfo",
-				       DLS_UPNP_MASK_PROP_DLNA_FLAGS,
-				       TRUE, FALSE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_DLNA_FLAGS, prop_t);
-
-	/* res@protocolInfo - MIME TYPES*/
-	prop_t = prv_prop_map_new("res@protocolInfo",
-					DLS_UPNP_MASK_PROP_MIME_TYPE,
-					TRUE, FALSE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_MIME_TYPE, prop_t);
-
-	/* res@resolution */
-	/* res@resolution - HEIGH */
-	prop_t = prv_prop_map_new("res@resolution",
-					DLS_UPNP_MASK_PROP_HEIGHT,
-					TRUE, FALSE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_HEIGHT, prop_t);
-
-	/* res@resolution - WIDTH */
-	prop_t = prv_prop_map_new("res@resolution",
-					DLS_UPNP_MASK_PROP_WIDTH,
-					TRUE, FALSE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_WIDTH, prop_t);
-
-	/* res@sampleFrequency */
-	prop_t = prv_prop_map_new("res@sampleFrequency",
-					DLS_UPNP_MASK_PROP_SAMPLE_RATE,
-					TRUE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_SAMPLE_RATE, prop_t);
-	g_hash_table_insert(p_map, "res@sampleFrequency",
-			    DLS_INTERFACE_PROP_SAMPLE_RATE);
-
-	/* res@size */
-	prop_t = prv_prop_map_new("res@size",
-					DLS_UPNP_MASK_PROP_SIZE,
-				       TRUE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_SIZE, prop_t);
-	g_hash_table_insert(p_map, "res@size", DLS_INTERFACE_PROP_SIZE);
-
-	/* res@updateCount */
-	prop_t = prv_prop_map_new("res@updateCount",
-				      DLS_UPNP_MASK_PROP_UPDATE_COUNT,
-				      TRUE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_UPDATE_COUNT, prop_t);
-	g_hash_table_insert(p_map, "res@updateCount",
-			    DLS_INTERFACE_PROP_UPDATE_COUNT);
-
-	/* upnp:album */
-	prop_t = prv_prop_map_new("upnp:album",
-					DLS_UPNP_MASK_PROP_ALBUM,
-				       TRUE, TRUE, TRUE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_ALBUM, prop_t);
-	g_hash_table_insert(p_map, "upnp:album", DLS_INTERFACE_PROP_ALBUM);
-
-	/* upnp:albumArtURI */
-	prop_t = prv_prop_map_new("upnp:albumArtURI",
-					DLS_UPNP_MASK_PROP_ALBUM_ART_URL,
-					TRUE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_ALBUM_ART_URL, prop_t);
-	g_hash_table_insert(p_map, "upnp:albumArtURI",
-			    DLS_INTERFACE_PROP_ALBUM_ART_URL);
-
-	/* upnp:artist */
-	/* upnp:artist - ARTIST*/
-	prop_t = prv_prop_map_new("upnp:artist",
-					DLS_UPNP_MASK_PROP_ARTIST,
-					TRUE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_ARTIST, prop_t);
-	g_hash_table_insert(p_map, "upnp:artist", DLS_INTERFACE_PROP_ARTIST);
-
-	/* upnp:artist - ARTISTS*/
-	prop_t = prv_prop_map_new("upnp:artist",
-					DLS_UPNP_MASK_PROP_ARTISTS,
-					TRUE, FALSE, TRUE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_ARTISTS, prop_t);
-
-	/* upnp:class */
-	prop_t = prv_prop_map_new("upnp:class",
-					DLS_UPNP_MASK_PROP_TYPE,
-					FALSE, TRUE, TRUE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_TYPE, prop_t);
-	g_hash_table_insert(p_map, "upnp:class", DLS_INTERFACE_PROP_TYPE);
-
-	/* upnp:containerUpdateID */
-	prop_t = prv_prop_map_new("upnp:containerUpdateID",
-				      DLS_UPNP_MASK_PROP_CONTAINER_UPDATE_ID,
-				      TRUE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_CONTAINER_UPDATE_ID,
-			    prop_t);
-	g_hash_table_insert(p_map, "upnp:containerUpdateID",
-			    DLS_INTERFACE_PROP_CONTAINER_UPDATE_ID);
-
-	/* upnp:createClass */
-	prop_t = prv_prop_map_new("upnp:createClass",
-					DLS_UPNP_MASK_PROP_CREATE_CLASSES,
-					TRUE, FALSE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_CREATE_CLASSES, prop_t);
-
-	/* upnp:genre */
-	prop_t = prv_prop_map_new("upnp:genre",
-					DLS_UPNP_MASK_PROP_GENRE,
-					TRUE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_GENRE, prop_t);
-	g_hash_table_insert(p_map, "upnp:genre", DLS_INTERFACE_PROP_GENRE);
-
-	/* upnp:objectUpdateID */
-	prop_t = prv_prop_map_new("upnp:objectUpdateID",
-				      DLS_UPNP_MASK_PROP_OBJECT_UPDATE_ID,
-				      TRUE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_OBJECT_UPDATE_ID, prop_t);
-	g_hash_table_insert(p_map, "upnp:objectUpdateID",
-			    DLS_INTERFACE_PROP_OBJECT_UPDATE_ID);
-
-	/* upnp:originalTrackNumber */
-	prop_t = prv_prop_map_new("upnp:originalTrackNumber",
-					DLS_UPNP_MASK_PROP_TRACK_NUMBER,
-					TRUE, TRUE, TRUE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_TRACK_NUMBER, prop_t);
-	g_hash_table_insert(p_map, "upnp:originalTrackNumber",
-			    DLS_INTERFACE_PROP_TRACK_NUMBER);
-
-	/* upnp:totalDeletedChildCount */
-	prop_t = prv_prop_map_new("upnp:totalDeletedChildCount",
-				DLS_UPNP_MASK_PROP_TOTAL_DELETED_CHILD_COUNT,
-				TRUE, TRUE, FALSE);
-	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_TOTAL_DELETED_CHILD_COUNT,
-			    prop_t);
-	g_hash_table_insert(p_map, "upnp:totalDeletedChildCount",
-			    DLS_INTERFACE_PROP_TOTAL_DELETED_CHILD_COUNT);
+		i++;
+	}
 
 	*filter_map = f_map;
 	*property_map = p_map;
+
+// 	DLEYNA_LOG_DEBUG_NL();
+// 	DLEYNA_LOG_DEBUG("##### DEVICE ####");
+// 	test_prop(DLS_PROP_MASK_ALL_DEVICE_PROPS);
+// 	DLEYNA_LOG_DEBUG_NL();
+// 	DLEYNA_LOG_DEBUG("##### OBKECT ####");
+// 	test_prop(DLS_UPNP_MASK_ALL_OBJECT_PROPS);
+// 	DLEYNA_LOG_DEBUG_NL();
+// 	DLEYNA_LOG_DEBUG("##### ITEM ####");
+// 	test_prop(DLS_UPNP_MASK_ALL_ITEM_PROPS);
+// 	DLEYNA_LOG_DEBUG_NL();
+// 	DLEYNA_LOG_DEBUG("##### CONT ####");
+// 	test_prop(DLS_UPNP_MASK_ALL_CONTAINER_PROPS);
+// 	DLEYNA_LOG_DEBUG_NL();
 }
 
 static gchar *prv_compute_upnp_filter(GHashTable *upnp_props)
@@ -513,7 +283,7 @@ dls_upnp_prop_mask dls_props_parse_filter(GHashTable *filter_map,
 	if (parse_filter) {
 		mask = prv_parse_filter_list(filter_map, filter, upnp_filter);
 	} else {
-		mask = DLS_UPNP_MASK_ALL_PROPS;
+		mask = DLS_PROP_MASK_ALL_PROPS;
 		*upnp_filter = g_strdup("*");
 	}
 
@@ -698,8 +468,8 @@ static GVariant *prv_add_list_dlna_prop(GList *list)
 	return g_variant_builder_end(&vb);
 }
 
-static GVariant *prv_props_get_dlna_info_dict(guint flags,
-					      const dls_prop_dlna_t *dfa)
+static GVariant *prv_get_dlna_flags_dict(guint flags,
+					 const dls_prop_dlna_t *dfa)
 {
 	GVariantBuilder builder;
 	gboolean set;
@@ -1022,12 +792,12 @@ static void prv_parse_common_resources(GVariantBuilder *item_vb,
 	GUPnPDLNAOperation ope;
 	GUPnPDLNAFlags flags;
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_SIZE) {
+	if (filter_mask & DLS_PROP_MASK_SIZE) {
 		int64_val = gupnp_didl_lite_resource_get_size64(res);
 		prv_add_int64_prop(item_vb, DLS_INTERFACE_PROP_SIZE, int64_val);
 	}
 
-	if ((filter_mask & DLS_UPNP_MASK_PROP_UPDATE_COUNT) &&
+	if ((filter_mask & DLS_PROP_MASK_UPDATE_COUNT) &&
 	    gupnp_didl_lite_resource_update_count_is_set(res)) {
 		uint_val = gupnp_didl_lite_resource_get_update_count(res);
 		prv_add_uint_prop(item_vb, DLS_INTERFACE_PROP_UPDATE_COUNT,
@@ -1036,37 +806,37 @@ static void prv_parse_common_resources(GVariantBuilder *item_vb,
 
 	protocol_info = gupnp_didl_lite_resource_get_protocol_info(res);
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_DLNA_PROFILE) {
+	if (filter_mask & DLS_PROP_MASK_DLNA_PROFILE) {
 		str_val = gupnp_protocol_info_get_dlna_profile(protocol_info);
 		prv_add_string_prop(item_vb, DLS_INTERFACE_PROP_DLNA_PROFILE,
 				    str_val);
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_DLNA_CONVERSION) {
+	if (filter_mask & DLS_PROP_MASK_DLNA_CONVERSION) {
 		conv = gupnp_protocol_info_get_dlna_conversion(protocol_info);
 		prv_add_variant_prop(item_vb,
 				     DLS_INTERFACE_PROP_DLNA_CONVERSION,
-				     prv_props_get_dlna_info_dict(
+				     prv_get_dlna_flags_dict(
 						conv, g_prop_dlna_ci));
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_DLNA_OPERATION) {
+	if (filter_mask & DLS_PROP_MASK_DLNA_OPERATION) {
 		ope = gupnp_protocol_info_get_dlna_operation(protocol_info);
 		prv_add_variant_prop(item_vb,
 				     DLS_INTERFACE_PROP_DLNA_OPERATION,
-				     prv_props_get_dlna_info_dict(
+				     prv_get_dlna_flags_dict(
 						ope, g_prop_dlna_op));
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_DLNA_FLAGS) {
+	if (filter_mask & DLS_PROP_MASK_DLNA_FLAGS) {
 		flags = gupnp_protocol_info_get_dlna_flags(protocol_info);
 		prv_add_variant_prop(item_vb,
 				     DLS_INTERFACE_PROP_DLNA_FLAGS,
-				     prv_props_get_dlna_info_dict(
+				     prv_get_dlna_flags_dict(
 						flags, g_prop_dlna_flags));
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_MIME_TYPE) {
+	if (filter_mask & DLS_PROP_MASK_MIME_TYPE) {
 		str_val = gupnp_protocol_info_get_mime_type(protocol_info);
 		prv_add_string_prop(item_vb, DLS_INTERFACE_PROP_MIME_TYPE,
 				    str_val);
@@ -1081,39 +851,39 @@ static void prv_parse_all_resources(GVariantBuilder *item_vb,
 
 	prv_parse_common_resources(item_vb, res, filter_mask);
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_BITRATE) {
+	if (filter_mask & DLS_PROP_MASK_BITRATE) {
 		int_val = gupnp_didl_lite_resource_get_bitrate(res);
 		prv_add_int_prop(item_vb, DLS_INTERFACE_PROP_BITRATE, int_val);
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_SAMPLE_RATE) {
+	if (filter_mask & DLS_PROP_MASK_SAMPLE_RATE) {
 		int_val = gupnp_didl_lite_resource_get_sample_freq(res);
 		prv_add_int_prop(item_vb, DLS_INTERFACE_PROP_SAMPLE_RATE,
 				 int_val);
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_BITS_PER_SAMPLE) {
+	if (filter_mask & DLS_PROP_MASK_BITS_PER_SAMPLE) {
 		int_val = gupnp_didl_lite_resource_get_bits_per_sample(res);
 		prv_add_int_prop(item_vb, DLS_INTERFACE_PROP_BITS_PER_SAMPLE,
 				 int_val);
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_DURATION) {
+	if (filter_mask & DLS_PROP_MASK_DURATION) {
 		int_val = (int) gupnp_didl_lite_resource_get_duration(res);
 		prv_add_int_prop(item_vb, DLS_INTERFACE_PROP_DURATION, int_val);
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_WIDTH) {
+	if (filter_mask & DLS_PROP_MASK_WIDTH) {
 		int_val = (int) gupnp_didl_lite_resource_get_width(res);
 		prv_add_int_prop(item_vb, DLS_INTERFACE_PROP_WIDTH, int_val);
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_HEIGHT) {
+	if (filter_mask & DLS_PROP_MASK_HEIGHT) {
 		int_val = (int) gupnp_didl_lite_resource_get_height(res);
 		prv_add_int_prop(item_vb, DLS_INTERFACE_PROP_HEIGHT, int_val);
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_COLOR_DEPTH) {
+	if (filter_mask & DLS_PROP_MASK_COLOR_DEPTH) {
 		int_val = (int) gupnp_didl_lite_resource_get_color_depth(res);
 		prv_add_int_prop(item_vb, DLS_INTERFACE_PROP_COLOR_DEPTH,
 				 int_val);
@@ -1299,7 +1069,7 @@ static GVariant *prv_compute_resources(GUPnPDIDLLiteObject *object,
 	while (ptr) {
 		res = ptr->data;
 		res_vb = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
-		if (filter_mask & DLS_UPNP_MASK_PROP_URL) {
+		if (filter_mask & DLS_PROP_MASK_URL) {
 			str_val = gupnp_didl_lite_resource_get_uri(res);
 			prv_add_string_prop(res_vb, DLS_INTERFACE_PROP_URL,
 					    str_val);
@@ -1332,7 +1102,7 @@ static void prv_add_resources(GVariantBuilder *item_vb,
 	GVariant *val;
 
 	val = prv_compute_resources(object, filter_mask, all_res);
-	g_variant_builder_add(item_vb, "{sv}", DLS_INTERFACE_PROP_RESOURCES,
+	g_variant_builder_add(item_vb, "{sv}", DLS_INTERFACE_PROP_RES_RESOURCES,
 			      val);
 }
 
@@ -1368,37 +1138,37 @@ gboolean dls_props_add_object(GVariantBuilder *item_vb,
 	rest = gupnp_didl_lite_object_get_restricted(object);
 	path = dls_path_from_id(root_path, id);
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_DISPLAY_NAME)
+	if (filter_mask & DLS_PROP_MASK_DISPLAY_NAME)
 		prv_add_string_prop(item_vb, DLS_INTERFACE_PROP_DISPLAY_NAME,
 				    title);
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_CREATOR)
+	if (filter_mask & DLS_PROP_MASK_CREATOR)
 		prv_add_string_prop(item_vb, DLS_INTERFACE_PROP_CREATOR,
 				    creator);
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_PATH)
+	if (filter_mask & DLS_PROP_MASK_PATH)
 		prv_add_path_prop(item_vb, DLS_INTERFACE_PROP_PATH, path);
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_PARENT)
+	if (filter_mask & DLS_PROP_MASK_PARENT)
 		prv_add_path_prop(item_vb, DLS_INTERFACE_PROP_PARENT,
 				  parent_path);
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_TYPE)
+	if (filter_mask & DLS_PROP_MASK_TYPE)
 		prv_add_string_prop(item_vb, DLS_INTERFACE_PROP_TYPE,
 				    media_spec_type);
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_RESTRICTED)
+	if (filter_mask & DLS_PROP_MASK_RESTRICTED)
 		prv_add_bool_prop(item_vb, DLS_INTERFACE_PROP_RESTRICTED, rest);
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_DLNA_MANAGED) {
+	if (filter_mask & DLS_PROP_MASK_DLNA_MANAGED) {
 		flags = gupnp_didl_lite_object_get_dlna_managed(object);
 		prv_add_variant_prop(item_vb,
 				     DLS_INTERFACE_PROP_DLNA_MANAGED,
-				     prv_props_get_dlna_info_dict(
-						flags, g_prop_dlna_ocm));
+				     prv_get_dlna_flags_dict(flags,
+							     g_prop_dlna_ocm));
 	}
 
-	if ((filter_mask & DLS_UPNP_MASK_PROP_OBJECT_UPDATE_ID) &&
+	if ((filter_mask & DLS_PROP_MASK_OBJECT_UID) &&
 	    gupnp_didl_lite_object_update_id_is_set(object)) {
 		uint_val = gupnp_didl_lite_object_get_update_id(object);
 		prv_add_uint_prop(item_vb, DLS_INTERFACE_PROP_OBJECT_UPDATE_ID,
@@ -1427,7 +1197,7 @@ void dls_props_add_container(GVariantBuilder *item_vb,
 	const char *str_val;
 
 	*have_child_count = FALSE;
-	if (filter_mask & DLS_UPNP_MASK_PROP_CHILD_COUNT) {
+	if (filter_mask & DLS_PROP_MASK_CHILD_COUNT) {
 		child_count = gupnp_didl_lite_container_get_child_count(object);
 		if (child_count >= 0) {
 			prv_add_uint_prop(item_vb,
@@ -1437,18 +1207,18 @@ void dls_props_add_container(GVariantBuilder *item_vb,
 		}
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_SEARCHABLE) {
+	if (filter_mask & DLS_PROP_MASK_SEARCHABLE) {
 		searchable = gupnp_didl_lite_container_get_searchable(object);
 		prv_add_bool_prop(item_vb, DLS_INTERFACE_PROP_SEARCHABLE,
 				  searchable);
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_CREATE_CLASSES)
+	if (filter_mask & DLS_PROP_MASK_CREATE_CLASSES)
 		prv_add_variant_prop(item_vb,
 				     DLS_INTERFACE_PROP_CREATE_CLASSES,
 				     prv_compute_create_classes(object));
 
-	if ((filter_mask & DLS_UPNP_MASK_PROP_CONTAINER_UPDATE_ID) &&
+	if ((filter_mask & DLS_PROP_MASK_CONTAINER_UID) &&
 	    gupnp_didl_lite_container_container_update_id_is_set(object)) {
 		uint_val = gupnp_didl_lite_container_get_container_update_id(
 									object);
@@ -1457,7 +1227,7 @@ void dls_props_add_container(GVariantBuilder *item_vb,
 				  uint_val);
 	}
 
-	if ((filter_mask & DLS_UPNP_MASK_PROP_TOTAL_DELETED_CHILD_COUNT) &&
+	if ((filter_mask & DLS_PROP_MASK_TOTAL_DELETED_CC) &&
 	    gupnp_didl_lite_container_total_deleted_child_count_is_set(
 								object)) {
 		uint_val =
@@ -1468,14 +1238,14 @@ void dls_props_add_container(GVariantBuilder *item_vb,
 				  uint_val);
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_RESOURCES)
+	if (filter_mask & DLS_PROP_MASK_RES_RESOURCES)
 		prv_add_resources(item_vb, GUPNP_DIDL_LITE_OBJECT(object),
 				  filter_mask, FALSE);
 
 	res = prv_get_matching_resource(GUPNP_DIDL_LITE_OBJECT(object),
 					protocol_info);
 	if (res) {
-		if (filter_mask & DLS_UPNP_MASK_PROP_URLS) {
+		if (filter_mask & DLS_PROP_MASK_URLS) {
 			str_val = gupnp_didl_lite_resource_get_uri(res);
 			prv_add_strv_prop(item_vb, DLS_INTERFACE_PROP_URLS,
 					  &str_val, 1);
@@ -1497,30 +1267,30 @@ void dls_props_add_item(GVariantBuilder *item_vb,
 	char *path;
 	GList *list;
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_ARTIST)
+	if (filter_mask & DLS_PROP_MASK_ARTIST)
 		prv_add_string_prop(item_vb, DLS_INTERFACE_PROP_ARTIST,
 				    gupnp_didl_lite_object_get_artist(object));
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_ARTISTS) {
+	if (filter_mask & DLS_PROP_MASK_ARTISTS) {
 		list = gupnp_didl_lite_object_get_artists(object);
 		prv_add_variant_prop(item_vb, DLS_INTERFACE_PROP_ARTISTS,
 				     prv_get_artists_prop(list));
 		g_list_free_full(list, g_object_unref);
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_ALBUM)
+	if (filter_mask & DLS_PROP_MASK_ALBUM)
 		prv_add_string_prop(item_vb, DLS_INTERFACE_PROP_ALBUM,
 				    gupnp_didl_lite_object_get_album(object));
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_DATE)
+	if (filter_mask & DLS_PROP_MASK_DATE)
 		prv_add_string_prop(item_vb, DLS_INTERFACE_PROP_DATE,
 				    gupnp_didl_lite_object_get_date(object));
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_GENRE)
+	if (filter_mask & DLS_PROP_MASK_GENRE)
 		prv_add_string_prop(item_vb, DLS_INTERFACE_PROP_GENRE,
 				    gupnp_didl_lite_object_get_genre(object));
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_TRACK_NUMBER) {
+	if (filter_mask & DLS_PROP_MASK_TRACK_NUMBER) {
 		track_number = gupnp_didl_lite_object_get_track_number(object);
 		if (track_number >= 0)
 			prv_add_int_prop(item_vb,
@@ -1528,12 +1298,12 @@ void dls_props_add_item(GVariantBuilder *item_vb,
 					 track_number);
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_ALBUM_ART_URL)
+	if (filter_mask & DLS_PROP_MASK_ALBUM_ART_URL)
 		prv_add_string_prop(item_vb, DLS_INTERFACE_PROP_ALBUM_ART_URL,
 				    gupnp_didl_lite_object_get_album_art(
 					    object));
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_REFPATH) {
+	if (filter_mask & DLS_PROP_MASK_REFPATH) {
 		str_val = gupnp_didl_lite_item_get_ref_id(
 						GUPNP_DIDL_LITE_ITEM(object));
 		if (str_val != NULL) {
@@ -1546,7 +1316,7 @@ void dls_props_add_item(GVariantBuilder *item_vb,
 
 	res = prv_get_matching_resource(object, protocol_info);
 	if (res) {
-		if (filter_mask & DLS_UPNP_MASK_PROP_URLS) {
+		if (filter_mask & DLS_PROP_MASK_URLS) {
 			str_val = gupnp_didl_lite_resource_get_uri(res);
 			prv_add_strv_prop(item_vb, DLS_INTERFACE_PROP_URLS,
 					  &str_val, 1);
@@ -1555,7 +1325,7 @@ void dls_props_add_item(GVariantBuilder *item_vb,
 		g_object_unref(res);
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_RESOURCES)
+	if (filter_mask & DLS_PROP_MASK_RES_RESOURCES)
 		prv_add_resources(item_vb, object, filter_mask, TRUE);
 }
 
@@ -1569,7 +1339,7 @@ void dls_props_add_resource(GVariantBuilder *item_vb,
 
 	res = prv_get_matching_resource(object, protocol_info);
 	if (res) {
-		if (filter_mask & DLS_UPNP_MASK_PROP_URL) {
+		if (filter_mask & DLS_PROP_MASK_URL) {
 			str_val = gupnp_didl_lite_resource_get_uri(res);
 			prv_add_string_prop(item_vb, DLS_INTERFACE_PROP_URL,
 					    str_val);
@@ -1608,20 +1378,19 @@ static GVariant *prv_get_common_resource_property(const gchar *prop,
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_DLNA_CONVERSION)) {
 		protocol_info = gupnp_didl_lite_resource_get_protocol_info(res);
 		conv = gupnp_protocol_info_get_dlna_conversion(protocol_info);
-		retval = prv_props_get_dlna_info_dict(conv, g_prop_dlna_ci);
+		retval = prv_get_dlna_flags_dict(conv, g_prop_dlna_ci);
 		if (retval)
 			retval = g_variant_ref_sink(retval);
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_DLNA_OPERATION)) {
 		protocol_info = gupnp_didl_lite_resource_get_protocol_info(res);
 		ope = gupnp_protocol_info_get_dlna_operation(protocol_info);
-		retval = prv_props_get_dlna_info_dict(ope, g_prop_dlna_op);
+		retval = prv_get_dlna_flags_dict(ope, g_prop_dlna_op);
 		if (retval)
 			retval = g_variant_ref_sink(retval);
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_DLNA_FLAGS)) {
 		protocol_info = gupnp_didl_lite_resource_get_protocol_info(res);
 		flags = gupnp_protocol_info_get_dlna_flags(protocol_info);
-		retval =  prv_props_get_dlna_info_dict(flags,
-						       g_prop_dlna_flags);
+		retval =  prv_get_dlna_flags_dict(flags, g_prop_dlna_flags);
 		if (retval)
 			retval = g_variant_ref_sink(retval);
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_MIME_TYPE)) {
@@ -1784,7 +1553,7 @@ GVariant *dls_props_get_object_prop(const gchar *prop, const gchar *root_path,
 
 		DLEYNA_LOG_DEBUG("Prop %s = %0x", prop, dlna_managed);
 
-		retval = g_variant_ref_sink(prv_props_get_dlna_info_dict(
+		retval = g_variant_ref_sink(prv_get_dlna_flags_dict(
 						dlna_managed, g_prop_dlna_ocm));
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_OBJECT_UPDATE_ID) &&
 		   gupnp_didl_lite_object_update_id_is_set(object)) {
@@ -1890,9 +1659,9 @@ GVariant *dls_props_get_item_prop(const gchar *prop, const gchar *root_path,
 		path = dls_path_from_id(root_path, str);
 		retval = g_variant_ref_sink(g_variant_new_string(path));
 		g_free(path);
-	} else if (!strcmp(prop, DLS_INTERFACE_PROP_RESOURCES)) {
+	} else if (!strcmp(prop, DLS_INTERFACE_PROP_RES_RESOURCES)) {
 		retval = g_variant_ref_sink(
-			prv_compute_resources(object, DLS_UPNP_MASK_ALL_PROPS,
+			prv_compute_resources(object, DLS_PROP_MASK_ALL_PROPS,
 					      TRUE));
 #if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
 		prop_str = g_variant_print(retval, FALSE);
@@ -1984,9 +1753,9 @@ GVariant *dls_props_get_container_prop(const gchar *prop,
 		DLEYNA_LOG_DEBUG("Prop %s = %u", prop, uint_val);
 
 		retval = g_variant_ref_sink(g_variant_new_uint32(uint_val));
-	} else if (!strcmp(prop, DLS_INTERFACE_PROP_RESOURCES)) {
+	} else if (!strcmp(prop, DLS_INTERFACE_PROP_RES_RESOURCES)) {
 		retval = g_variant_ref_sink(
-			prv_compute_resources(object, DLS_UPNP_MASK_ALL_PROPS,
+			prv_compute_resources(object, DLS_PROP_MASK_ALL_PROPS,
 					      FALSE));
 #if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
 		prop_str = g_variant_print(retval, FALSE);
@@ -2014,3 +1783,448 @@ on_error:
 
 	return retval;
 }
+
+static gint prv_mask_to_index(dls_upnp_prop_mask filter_mask)
+{
+	int x = -1;
+	dls_upnp_prop_mask mask = filter_mask;
+
+	while (mask) {
+		mask = mask >> 1;
+		x++;
+	}
+
+	DLEYNA_LOG_DEBUG("##### MASK %lx INDEX %d", filter_mask, x);
+
+	return x;
+}
+
+GVariant *dls_props_get_prop_value(GUPnPDeviceInfo *proxy,
+				   GUPnPDIDLLiteObject *object,
+				   GUPnPDIDLLiteResource *res,
+				   const char *root_path,
+				   const gchar *parent_path,
+				   const dls_device_t *device,
+				   dls_props_index_t prop_index,
+				   const gchar *protocol_info,
+				   gboolean always)
+{
+	GVariant *retval = NULL;
+	gint ivalue;
+	guint uvalue;
+	gint64 int64_val;
+	gchar *str = NULL;
+	const char* cstr = NULL;
+	gboolean bvalue;
+	GList *list;
+	GUPnPOCMFlags ocm_flags;
+	GUPnPDLNAConversion conv;
+	GUPnPDLNAOperation ope;
+	GUPnPDLNAFlags flags;
+	GUPnPProtocolInfo *p_info;
+#if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
+	dls_prop_map_t *prop_t;
+#endif
+
+	switch(prop_index) {
+	case DLS_PROP_INDEX_CHILD_COUNT:
+		ivalue = gupnp_didl_lite_container_get_child_count(
+					GUPNP_DIDL_LITE_CONTAINER(object));
+		if (ivalue >= 0)
+			retval = g_variant_new_uint32((guint) ivalue);
+		break;
+
+	case DLS_PROP_INDEX_PATH:
+		cstr = gupnp_didl_lite_object_get_id(object);
+		if (!cstr)
+			goto on_exit;
+
+		str = dls_path_from_id(root_path, cstr);
+		break;
+
+	case DLS_PROP_INDEX_PARENT:
+		cstr = gupnp_didl_lite_object_get_parent_id(object);
+		if (!cstr || !strcmp(cstr, "-1") || !strcmp(cstr, ""))
+			str = g_strdup(root_path);
+		else
+			str = dls_path_from_id(root_path, cstr);
+		break;
+
+	case DLS_PROP_INDEX_REFPATH:
+		cstr = gupnp_didl_lite_item_get_ref_id(
+						GUPNP_DIDL_LITE_ITEM(object));
+		if (!cstr)
+			goto on_exit;
+
+		str = dls_path_from_id(root_path, cstr);
+		break;
+
+	case DLS_PROP_INDEX_RESTRICTED:
+		bvalue = gupnp_didl_lite_object_get_restricted(object);
+		retval = g_variant_new_boolean(bvalue);
+		break;
+
+	case DLS_PROP_INDEX_SEARCHABLE:
+		bvalue = gupnp_didl_lite_container_get_searchable(
+					GUPNP_DIDL_LITE_CONTAINER(object));
+		retval = g_variant_new_boolean(bvalue);
+		break;
+
+	case DLS_PROP_INDEX_CREATOR:
+		cstr = gupnp_didl_lite_object_get_creator(object);
+		if (!cstr)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_DATE:
+		cstr = gupnp_didl_lite_object_get_date(object);
+		if (!cstr)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_DISPLAY_NAME:
+		cstr = gupnp_didl_lite_object_get_title(object);
+		if (!cstr)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_DLNA_MANAGED:
+		ocm_flags = gupnp_didl_lite_object_get_dlna_managed(object);
+		retval = prv_get_dlna_flags_dict(ocm_flags, g_prop_dlna_ocm);
+		break;
+
+	case DLS_PROP_INDEX_RES_RESOURCES:
+	case DLS_PROP_INDEX_URL:
+	case DLS_PROP_INDEX_URLS:
+#warning "To implement"
+	break;
+
+	case DLS_PROP_INDEX_BITRATE:
+		ivalue = gupnp_didl_lite_resource_get_bitrate(res);
+		if (ivalue == -1)
+			goto on_exit;
+		retval = g_variant_new_int32(ivalue);
+		break;
+
+	case DLS_PROP_INDEX_BITS_PER_SAMPLE:
+		ivalue = gupnp_didl_lite_resource_get_bits_per_sample(res);
+		if (ivalue == -1)
+			goto on_exit;
+		retval = g_variant_new_int32(ivalue);
+		break;
+
+	case DLS_PROP_INDEX_COLOR_DEPTH:
+		ivalue = (int) gupnp_didl_lite_resource_get_color_depth(res);
+		if (ivalue == -1)
+			goto on_exit;
+		retval = g_variant_new_int32(ivalue);
+		break;
+
+	case DLS_PROP_INDEX_DURATION:
+		ivalue = (int) gupnp_didl_lite_resource_get_duration(res);
+		if (ivalue == -1)
+			goto on_exit;
+		retval = g_variant_new_int32(ivalue);
+		break;
+
+	case DLS_PROP_INDEX_DLNA_PROFILE:
+		p_info = gupnp_didl_lite_resource_get_protocol_info(res);
+		if (!p_info)
+			goto on_exit;
+		cstr = gupnp_protocol_info_get_dlna_profile(p_info);
+		if (!cstr)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_MIME_TYPE:
+		p_info = gupnp_didl_lite_resource_get_protocol_info(res);
+		if (!p_info)
+			goto on_exit;
+		cstr = gupnp_protocol_info_get_mime_type(p_info);
+		if (!cstr)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_HEIGHT:
+		ivalue = (int) gupnp_didl_lite_resource_get_height(res);
+		if (ivalue == -1)
+			goto on_exit;
+		retval = g_variant_new_int32(ivalue);
+		break;
+
+	case DLS_PROP_INDEX_WIDTH:
+		ivalue = (int) gupnp_didl_lite_resource_get_width(res);
+		if (ivalue == -1)
+			goto on_exit;
+		retval = g_variant_new_int32(ivalue);
+		break;
+
+	case DLS_PROP_INDEX_SAMPLE_RATE:
+		ivalue = gupnp_didl_lite_resource_get_sample_freq(res);
+		if (ivalue == -1)
+			goto on_exit;
+		retval = g_variant_new_int32(ivalue);
+		break;
+
+	case DLS_PROP_INDEX_SIZE:
+		int64_val = gupnp_didl_lite_resource_get_size64(res);
+		if (int64_val == -1)
+			goto on_exit;
+		retval = g_variant_new_int64(int64_val);
+		break;
+
+	case DLS_PROP_INDEX_UPDATE_COUNT:
+		if (!gupnp_didl_lite_resource_update_count_is_set(res))
+			goto on_exit;
+		uvalue = gupnp_didl_lite_resource_get_update_count(res);
+		retval = g_variant_new_uint32(uvalue);
+		break;
+
+	case DLS_PROP_INDEX_ALBUM:
+		cstr = gupnp_didl_lite_object_get_album(object);
+		if (!cstr)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_ALBUM_ART_URL:
+		cstr = gupnp_didl_lite_object_get_album_art(object);
+		if (!cstr)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_ARTIST:
+		cstr = gupnp_didl_lite_object_get_artist(object);
+		if (!cstr)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_ARTISTS:
+		list = gupnp_didl_lite_object_get_artists(object);
+		if (!list)
+			goto on_exit;
+
+		retval = prv_get_artists_prop(list);
+		g_list_free_full(list, g_object_unref);
+		break;
+
+	case DLS_PROP_INDEX_TYPE:
+		cstr = gupnp_didl_lite_object_get_upnp_class(object);
+		cstr = dls_props_upnp_class_to_media_spec(cstr);
+		if (!cstr)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_CONTAINER_UID:
+		if (!gupnp_didl_lite_container_container_update_id_is_set(
+					GUPNP_DIDL_LITE_CONTAINER(object)))
+			goto on_exit;
+
+		uvalue = gupnp_didl_lite_container_get_container_update_id(
+					GUPNP_DIDL_LITE_CONTAINER(object));
+
+		retval = g_variant_new_uint32(uvalue);
+		break;
+
+	case DLS_PROP_INDEX_CREATE_CLASSES:
+		retval = prv_compute_create_classes(
+					GUPNP_DIDL_LITE_CONTAINER(object));
+		break;
+
+	case DLS_PROP_INDEX_GENRE:
+		cstr = gupnp_didl_lite_object_get_genre(object);
+		if (!cstr)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_OBJECT_UID:
+		if (!gupnp_didl_lite_object_update_id_is_set(object))
+			goto on_exit;
+
+		uvalue = gupnp_didl_lite_object_get_update_id(object);
+
+		retval = g_variant_new_uint32(uvalue);
+		break;
+
+	case DLS_PROP_INDEX_TRACK_NUMBER:
+		ivalue = gupnp_didl_lite_object_get_track_number(object);
+		if (ivalue < 0)
+			goto on_exit;
+
+		retval = g_variant_new_int32(ivalue);
+		break;
+
+	case DLS_PROP_INDEX_TOTAL_DELETED_CC:
+		if (!gupnp_didl_lite_container_total_deleted_child_count_is_set(
+					GUPNP_DIDL_LITE_CONTAINER(object)))
+			goto on_exit;
+
+		uvalue =
+			gupnp_didl_lite_container_get_total_deleted_child_count(
+					GUPNP_DIDL_LITE_CONTAINER(object));
+		retval = g_variant_new_uint32(uvalue);
+		break;
+
+	case DLS_PROP_INDEX_DLNA_CONVERSION:
+		p_info = gupnp_didl_lite_resource_get_protocol_info(res);
+		conv = gupnp_protocol_info_get_dlna_conversion(p_info);
+		retval = prv_get_dlna_flags_dict(conv, g_prop_dlna_ci);
+		break;
+
+	case DLS_PROP_INDEX_DLNA_OPERATION:
+		p_info = gupnp_didl_lite_resource_get_protocol_info(res);
+		ope = gupnp_protocol_info_get_dlna_operation(p_info);
+		retval = prv_get_dlna_flags_dict(ope, g_prop_dlna_op);
+		break;
+
+	case DLS_PROP_INDEX_DLNA_FLAGS:
+		p_info = gupnp_didl_lite_resource_get_protocol_info(res);
+		flags = gupnp_protocol_info_get_dlna_flags(p_info);
+		retval =  prv_get_dlna_flags_dict(flags, g_prop_dlna_flags);
+
+	case DLS_PROP_INDEX_LOCATION:
+		cstr = gupnp_device_info_get_location(proxy);
+		if (!cstr)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_UDN:
+		cstr = gupnp_device_info_get_udn(proxy);
+		if (!cstr)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_DEVICE_TYPE:
+		cstr = gupnp_device_info_get_device_type(proxy);
+		if (!cstr)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_FRIENDLY_NAME:
+		str = gupnp_device_info_get_friendly_name(proxy);
+		if (!str)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_MANUFACTURER:
+		str = gupnp_device_info_get_manufacturer(proxy);
+		if (!str)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_MANUFACTURER_URL:
+		str = gupnp_device_info_get_manufacturer_url(proxy);
+		if (!str)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_MODEL_DESC:
+		str = gupnp_device_info_get_model_description(proxy);
+		if (!str)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_MODEL_NAME:
+		str = gupnp_device_info_get_model_name(proxy);
+		if (!str)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_MODEL_NUMBER:
+		str = gupnp_device_info_get_model_number(proxy);
+		if (!str)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_MODEL_URL:
+		str = gupnp_device_info_get_model_url(proxy);
+		if (!str)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_SERIAL_NUMBER:
+		str = gupnp_device_info_get_serial_number(proxy);
+		if (!str)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_PRESENTATION_URL:
+		str = gupnp_device_info_get_presentation_url(proxy);
+		if (!str)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_ICON_URL:
+		str = gupnp_device_info_get_icon_url(proxy, NULL, -1, -1, -1,
+						     FALSE, NULL, NULL, NULL,
+						     NULL);
+		if (!str)
+			goto on_exit;
+		break;
+
+	case DLS_PROP_INDEX_SV_DLNA_CAPS:
+		list = gupnp_device_info_list_dlna_capabilities(proxy);
+		if (list == NULL)
+			goto on_exit;
+
+		retval = prv_add_list_dlna_prop(list);
+		g_list_free_full(list, g_free);
+		break;
+
+	case DLS_PROP_INDEX_SV_SEARCH_CAPS:
+		if (device->search_caps != NULL)
+			retval = device->search_caps;
+		break;
+
+	case DLS_PROP_INDEX_SV_SORT_CAPS:
+		if (device->sort_caps != NULL)
+			retval = device->sort_caps;
+		break;
+
+	case DLS_PROP_INDEX_SV_SORT_EXT_CAPS:
+		if (device->sort_ext_caps != NULL)
+			retval = device->sort_ext_caps;
+		break;
+
+	case DLS_PROP_INDEX_SV_FEATURE_LIST:
+		if (device->feature_list != NULL)
+			retval = device->feature_list;
+		break;
+
+/*	case DLS_PROP_INDEX_SV_SRT:
+ * 	Managed in a dedicated task
+ */
+	case DLS_PROP_INDEX_ESV_SYSTEM_UID:
+		uvalue = device->system_update_id;
+		retval = g_variant_new_uint32(uvalue);
+	break;
+
+	default:
+		break;
+	};
+
+	if (str != NULL)
+		retval = g_variant_new_string(str);
+	else if (cstr != NULL)
+		retval = g_variant_new_string(cstr);
+
+on_exit:
+	g_free(str);
+
+#if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
+	str = NULL;
+	cstr = NULL;
+
+	if (retval != NULL)
+		str = g_variant_print(retval, FALSE);
+
+	prop_t = dls_props_def_get();
+	cstr = prop_t[prop_index].dls_prop_name;
+
+	DLEYNA_LOG_DEBUG("Prop %s = %s", cstr, str);
+
+	g_free(str);
+#endif
+
+	return retval;
+}
+
