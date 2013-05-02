@@ -4,8 +4,7 @@ if [ -f config.status ]; then
 	make maintainer-clean
 fi
 
-autoreconf -if && \
-    ./configure --enable-maintainer-mode \
+./autogen.sh --enable-maintainer-mode \
 		--enable-silent-rules \
 		--disable-optimization \
 		--enable-debug \
