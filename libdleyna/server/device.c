@@ -1430,11 +1430,15 @@ static void prv_get_object(GUPnPDIDLLiteParser *parser,
 	const char *parent_path;
 	gchar *path = NULL;
 
-	id = gupnp_didl_lite_object_get_parent_id(object);
+	id = gupnp_didl_lite_object_get_id(object);
+	if (!id)
+		goto on_error;
 
-	if (!id || !strcmp(id, "-1") || !strcmp(id, "")) {
+	if (!strcmp(id, "0")) {
 		parent_path = cb_data->task.target.root_path;
 	} else {
+		id = gupnp_didl_lite_object_get_parent_id(object);
+
 		path = dls_path_from_id(cb_data->task.target.root_path, id);
 		parent_path = path;
 	}
@@ -1442,10 +1446,19 @@ static void prv_get_object(GUPnPDIDLLiteParser *parser,
 	if (!dls_props_add_object(cb_task_data->vb, object,
 				  cb_data->task.target.root_path,
 				  parent_path, DLS_UPNP_MASK_ALL_PROPS))
-		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
-					     DLEYNA_ERROR_BAD_RESULT,
-					     "Unable to retrieve mandatory object properties");
+		goto on_error;
+
 	g_free(path);
+
+	return;
+
+on_error:
+
+	g_free(path);
+
+	cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+				     DLEYNA_ERROR_BAD_RESULT,
+				     "Unable to retrieve mandatory object properties");
 }
 
 static void prv_get_all(GUPnPDIDLLiteParser *parser,
@@ -2588,11 +2601,15 @@ static void prv_found_target(GUPnPDIDLLiteParser *parser,
 
 	builder = g_new0(dls_device_object_builder_t, 1);
 
-	id = gupnp_didl_lite_object_get_parent_id(object);
+	id = gupnp_didl_lite_object_get_id(object);
+	if (!id)
+		goto on_error;
 
-	if (!id || !strcmp(id, "-1") || !strcmp(id, "")) {
+	if (!strcmp(id, "0")) {
 		parent_path = cb_data->task.target.root_path;
 	} else {
+		id = gupnp_didl_lite_object_get_parent_id(object);
+
 		path = dls_path_from_id(cb_data->task.target.root_path, id);
 		parent_path = path;
 	}

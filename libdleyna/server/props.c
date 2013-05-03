@@ -1720,19 +1720,24 @@ GVariant *dls_props_get_object_prop(const gchar *prop, const gchar *root_path,
 	guint uint_val;
 
 	if (!strcmp(prop, DLS_INTERFACE_PROP_PARENT)) {
-		id = gupnp_didl_lite_object_get_parent_id(object);
-		if (!id || !strcmp(id, "-1")) {
+		id = gupnp_didl_lite_object_get_id(object);
+		if (!id)
+			goto on_error;
+
+		if (!strcmp(id, "0")) {
 			DLEYNA_LOG_DEBUG("Prop %s = %s", prop, root_path);
 
 			retval = g_variant_ref_sink(g_variant_new_string(
-							    root_path));
+								root_path));
 		} else {
+			id = gupnp_didl_lite_object_get_parent_id(object);
+
 			path = dls_path_from_id(root_path, id);
 
 			DLEYNA_LOG_DEBUG("Prop %s = %s", prop, path);
 
 			retval = g_variant_ref_sink(g_variant_new_string(
-							    path));
+								path));
 			g_free(path);
 		}
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_PATH)) {
