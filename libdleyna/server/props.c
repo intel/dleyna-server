@@ -1709,7 +1709,8 @@ on_exit:
 GVariant *dls_props_get_object_prop(const gchar *prop, const gchar *root_path,
 				    GUPnPDIDLLiteObject *object)
 {
-	const char *id;
+	const char *object_id;
+	const char *parent_id;
 	gchar *path;
 	const char *upnp_class;
 	const char *media_spec_type;
@@ -1720,14 +1721,21 @@ GVariant *dls_props_get_object_prop(const gchar *prop, const gchar *root_path,
 	guint uint_val;
 
 	if (!strcmp(prop, DLS_INTERFACE_PROP_PARENT)) {
-		id = gupnp_didl_lite_object_get_parent_id(object);
-		if (!id || !strcmp(id, "-1")) {
+		object_id = gupnp_didl_lite_object_get_id(object);
+		if (!object_id)
+			goto on_error;
+
+		parent_id = gupnp_didl_lite_object_get_parent_id(object);
+		if (!parent_id)
+			goto on_error;
+
+		if (!strcmp(object_id, "0") || !strcmp(parent_id, "-1")) {
 			DLEYNA_LOG_DEBUG("Prop %s = %s", prop, root_path);
 
 			retval = g_variant_ref_sink(g_variant_new_string(
 							    root_path));
 		} else {
-			path = dls_path_from_id(root_path, id);
+			path = dls_path_from_id(root_path, parent_id);
 
 			DLEYNA_LOG_DEBUG("Prop %s = %s", prop, path);
 
@@ -1736,11 +1744,11 @@ GVariant *dls_props_get_object_prop(const gchar *prop, const gchar *root_path,
 			g_free(path);
 		}
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_PATH)) {
-		id = gupnp_didl_lite_object_get_id(object);
-		if (!id)
+		object_id = gupnp_didl_lite_object_get_id(object);
+		if (!object_id)
 			goto on_error;
 
-		path = dls_path_from_id(root_path, id);
+		path = dls_path_from_id(root_path, object_id);
 
 		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, path);
 
