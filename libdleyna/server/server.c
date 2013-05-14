@@ -647,12 +647,12 @@ static void prv_delete_task(dleyna_task_atom_t *task, gpointer user_data)
 }
 
 static void prv_method_call(dleyna_connector_id_t conn,
-				const gchar *sender,
-				const gchar *object,
-				const gchar *interface,
-				const gchar *method,
-				GVariant *parameters,
-				dleyna_connector_msg_id_t invocation);
+			    const gchar *sender,
+			    const gchar *object,
+			    const gchar *interface,
+			    const gchar *method,
+			    GVariant *parameters,
+			    dleyna_connector_msg_id_t invocation);
 
 static void prv_object_method_call(dleyna_connector_id_t conn,
 				   const gchar *sender,
