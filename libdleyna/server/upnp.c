@@ -659,7 +659,6 @@ static gboolean prv_compute_mime_and_class(dls_task_t *task,
 
 	if (!g_file_test(task->ut.upload.file_path,
 			 G_FILE_TEST_IS_REGULAR | G_FILE_TEST_EXISTS)) {
-
 		DLEYNA_LOG_WARNING(
 			"File %s does not exist or is not a regular file",
 			task->ut.upload.file_path);
@@ -675,7 +674,6 @@ static gboolean prv_compute_mime_and_class(dls_task_t *task,
 					    NULL);
 
 	if (!content_type) {
-
 		DLEYNA_LOG_WARNING("Unable to determine Content Type for %s",
 				   task->ut.upload.file_path);
 
@@ -689,7 +687,6 @@ static gboolean prv_compute_mime_and_class(dls_task_t *task,
 	g_free(content_type);
 
 	if (!cb_task_data->mime_type) {
-
 		DLEYNA_LOG_WARNING("Unable to determine MIME Type for %s",
 				   task->ut.upload.file_path);
 
@@ -706,7 +703,6 @@ static gboolean prv_compute_mime_and_class(dls_task_t *task,
 	} else if (g_content_type_is_a(cb_task_data->mime_type, "video/*")) {
 		cb_task_data->object_class = "object.item.videoItem";
 	} else {
-
 		DLEYNA_LOG_WARNING("Unsupported MIME Type %s",
 				   cb_task_data->mime_type);
 
