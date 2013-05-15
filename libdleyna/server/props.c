@@ -1135,6 +1135,7 @@ static GVariant *prv_compute_create_classes(GUPnPDIDLLiteContainer *container)
 	GList *ptr;
 	GUPnPDIDLLiteCreateClass *create_class;
 	const char *content;
+	const char *ms2_class;
 	gboolean inc_derived;
 
 	g_variant_builder_init(&create_classes_vb, G_VARIANT_TYPE("a(sb)"));
@@ -1146,10 +1147,11 @@ static GVariant *prv_compute_create_classes(GUPnPDIDLLiteContainer *container)
 		create_class = ptr->data;
 		content = gupnp_didl_lite_create_class_get_content(
 								 create_class);
+		ms2_class = dls_props_upnp_class_to_media_spec(content);
 		inc_derived = gupnp_didl_lite_create_class_get_include_derived(
 								 create_class);
 		g_variant_builder_add(&create_classes_vb,
-				      "(sb)", content, inc_derived);
+				      "(sb)", ms2_class, inc_derived);
 		g_object_unref(ptr->data);
 		ptr = g_list_next(ptr);
 	}
