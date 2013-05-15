@@ -1247,6 +1247,12 @@ const gchar *dls_props_upnp_class_to_media_spec(const gchar *upnp_class)
 			retval = gMediaSpec2GenreMusic;
 		else
 			retval = gMediaSpec2Genre;
+	} else if (!strncmp(upnp_class, gUPnPPlaylist,
+			     gUPnPPlaylistLen)) {
+		retval = gMediaSpec2Playlist;
+	} else if (!strncmp(upnp_class, gUPnPStorage,
+			     gUPnPStorageLen)) {
+		retval = gMediaSpec2Storage;
 	} else if (!strncmp(upnp_class, gUPnPContainer, gUPnPContainerLen)) {
 		ptr = upnp_class + gUPnPContainerLen;
 		if (!*ptr || *ptr == '.')
@@ -1271,25 +1277,19 @@ const gchar *dls_props_upnp_class_to_media_spec(const gchar *upnp_class)
 			retval = gMediaSpec2VideoBroadcast;
 		else
 			retval = gMediaSpec2Video;
-	}  else if (!strncmp(upnp_class, gUPnPImageItem, gUPnPImageItemLen)) {
+	} else if (!strncmp(upnp_class, gUPnPImageItem, gUPnPImageItemLen)) {
 		ptr = upnp_class + gUPnPImageItemLen;
 		if (!strcmp(ptr, ".photo"))
 			retval = gMediaSpec2ImagePhoto;
 		else
 			retval = gMediaSpec2Image;
-	}  else if (!strncmp(upnp_class, gUPnPPlaylist,
-			     gUPnPPlaylistLen)) {
-		retval = gMediaSpec2Playlist;
-	}  else if (!strncmp(upnp_class, gUPnPPlaylistItem,
+	} else if (!strncmp(upnp_class, gUPnPPlaylistItem,
 			     gUPnPPlaylistItemLen)) {
 		retval = gMediaSpec2PlaylistItem;
 	} else if (!strncmp(upnp_class, gUPnPItem, gUPnPItemLen)) {
 		ptr = upnp_class + gUPnPItemLen;
 		if (!*ptr || *ptr == '.')
 			retval = gMediaSpec2Item;
-	}  else if (!strncmp(upnp_class, gUPnPStorage,
-			     gUPnPStorageLen)) {
-		retval = gMediaSpec2Storage;
 	}
 
 on_error:
