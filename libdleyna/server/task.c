@@ -491,18 +491,14 @@ dls_task_t *dls_task_create_reference_new(dleyna_connector_msg_id_t invocation,
 					  GError **error)
 {
 	dls_task_t *task;
-	GVariant *ref_path = NULL;
 
 	task = prv_m2spec_task_new(type, invocation, path,
 				   "(@o)", error, FALSE);
 	if (!task)
 		goto finished;
 
-	g_variant_get(parameters, "(o)", &ref_path);
-
-	task->ut.create_reference.item_path = g_strstrip(
-					g_variant_dup_string(ref_path, NULL));
-	g_variant_unref(ref_path);
+	g_variant_get(parameters, "(o)", &task->ut.create_reference.item_path);
+	(void) g_strstrip(task->ut.create_reference.item_path);
 
 finished:
 
