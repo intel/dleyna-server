@@ -139,15 +139,12 @@ class Container(MediaObject):
         path = self._containerIF.CreateContainer(name, type, child_types)
         print u"New container path: " + path
 
-    def create_playlist(self, title, items, creator="", genre="", desc=""):
-        (tid, path) = self._containerIF.CreatePlaylist(title, creator, genre,
-                                                       desc, items)
-        print "Transfer ID: " + str(tid)
-        print u"Path: " + path
-
     def print_compatible_resource(self, protocol_info, fltr):
         print_properties(self._containerIF.GetCompatibleResource(protocol_info,
 								 fltr))
+    def create_reference(self, file_path):
+        path = self._containerIF.CreateReference(file_path)
+        print u"Reference Path: " + path
 
 class Device(Container):
 
@@ -183,15 +180,6 @@ class Device(Container):
 
     def cancel(self):
         return self._deviceIF.Cancel()
-
-    def create_playlist_in_any(self, title, items, creator="", genre="", desc=""):
-        (tid, path) = self._deviceIF.CreatePlaylistInAnyContainer(title,
-                                                                  creator,
-                                                                  genre,
-                                                                  desc,
-                                                                  items)
-        print "Transfer ID: " + str(tid)
-        print u"Path: " + path
 
 
 class UPNP(object):

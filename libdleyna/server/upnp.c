@@ -659,7 +659,6 @@ static gboolean prv_compute_mime_and_class(dls_task_t *task,
 
 	if (!g_file_test(task->ut.upload.file_path,
 			 G_FILE_TEST_IS_REGULAR | G_FILE_TEST_EXISTS)) {
-
 		DLEYNA_LOG_WARNING(
 			"File %s does not exist or is not a regular file",
 			task->ut.upload.file_path);
@@ -675,7 +674,6 @@ static gboolean prv_compute_mime_and_class(dls_task_t *task,
 					    NULL);
 
 	if (!content_type) {
-
 		DLEYNA_LOG_WARNING("Unable to determine Content Type for %s",
 				   task->ut.upload.file_path);
 
@@ -689,7 +687,6 @@ static gboolean prv_compute_mime_and_class(dls_task_t *task,
 	g_free(content_type);
 
 	if (!cb_task_data->mime_type) {
-
 		DLEYNA_LOG_WARNING("Unable to determine MIME Type for %s",
 				   task->ut.upload.file_path);
 
@@ -706,7 +703,6 @@ static gboolean prv_compute_mime_and_class(dls_task_t *task,
 	} else if (g_content_type_is_a(cb_task_data->mime_type, "video/*")) {
 		cb_task_data->object_class = "object.item.videoItem";
 	} else {
-
 		DLEYNA_LOG_WARNING("Unsupported MIME Type %s",
 				   cb_task_data->mime_type);
 
@@ -1012,111 +1008,6 @@ on_error:
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
-void dls_upnp_create_playlist(dls_upnp_t *upnp, dls_client_t *client,
-			      dls_task_t *task,
-			      dls_upnp_task_complete_t cb)
-{
-	dls_async_task_t *cb_data = (dls_async_task_t *)task;
-	dls_task_create_playlist_t *task_data;
-
-	DLEYNA_LOG_DEBUG("Enter");
-
-	cb_data->cb = cb;
-	task_data = &task->ut.playlist;
-
-	DLEYNA_LOG_DEBUG("Root Path: %s - Id: %s", task->target.root_path,
-			 task->target.id);
-
-	if (!task_data->title || !*task_data->title)
-		goto on_param_error;
-
-	if (!g_variant_n_children(task_data->item_path))
-		goto on_param_error;
-
-	DLEYNA_LOG_DEBUG_NL();
-	DLEYNA_LOG_DEBUG("Title = %s", task_data->title);
-	DLEYNA_LOG_DEBUG("Creator = %s", task_data->creator);
-	DLEYNA_LOG_DEBUG("Genre = %s", task_data->genre);
-	DLEYNA_LOG_DEBUG("Desc = %s", task_data->desc);
-	DLEYNA_LOG_DEBUG_NL();
-
-	dls_device_playlist_upload(client, task, task->target.id);
-
-	DLEYNA_LOG_DEBUG("Exit");
-
-	return;
-
-on_param_error:
-
-	DLEYNA_LOG_WARNING("Invalid Parameter");
-
-	cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
-				     DLEYNA_ERROR_OPERATION_FAILED,
-				     "Invalid Parameter");
-
-	(void) g_idle_add(dls_async_task_complete, cb_data);
-
-	DLEYNA_LOG_DEBUG("Exit failure");
-}
-
-void dls_upnp_create_playlist_in_any(dls_upnp_t *upnp, dls_client_t *client,
-				     dls_task_t *task,
-				     dls_upnp_task_complete_t cb)
-{
-	dls_async_task_t *cb_data = (dls_async_task_t *)task;
-	dls_task_create_playlist_t *task_data;
-
-	DLEYNA_LOG_DEBUG("Enter");
-
-	cb_data->cb = cb;
-	task_data = &task->ut.playlist;
-
-	DLEYNA_LOG_DEBUG("Root Path: %s - Id: %s", task->target.root_path,
-			 task->target.id);
-
-	if (strcmp(task->target.id, "0")) {
-		DLEYNA_LOG_WARNING("Bad path %s", task->target.path);
-
-		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
-					     DLEYNA_ERROR_BAD_PATH,
-					     "CreatePlayListInAny must be executed on a root path");
-
-		goto on_error;
-	}
-
-	if (!task_data->title || !*task_data->title)
-		goto on_param_error;
-
-	if (!g_variant_n_children(task_data->item_path))
-		goto on_param_error;
-
-	DLEYNA_LOG_DEBUG_NL();
-	DLEYNA_LOG_DEBUG("Title = %s", task_data->title);
-	DLEYNA_LOG_DEBUG("Creator = %s", task_data->creator);
-	DLEYNA_LOG_DEBUG("Genre = %s", task_data->genre);
-	DLEYNA_LOG_DEBUG("Desc = %s", task_data->desc);
-	DLEYNA_LOG_DEBUG_NL();
-
-	dls_device_playlist_upload(client, task, "DLNA.ORG_AnyContainer");
-
-	DLEYNA_LOG_DEBUG("Exit");
-
-	return;
-
-on_param_error:
-
-	DLEYNA_LOG_WARNING("Invalid Parameter");
-
-	cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
-				     DLEYNA_ERROR_OPERATION_FAILED,
-				     "Invalid Parameter");
-on_error:
-
-	(void) g_idle_add(dls_async_task_complete, cb_data);
-
-	DLEYNA_LOG_DEBUG("Exit failure");
-}
-
 void dls_upnp_get_object_metadata(dls_upnp_t *upnp, dls_client_t *client,
 				  dls_task_t *task, dls_upnp_task_complete_t cb)
 {
@@ -1132,6 +1023,26 @@ void dls_upnp_get_object_metadata(dls_upnp_t *upnp, dls_client_t *client,
 	dls_device_get_object_metadata(client, task, task->target.id);
 
 	DLEYNA_LOG_DEBUG("Exit");
+}
+
+void dls_upnp_create_reference(dls_upnp_t *upnp, dls_client_t *client,
+			       dls_task_t *task,
+			       dls_upnp_task_complete_t cb)
+{
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	cb_data->cb = cb;
+
+	DLEYNA_LOG_DEBUG("Root Path: %s - Id: %s", task->target.root_path,
+			 task->target.id);
+
+	dls_device_create_reference(client, task);
+
+	DLEYNA_LOG_DEBUG("Exit");
+
+	return;
 }
 
 void dls_upnp_unsubscribe(dls_upnp_t *upnp)
