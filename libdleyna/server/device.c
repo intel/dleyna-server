@@ -1419,25 +1419,41 @@ static void prv_get_object(GUPnPDIDLLiteParser *parser,
 {
 	dls_async_task_t *cb_data = user_data;
 	dls_async_get_all_t *cb_task_data = &cb_data->ut.get_all;
-	const char *id;
+	const char *object_id;
+	const char *parent_id;
 	const char *parent_path;
 	gchar *path = NULL;
 
-	id = gupnp_didl_lite_object_get_parent_id(object);
+	object_id = gupnp_didl_lite_object_get_id(object);
+	if (!object_id)
+		goto on_error;
 
-	if (!id || !strcmp(id, "-1") || !strcmp(id, "")) {
+	parent_id = gupnp_didl_lite_object_get_parent_id(object);
+	if (!parent_id)
+		goto on_error;
+
+	if (!strcmp(object_id, "0") || !strcmp(parent_id, "-1")) {
 		parent_path = cb_data->task.target.root_path;
 	} else {
-		path = dls_path_from_id(cb_data->task.target.root_path, id);
+		path = dls_path_from_id(cb_data->task.target.root_path,
+					parent_id);
 		parent_path = path;
 	}
 
 	if (!dls_props_add_object(cb_task_data->vb, object,
 				  cb_data->task.target.root_path,
 				  parent_path, DLS_UPNP_MASK_ALL_PROPS))
-		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
-					     DLEYNA_ERROR_BAD_RESULT,
-					     "Unable to retrieve mandatory object properties");
+		goto on_error;
+
+	g_free(path);
+
+	return;
+
+on_error:
+
+	cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+				     DLEYNA_ERROR_BAD_RESULT,
+				     "Unable to retrieve mandatory object properties");
 	g_free(path);
 }
 
@@ -2571,7 +2587,8 @@ static void prv_found_target(GUPnPDIDLLiteParser *parser,
 {
 	dls_async_task_t *cb_data = user_data;
 	dls_async_bas_t *cb_task_data = &cb_data->ut.bas;
-	const char *id;
+	const char *object_id;
+	const char *parent_id;
 	const char *parent_path;
 	gchar *path = NULL;
 	gboolean have_child_count;
@@ -2581,12 +2598,19 @@ static void prv_found_target(GUPnPDIDLLiteParser *parser,
 
 	builder = g_new0(dls_device_object_builder_t, 1);
 
-	id = gupnp_didl_lite_object_get_parent_id(object);
+	object_id = gupnp_didl_lite_object_get_id(object);
+	if (!object_id)
+		goto on_error;
 
-	if (!id || !strcmp(id, "-1") || !strcmp(id, "")) {
+	parent_id = gupnp_didl_lite_object_get_parent_id(object);
+	if (!parent_id)
+		goto on_error;
+
+	if (!strcmp(object_id, "0") || !strcmp(parent_id, "-1")) {
 		parent_path = cb_data->task.target.root_path;
 	} else {
-		path = dls_path_from_id(cb_data->task.target.root_path, id);
+		path = dls_path_from_id(cb_data->task.target.root_path,
+					parent_id);
 		parent_path = path;
 	}
 
