@@ -500,11 +500,9 @@ dls_task_t *dls_task_create_reference_new(dleyna_connector_msg_id_t invocation,
 
 	g_variant_get(parameters, "(o)", &ref_path);
 
-	if (ref_path != NULL) {
-		task->ut.create_reference.item_path = g_strstrip(
+	task->ut.create_reference.item_path = g_strstrip(
 					g_variant_dup_string(ref_path, NULL));
-		g_variant_unref(ref_path);
-	}
+	g_variant_unref(ref_path);
 
 finished:
 
