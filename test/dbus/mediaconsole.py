@@ -181,6 +181,9 @@ class Device(Container):
     def cancel(self):
         return self._deviceIF.Cancel()
 
+    def print_icon(self, resolution):
+        bytes, mime = self._deviceIF.GetIcon(resolution)
+        print "Icon mime type: " + mime
 
 class UPNP(object):
 

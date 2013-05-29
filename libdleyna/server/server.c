@@ -399,6 +399,14 @@ static const gchar g_server_introspection[] =
 	"    </method>"
 	"    <method name='"DLS_INTERFACE_CANCEL"'>"
 	"    </method>"
+	"    <method name='"DLS_INTERFACE_GET_ICON"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_RESOLUTION"'"
+	"           direction='in'/>"
+	"      <arg type='ay' name='"DLS_INTERFACE_ICON_BYTES"'"
+	"           direction='out'/>"
+	"      <arg type='s' name='"DLS_INTERFACE_MIME_TYPE"'"
+	"           direction='out'/>"
+	"    </method>"
 	"    <property type='s' name='"DLS_INTERFACE_PROP_LOCATION"'"
 	"       access='read'/>"
 	"    <property type='s' name='"DLS_INTERFACE_PROP_UDN"'"
@@ -618,6 +626,10 @@ static void prv_process_async_task(dls_task_t *task)
 	case DLS_TASK_CREATE_REFERENCE:
 		dls_upnp_create_reference(g_context.upnp, client, task,
 					  prv_async_task_complete);
+		break;
+	case DLS_TASK_GET_ICON:
+		dls_upnp_get_icon(g_context.upnp, client, task,
+				  prv_async_task_complete);
 		break;
 	default:
 		break;
@@ -1041,6 +1053,9 @@ static void prv_device_method_call(dleyna_connector_id_t conn,
 	} else if (!strcmp(method, DLS_INTERFACE_CANCEL_UPLOAD)) {
 		task = dls_task_cancel_upload_new(invocation, object,
 						  parameters, &error);
+	} else if (!strcmp(method, DLS_INTERFACE_GET_ICON)) {
+		task = dls_task_get_icon_new(invocation, object, parameters,
+					     &error);
 	} else if (!strcmp(method, DLS_INTERFACE_CANCEL)) {
 		task = NULL;
 

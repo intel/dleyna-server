@@ -82,6 +82,13 @@ struct dls_device_upload_job_t_ {
 	guint remove_idle;
 };
 
+typedef struct dls_device_download_t_ dls_device_download_t;
+struct dls_device_download_t_ {
+	SoupSession *session;
+	SoupMessage *msg;
+	dls_async_task_t *task;
+};
+
 /* Private structure used in chain task */
 typedef struct prv_new_device_ct_t_ prv_new_device_ct_t;
 struct prv_new_device_ct_t_ {
@@ -233,6 +240,8 @@ void dls_device_delete(void *device)
 		g_variant_unref(dev->sort_caps);
 		g_variant_unref(dev->sort_ext_caps);
 		g_variant_unref(dev->feature_list);
+		g_free(dev->icon.mime_type);
+		g_free(dev->icon.bytes);
 		g_free(dev);
 	}
 }
@@ -4262,3 +4271,130 @@ on_error:
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
+static void prv_build_icon_result(dls_device_t *device, dls_task_t *task)
+{
+	GVariant *out_p[2];
+
+	out_p[0] = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
+					     device->icon.bytes,
+					     device->icon.size,
+					     1);
+	out_p[1] = g_variant_new_string(device->icon.mime_type);
+	task->result = g_variant_ref_sink(g_variant_new_tuple(out_p, 2));
+}
+
+static void prv_get_icon_cancelled(GCancellable *cancellable,
+				   gpointer user_data)
+{
+	dls_device_download_t *download = (dls_device_download_t *)user_data;
+
+	dls_async_task_cancelled_cb(cancellable, download->task);
+
+	if (download->msg) {
+		soup_session_cancel_message(download->session, download->msg,
+					    SOUP_STATUS_CANCELLED);
+		DLEYNA_LOG_DEBUG("Cancelling device icon download");
+	}
+}
+
+static void prv_free_download_info(dls_device_download_t *download)
+{
+	if (download->msg)
+		g_object_unref(download->msg);
+	g_object_unref(download->session);
+	g_free(download);
+}
+
+static void prv_get_icon_session_cb(SoupSession *session,
+				    SoupMessage *msg,
+				    gpointer user_data)
+{
+	dls_device_download_t *download = (dls_device_download_t *)user_data;
+	dls_async_task_t *cb_data = (dls_async_task_t *)download->task;
+	dls_device_t *device = (dls_device_t *)cb_data->task.target.device;
+
+	if (msg->status_code == SOUP_STATUS_CANCELLED)
+		goto out;
+
+	if (SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
+		device->icon.size = msg->response_body->length;
+		device->icon.bytes = g_malloc(device->icon.size);
+		memcpy(device->icon.bytes, msg->response_body->data,
+		       device->icon.size);
+
+		prv_build_icon_result(device, &cb_data->task);
+	} else {
+		DLEYNA_LOG_DEBUG("Failed to GET device icon: %s",
+				 msg->reason_phrase);
+
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_OPERATION_FAILED,
+					     "Failed to GET device icon");
+	}
+
+	(void) g_idle_add(dls_async_task_complete, cb_data);
+	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
+
+out:
+
+	prv_free_download_info(download);
+}
+
+void dls_device_get_icon(dls_client_t *client,
+			 dls_task_t *task)
+{
+	GUPnPDeviceInfo *info;
+	dls_device_context_t *context;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_device_t *device = task->target.device;
+	gchar *url;
+	dls_device_download_t *download;
+
+	if (device->icon.size != 0) {
+		prv_build_icon_result(device, task);
+		goto end;
+	}
+
+	context = dls_device_get_context(device, client);
+	info = (GUPnPDeviceInfo *)context->device_proxy;
+
+	url = gupnp_device_info_get_icon_url(info, NULL, -1, -1, -1, FALSE,
+					     &device->icon.mime_type, NULL,
+					     NULL, NULL);
+	if (url == NULL || *url == 0) {
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_NOT_SUPPORTED,
+					     "No icon available");
+		goto end;
+	}
+
+	download = g_new0(dls_device_download_t, 1);
+	download->session = soup_session_async_new();
+	download->msg = soup_message_new(SOUP_METHOD_GET, url);
+	download->task = cb_data;
+
+	if (!download->msg) {
+		DLEYNA_LOG_WARNING("Invalid URL %s", url);
+
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_BAD_RESULT,
+					     "Invalid URL %s", url);
+		prv_free_download_info(download);
+
+		goto end;
+	}
+
+	cb_data->cancel_id =
+		g_cancellable_connect(cb_data->cancellable,
+				      G_CALLBACK(prv_get_icon_cancelled),
+				      download, NULL);
+
+	soup_session_queue_message(download->session, download->msg,
+				   prv_get_icon_session_cb, download);
+
+	return;
+
+end:
+
+	(void) g_idle_add(dls_async_task_complete, cb_data);
+}

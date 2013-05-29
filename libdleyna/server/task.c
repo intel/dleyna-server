@@ -536,6 +536,26 @@ dls_task_t *dls_task_get_metadata_new(dleyna_connector_msg_id_t invocation,
 	return task;
 }
 
+dls_task_t *dls_task_get_icon_new(dleyna_connector_msg_id_t invocation,
+				  const gchar *path, GVariant *parameters,
+				  GError **error)
+{
+	dls_task_t *task;
+
+	task = prv_m2spec_task_new(DLS_TASK_GET_ICON, invocation, path,
+				   "(@ays)", error, FALSE);
+	if (!task)
+		goto finished;
+
+	task->multiple_retvals = TRUE;
+
+	g_variant_get(parameters, "(s)", &task->ut.get_icon.resolution);
+
+finished:
+
+	return task;
+}
+
 void dls_task_complete(dls_task_t *task)
 {
 	GVariant *variant = NULL;
