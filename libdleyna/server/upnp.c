@@ -1045,6 +1045,21 @@ void dls_upnp_create_reference(dls_upnp_t *upnp, dls_client_t *client,
 	return;
 }
 
+void dls_upnp_get_icon(dls_upnp_t *upnp, dls_client_t *client,
+		       dls_task_t *task,
+		       dls_upnp_task_complete_t cb)
+{
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	cb_data->cb = cb;
+
+	dls_device_get_icon(client, task);
+
+	DLEYNA_LOG_DEBUG("Exit");
+}
+
 void dls_upnp_unsubscribe(dls_upnp_t *upnp)
 {
 	GHashTableIter iter;

@@ -114,6 +114,10 @@ static void prv_delete(dls_task_t *task)
 	case DLS_TASK_CREATE_REFERENCE:
 		g_free(task->ut.create_reference.item_path);
 		break;
+	case DLS_TASK_GET_ICON:
+		g_free(task->ut.get_icon.resolution);
+		g_free(task->ut.get_icon.mime_type);
+		break;
 	default:
 		break;
 	}
@@ -532,6 +536,27 @@ dls_task_t *dls_task_get_metadata_new(dleyna_connector_msg_id_t invocation,
 
 	task = prv_m2spec_task_new(DLS_TASK_GET_OBJECT_METADATA, invocation,
 				   path, "(@s)", error, FALSE);
+
+	return task;
+}
+
+dls_task_t *dls_task_get_icon_new(dleyna_connector_msg_id_t invocation,
+				  const gchar *path, GVariant *parameters,
+				  GError **error)
+{
+	dls_task_t *task;
+
+	task = prv_m2spec_task_new(DLS_TASK_GET_ICON, invocation, path,
+				   "(@ays)", error, FALSE);
+	if (!task)
+		goto finished;
+
+	task->multiple_retvals = TRUE;
+
+	g_variant_get(parameters, "(ss)", &task->ut.get_icon.mime_type,
+		      &task->ut.get_icon.resolution);
+
+finished:
 
 	return task;
 }

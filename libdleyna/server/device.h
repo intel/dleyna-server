@@ -41,6 +41,13 @@ struct dls_device_context_t_ {
 	guint timeout_id;
 };
 
+typedef struct dls_device_icon_t_ dls_device_icon_t;
+struct dls_device_icon_t_ {
+	gchar *mime_type;
+	guchar *bytes;
+	gsize size;
+};
+
 struct dls_device_t_ {
 	dleyna_connector_id_t connection;
 	guint id;
@@ -57,6 +64,7 @@ struct dls_device_t_ {
 	GVariant *feature_list;
 	gboolean shutting_down;
 	guint construct_step;
+	dls_device_icon_t icon;
 };
 
 dls_device_context_t *dls_device_append_new_context(dls_device_t *device,
@@ -137,5 +145,8 @@ void dls_device_get_object_metadata(dls_client_t *client,
 
 void dls_device_create_reference(dls_client_t *client,
 				 dls_task_t *task);
+
+void dls_device_get_icon(dls_client_t *client,
+			 dls_task_t *task);
 
 #endif /* DLS_DEVICE_H__ */
