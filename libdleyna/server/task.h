@@ -145,6 +145,7 @@ struct dls_task_target_info_t_ {
 
 typedef struct dls_task_get_icon_t_ dls_task_get_icon_t;
 struct dls_task_get_icon_t_ {
+	gchar *mime_type;
 	gchar *resolution;
 };
 

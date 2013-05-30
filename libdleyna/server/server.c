@@ -400,6 +400,8 @@ static const gchar g_server_introspection[] =
 	"    <method name='"DLS_INTERFACE_CANCEL"'>"
 	"    </method>"
 	"    <method name='"DLS_INTERFACE_GET_ICON"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_REQ_MIME_TYPE"'"
+	"           direction='in'/>"
 	"      <arg type='s' name='"DLS_INTERFACE_RESOLUTION"'"
 	"           direction='in'/>"
 	"      <arg type='ay' name='"DLS_INTERFACE_ICON_BYTES"'"

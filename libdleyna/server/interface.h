@@ -186,6 +186,7 @@ enum dls_interface_type_ {
 #define DLS_INTERFACE_RESOLUTION "Resolution"
 #define DLS_INTERFACE_ICON_BYTES "Bytes"
 #define DLS_INTERFACE_MIME_TYPE "MimeType"
+#define DLS_INTERFACE_REQ_MIME_TYPE "RequestedMimeType"
 
 #define DLS_INTERFACE_GET_METADATA "GetMetaData"
 #define DLS_INTERFACE_METADATA "MetaData"

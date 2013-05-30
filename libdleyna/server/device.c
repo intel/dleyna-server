@@ -4389,6 +4389,7 @@ void dls_device_get_icon(dls_client_t *client,
 				      G_CALLBACK(prv_get_icon_cancelled),
 				      download, NULL);
 
+	g_object_ref(download->msg);
 	soup_session_queue_message(download->session, download->msg,
 				   prv_get_icon_session_cb, download);
 

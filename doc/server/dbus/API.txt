@@ -314,12 +314,12 @@ Cancel() -> void
 
 Cancels all requests a client has outstanding on that server.
 
-GetIcon(s Resolution) -> (ay Data, s MimeType)
+GetIcon(s RequestedMimeType, s Resolution) -> (ay Bytes, s MimeType)
 
 Returns the device icon bytes and mime type according to
-the Resolution parameter.
-The Resolution parameter is currently reserved for future use
-and should be set as an empty string.
+the RequestedMimeType and Resolution parameters.
+Both RequestedMimeType and Resolution parameters are currently
+reserved for future use and should be set as an empty string.
 
 
 Signals:
