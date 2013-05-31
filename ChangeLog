@@ -1,3 +1,43 @@
+version 0.0.2
+	- Add a new method GetMetaData to the org.gnome.UPnP.MediaObject2 interface
+	  to allow the retrieval of the Meta data information of an object in
+	  DIDL-Lite XML format
+	- Handle wild cards for SortCaps & SearchCaps properties
+	- Add a new property and a new function to media container objects:
+	  Resource and GetCompatibleResource()
+	- Fixed bug: CreateContainer does not specify the correct DLNAManaged flags
+	  https://github.com/01org/dleyna-server/issues/24
+	- Add MediaItem2 resource properties to container objects:
+	  URLs, Size, DLNAProfile & MimeType
+	- Fixed bug: ObjectUpdateID and ContainerUpdateID are reported on all
+	  objects and containers
+	  https://github.com/01org/dleyna-server/issues/27
+	- Fixed bug: dleyna-server can fail to discover a device if a network
+	  connection is lost during device construction
+	  https://github.com/01org/dleyna-server/issues/14
+	- Fixed bug: We don't display media with invalid metadata
+	  https://github.com/01org/dleyna-renderer/issues/30
+	- Fixed bug: MediaConnect DMS crashes dLeyna
+	  https://github.com/01org/dleyna-server/issues/49
+	- Two new methods have been added to the UPNP class, server_from_name and
+	  server_from_udn.  These methods can be used to construct Device objects
+	  from UDNs or friendly names
+	- Add new org.gnome.MediaContainer2 properties:
+	  DLNAConversion, DLNAFlags & DLNAOperation
+	- Add a Rescan method to Manager interface
+	- Add autogen.sh script to call `autoreconf -i`
+	- Remove CreatePlayListInAnyContainer() from
+	  com.intel.dLeynaServer.MediaDevice
+	- Remove CreatePlayList() from org.gnome.MediaContainer2
+	- Add CreateReference method to org.gnome.MediaContainer2
+	- Add support for object.container.playlistContainer and
+	  object.container.storageFolder object classes
+	- Fixed bug: The dLeyna-server CreateClasses property is incorrect
+	  https://github.com/01org/dleyna-server/issues/94
+	- Fixed bug: Incorrect Parent Path reported for XBMC
+	  https://github.com/01org/dleyna-server/issues/32
+	- Add a GetIcon() method to com.intel.dLeynaServer.MediaDevice
+
 version 0.0.1
 	- Initial version of dleyna-server.
 	- Enable support of deleyna-server as git submodules.
