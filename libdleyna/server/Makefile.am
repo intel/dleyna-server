@@ -1,6 +1,6 @@
 libdleyna_serverincdir = $(includedir)/dleyna-1.0/libdleyna/server
 
-DLEYNA_SERVER_VERSION = 1:1:0
+DLEYNA_SERVER_VERSION = 1:2:0
 
 AM_CFLAGS =	$(GLIB_CFLAGS)				\
 		$(GIO_CFLAGS)				\
