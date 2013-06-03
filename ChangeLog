@@ -1,3 +1,6 @@
+version 0.1.0
+	- Prepare for first stable branch
+
 version 0.0.2
 	- Add a new method GetMetaData to the org.gnome.UPnP.MediaObject2 interface
 	  to allow the retrieval of the Meta data information of an object in
