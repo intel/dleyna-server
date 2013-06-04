@@ -1,4 +1,4 @@
 [D-BUS Service]
 Name=com.intel.dleyna-server
-Exec=@prefix@/libexec/dleyna-server-service
+Exec=@libexecdir@/dleyna-server-service
 
