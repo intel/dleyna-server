@@ -28,5 +28,5 @@ pkgconfig_DATA = dleyna-server-service-1.0.pc
 
 EXTRA_DIST = $(dbusservice_in_files)
 
-CLEANFILES = $(dbusservice_DATA) $(pkgconfig_DATA)
-DISTCLEANFILES = $(dbusservice_DATA) $(pkgconfig_DATA)
+CLEANFILES = $(dbusservice_DATA)
+DISTCLEANFILES = $(dbusservice_DATA)
