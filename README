@@ -94,3 +94,8 @@ This option allows a prefix to be added to the SOUP session user agent.
 For example, --with-ua-prefix=MyPrefix can be used to change a default user
 agent string from "dLeyna/0.0.1 GUPnP/0.19.4 DLNADOC/1.50" to
 "MyPrefix dLeyna/0.0.1 GUPnP/0.19.4 DLNADOC/1.50".
+
+--with-dbus-service-dir
+
+By default, the dbus service files are installed in $(datadir)/dbus-1/services.
+This option allows to choose another installation directory.

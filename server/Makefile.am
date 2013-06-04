@@ -15,11 +15,11 @@ dleyna_server_service_LDADD =	$(GLIB_LIBS)				    			\
 				$(DLEYNA_CORE_LIBS)			    			\
 				$(top_builddir)/libdleyna/server/libdleyna-server-1.0.la
 			
-dbussessiondir = @DBUS_SESSION_DIR@
-dbussession_DATA = com.intel.dleyna-server.service
+dbusservicedir = $(DBUS_SERVICE_DIR)
+dbusservice_DATA = com.intel.dleyna-server.service
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = dleyna-server-service-1.0.pc
 
-CLEANFILES = $(dbussession_DATA) $(pkgconfig_DATA)
-DISTCLEANFILES = $(dbussession_DATA) $(pkgconfig_DATA)
+CLEANFILES = $(dbusservice_DATA)
+DISTCLEANFILES = $(pkgconfig_DATA)
