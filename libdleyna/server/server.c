@@ -1164,9 +1164,10 @@ out:
 
 static void prv_control_point_stop_service(void)
 {
-	dls_upnp_unsubscribe(g_context.upnp);
-
-	dls_upnp_delete(g_context.upnp);
+	if (g_context.upnp) {
+		dls_upnp_unsubscribe(g_context.upnp);
+		dls_upnp_delete(g_context.upnp);
+	}
 
 	if (g_context.connection) {
 		if (g_context.dls_id)
