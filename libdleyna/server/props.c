@@ -1366,11 +1366,16 @@ gboolean dls_props_add_object(GVariantBuilder *item_vb,
 	const char *id;
 	const char *title;
 	const char *creator;
+	const char *artist;
+	const char *album;
 	const char *upnp_class;
 	const char *media_spec_type;
+	const char *url = NULL;
+	long duration = -1;
 	gboolean retval = FALSE;
 	gboolean rest;
 	GUPnPOCMFlags flags;
+	GList *resources;
 	guint uint_val;
 
 	id = gupnp_didl_lite_object_get_id(object);
@@ -1385,8 +1390,18 @@ gboolean dls_props_add_object(GVariantBuilder *item_vb,
 
 	title = gupnp_didl_lite_object_get_title(object);
 	creator = gupnp_didl_lite_object_get_creator(object);
+	artist = gupnp_didl_lite_object_get_artist(object);
+	album = gupnp_didl_lite_object_get_album(object);
 	rest = gupnp_didl_lite_object_get_restricted(object);
 	path = dls_path_from_id(root_path, id);
+
+	resources = gupnp_didl_lite_object_get_resources(object);
+	/* Use values from the first resource for URL and Duration  */
+	if (resources) {
+		GUPnPDIDLLiteResource *resource = GUPNP_DIDL_LITE_RESOURCE(resources->data);
+		url = gupnp_didl_lite_resource_get_uri(resource);
+		duration = gupnp_didl_lite_resource_get_duration(resource);
+	}
 
 	if (filter_mask & DLS_UPNP_MASK_PROP_DISPLAY_NAME)
 		prv_add_string_prop(item_vb, DLS_INTERFACE_PROP_DISPLAY_NAME,
@@ -1395,6 +1410,22 @@ gboolean dls_props_add_object(GVariantBuilder *item_vb,
 	if (filter_mask & DLS_UPNP_MASK_PROP_CREATOR)
 		prv_add_string_prop(item_vb, DLS_INTERFACE_PROP_CREATOR,
 				    creator);
+
+	if (filter_mask & DLS_UPNP_MASK_PROP_ARTIST)
+		prv_add_string_prop(item_vb, DLS_INTERFACE_PROP_ARTIST,
+				    artist);
+
+	if (filter_mask & DLS_UPNP_MASK_PROP_ALBUM)
+		prv_add_string_prop(item_vb, DLS_INTERFACE_PROP_ALBUM,
+				    album);
+
+	if (filter_mask & DLS_UPNP_MASK_PROP_DURATION)
+		prv_add_int64_prop(item_vb, DLS_INTERFACE_PROP_DURATION,
+				    duration);
+
+	if (filter_mask & DLS_UPNP_MASK_PROP_URL)
+		prv_add_string_prop(item_vb, DLS_INTERFACE_PROP_URL,
+				    url);
 
 	if (filter_mask & DLS_UPNP_MASK_PROP_PATH)
 		prv_add_path_prop(item_vb, DLS_INTERFACE_PROP_PATH, path);
