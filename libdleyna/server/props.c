@@ -92,7 +92,7 @@ static const gchar gMediaSpec2PersonMusicArtist[] = "person.musicartist";
 static const gchar gMediaSpec2Genre[] = "genre";
 static const gchar gMediaSpec2GenreMovie[] = "genre.movie";
 static const gchar gMediaSpec2GenreMusic[] = "genre.music";
-static const gchar gMediaSpec2AudioMusic[] = "audio.music";
+static const gchar gMediaSpec2AudioMusic[] = "music";
 static const gchar gMediaSpec2AudioBroadcast[] = "audio.broadcast";
 static const gchar gMediaSpec2Audio[] = "audio";
 static const gchar gMediaSpec2AudioBook[] = "audio.book";
@@ -396,9 +396,14 @@ void dls_prop_maps_new(GHashTable **property_map, GHashTable **filter_map)
 	/* upnp:class */
 	prop_t = prv_prop_map_new("upnp:class",
 					DLS_UPNP_MASK_PROP_TYPE,
-					FALSE, TRUE, TRUE);
+					FALSE, TRUE, FALSE);
 	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_TYPE, prop_t);
 	g_hash_table_insert(p_map, "upnp:class", DLS_INTERFACE_PROP_TYPE);
+
+	prop_t = prv_prop_map_new("upnp:class",
+					DLS_UPNP_MASK_PROP_TYPE_EX,
+					FALSE, TRUE, TRUE);
+	g_hash_table_insert(f_map, DLS_INTERFACE_PROP_TYPE_EX, prop_t);
 
 	/* upnp:containerUpdateID */
 	prop_t = prv_prop_map_new("upnp:containerUpdateID",
@@ -1147,7 +1152,7 @@ static GVariant *prv_compute_create_classes(GUPnPDIDLLiteContainer *container)
 		create_class = ptr->data;
 		content = gupnp_didl_lite_create_class_get_content(
 								 create_class);
-		ms2_class = dls_props_upnp_class_to_media_spec(content);
+		ms2_class = dls_props_upnp_class_to_media_spec_ex(content);
 		inc_derived = gupnp_didl_lite_create_class_get_include_derived(
 								 create_class);
 		g_variant_builder_add(&create_classes_vb,
@@ -1161,6 +1166,33 @@ static GVariant *prv_compute_create_classes(GUPnPDIDLLiteContainer *container)
 }
 
 const gchar *dls_props_media_spec_to_upnp_class(const gchar *m2spec_class)
+{
+	const gchar *retval = NULL;
+
+	if (!m2spec_class)
+		goto on_error;
+
+	if (!strcmp(m2spec_class, gMediaSpec2Container))
+		retval = gUPnPContainer;
+	else if (!strcmp(m2spec_class, gMediaSpec2AudioMusic))
+		retval = gUPnPMusicTrack;
+	else if (!strcmp(m2spec_class, gMediaSpec2Audio))
+		retval = gUPnPAudioItem;
+	else if (!strcmp(m2spec_class, gMediaSpec2VideoMovie))
+		retval = gUPnPMovie;
+	else if (!strcmp(m2spec_class, gMediaSpec2Video))
+		retval = gUPnPVideoItem;
+	else if (!strcmp(m2spec_class, gMediaSpec2ImagePhoto))
+		retval = gUPnPPhoto;
+	else if (!strcmp(m2spec_class, gMediaSpec2Image))
+		retval = gUPnPImageItem;
+
+on_error:
+
+	return retval;
+}
+
+const gchar *dls_props_media_spec_to_upnp_class_ex(const gchar *m2spec_class)
 {
 	const gchar *retval = NULL;
 
@@ -1227,6 +1259,43 @@ const gchar *dls_props_upnp_class_to_media_spec(const gchar *upnp_class)
 	if (!upnp_class)
 		goto on_error;
 
+	if (!strncmp(upnp_class, gUPnPContainer, gUPnPContainerLen)) {
+		ptr = upnp_class + gUPnPContainerLen;
+		if (!*ptr || *ptr == '.')
+			retval = gMediaSpec2Container;
+	} else if (!strncmp(upnp_class, gUPnPAudioItem, gUPnPAudioItemLen)) {
+		ptr = upnp_class + gUPnPAudioItemLen;
+		if (!strcmp(ptr, ".musicTrack"))
+			retval = gMediaSpec2AudioMusic;
+		else
+			retval = gMediaSpec2Audio;
+	} else if (!strncmp(upnp_class, gUPnPVideoItem, gUPnPVideoItemLen)) {
+		ptr = upnp_class + gUPnPVideoItemLen;
+		if (!strcmp(ptr, ".movie"))
+			retval = gMediaSpec2VideoMovie;
+		else
+			retval = gMediaSpec2Video;
+	}  else if (!strncmp(upnp_class, gUPnPImageItem, gUPnPImageItemLen)) {
+		ptr = upnp_class + gUPnPImageItemLen;
+		if (!strcmp(ptr, ".photo"))
+			retval = gMediaSpec2ImagePhoto;
+		else
+			retval = gMediaSpec2Image;
+	}
+
+on_error:
+
+	return retval;
+}
+
+const gchar *dls_props_upnp_class_to_media_spec_ex(const gchar *upnp_class)
+{
+	const gchar *retval = NULL;
+	const gchar *ptr;
+
+	if (!upnp_class)
+		goto on_error;
+
 	if (!strncmp(upnp_class, gUPnPAlbum, gUPnPAlbumLen)) {
 		ptr = upnp_class + gUPnPAlbumLen;
 		if (!strcmp(ptr, ".photoAlbum"))
@@ -1249,6 +1318,11 @@ const gchar *dls_props_upnp_class_to_media_spec(const gchar *upnp_class)
 			retval = gMediaSpec2GenreMusic;
 		else
 			retval = gMediaSpec2Genre;
+	}  else if (!strncmp(upnp_class, gUPnPStorage, gUPnPStorageLen)) {
+		retval = gMediaSpec2Storage;
+	}  else if (!strncmp(upnp_class, gUPnPPlaylist,
+			     gUPnPPlaylistLen)) {
+		retval = gMediaSpec2Playlist;
 	} else if (!strncmp(upnp_class, gUPnPContainer, gUPnPContainerLen)) {
 		ptr = upnp_class + gUPnPContainerLen;
 		if (!*ptr || *ptr == '.')
@@ -1279,9 +1353,6 @@ const gchar *dls_props_upnp_class_to_media_spec(const gchar *upnp_class)
 			retval = gMediaSpec2ImagePhoto;
 		else
 			retval = gMediaSpec2Image;
-	}  else if (!strncmp(upnp_class, gUPnPPlaylist,
-			     gUPnPPlaylistLen)) {
-		retval = gMediaSpec2Playlist;
 	}  else if (!strncmp(upnp_class, gUPnPPlaylistItem,
 			     gUPnPPlaylistItemLen)) {
 		retval = gMediaSpec2PlaylistItem;
@@ -1289,9 +1360,6 @@ const gchar *dls_props_upnp_class_to_media_spec(const gchar *upnp_class)
 		ptr = upnp_class + gUPnPItemLen;
 		if (!*ptr || *ptr == '.')
 			retval = gMediaSpec2Item;
-	}  else if (!strncmp(upnp_class, gUPnPStorage,
-			     gUPnPStorageLen)) {
-		retval = gMediaSpec2Storage;
 	}
 
 on_error:
@@ -1368,6 +1436,7 @@ gboolean dls_props_add_object(GVariantBuilder *item_vb,
 	const char *creator;
 	const char *upnp_class;
 	const char *media_spec_type;
+	const char *media_spec_type_ex;
 	gboolean retval = FALSE;
 	gboolean rest;
 	GUPnPOCMFlags flags;
@@ -1382,6 +1451,8 @@ gboolean dls_props_add_object(GVariantBuilder *item_vb,
 
 	if (!media_spec_type)
 		goto on_error;
+
+	media_spec_type_ex = dls_props_upnp_class_to_media_spec_ex(upnp_class);
 
 	title = gupnp_didl_lite_object_get_title(object);
 	creator = gupnp_didl_lite_object_get_creator(object);
@@ -1406,6 +1477,10 @@ gboolean dls_props_add_object(GVariantBuilder *item_vb,
 	if (filter_mask & DLS_UPNP_MASK_PROP_TYPE)
 		prv_add_string_prop(item_vb, DLS_INTERFACE_PROP_TYPE,
 				    media_spec_type);
+
+	if (filter_mask & DLS_UPNP_MASK_PROP_TYPE_EX)
+		prv_add_string_prop(item_vb, DLS_INTERFACE_PROP_TYPE_EX,
+				    media_spec_type_ex);
 
 	if (filter_mask & DLS_UPNP_MASK_PROP_RESTRICTED)
 		prv_add_bool_prop(item_vb, DLS_INTERFACE_PROP_RESTRICTED, rest);
@@ -1778,6 +1853,17 @@ GVariant *dls_props_get_object_prop(const gchar *prop, const gchar *root_path,
 		upnp_class = gupnp_didl_lite_object_get_upnp_class(object);
 		media_spec_type =
 			dls_props_upnp_class_to_media_spec(upnp_class);
+		if (!media_spec_type)
+			goto on_error;
+
+		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, media_spec_type);
+
+		retval = g_variant_ref_sink(g_variant_new_string(
+						    media_spec_type));
+	} else if (!strcmp(prop, DLS_INTERFACE_PROP_TYPE_EX)) {
+		upnp_class = gupnp_didl_lite_object_get_upnp_class(object);
+		media_spec_type =
+			dls_props_upnp_class_to_media_spec_ex(upnp_class);
 		if (!media_spec_type)
 			goto on_error;
 

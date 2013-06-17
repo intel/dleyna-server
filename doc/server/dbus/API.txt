@@ -262,13 +262,13 @@ not necessarily finished.  There are two return values.  The UploadId,
 which can be used to monitor the progress of the upload and to
 cancel it and ObjectPath, which contains the path of the newly created object.
 
-CreateContainerInAnyContainer(s DisplayName, s Type, as ChildTypes)
+CreateContainerInAnyContainer(s DisplayName, s TypeEx, as ChildTypes)
                                                              -> o ObjectPath
 
 Creates a new container. The DMS chooses the best place to create
 this new container. DisplayName is the name of the new container,
-Type is the type and ChildTypes is an array of types that can be stored
-in the new folder, e.g., ['video','container'].
+TypeEx is the extended type and ChildTypes is an array of extended types that
+can be stored in the new folder, e.g., ['video','container'].
 A special value of ['*'] indicates that no restriction is placed
 on the types of objects that can be stored in the container.
 The path of the newly created object is returned.
@@ -361,7 +361,7 @@ The value of each dictionary entry depends on the key value.
 | o | M | Contains the Object Path property of the parent container to which   |
 |   |   | this object was added.                                               |
 |------------------------------------------------------------------------------|
-| s | M | Contains the value of the Type (converted upnp:class property)       |
+| s | M | Contains the value of the TypeEx (converted upnp:class property)     |
 |   |   | of the object that was added.                                        |
 |------------------------------------------------------------------------------|
 
@@ -482,6 +482,24 @@ Additional Properties:
 |                 |       |      |  for the object relative to the          |
 |                 |       |      |  SystemUpdateID state variable.          |
 |---------------------------------------------------------------------------|
+| TypeEx          |  s    |  m   |  The extended Type of the object.        |
+|                 |       |      |  following values are permitted:         |
+|                 |       |      |                                          |
+|                 |       |      |  in case of Items:                       |
+|                 |       |      |   'video.musicclip', 'video.broadcast'   |
+|                 |       |      |   'audio.broadcast', 'audio.book',       |
+|                 |       |      |   'item.playlist', 'item', 'video',      |
+|                 |       |      |   'video.movie', 'audio', 'music',       |
+|                 |       |      |   'image', 'image.photo'                 |
+|                 |       |      |  and in case of Containers:              |
+|                 |       |      |   'album', 'album.music', 'album.photo'  |
+|                 |       |      |   'person', 'person.musicartist'         |
+|                 |       |      |   'genre', 'genre.music', 'genre.movie'  |
+|                 |       |      |   'playlist', 'storage', 'container'     |
+|                 |       |      |                                          |
+|                 |       |      |  Since version 0.2.0.                    |
+|---------------------------------------------------------------------------|
+
 
 
 Additional Methods:
@@ -502,7 +520,7 @@ property name value pairs that are to be updated, or added if they do
 not already exist.  ToDelete is an array of properties to be deleted.
 The same property cannot appear in both ToAddUpdate and ToDelete.
 Only the following properties can be updated: 'Date', 'DisplayName',
-'Artists', 'Album', 'Type', 'TrackNumber'.
+'Artists', 'Album', 'TypeEx', 'TrackNumber'.
 
 GetMetaData() -> s
 
@@ -548,12 +566,21 @@ Additional properties unsupported by org.gnome.MediaContainer2
 |---------------------------------------------------------------------------|
 |     Name               | Type | m/o* |              Description           |
 |---------------------------------------------------------------------------|
-| CreateClasses          |a(sb) |  o   |  Array of UPnP createClasses       |
-|                        |      |      |  property. A createClasses         |
-|                        |      |      |  property is a tuple (sb)          |
-|                        |      |      |  representing the class and        |
-|                        |      |      |  whether derived values are        |
-|                        |      |      |  allowed for this class.           |
+| CreateClasses          |a(sb) |  o   |  The CreateClasses property is an  |      
+|                        |      |      |  array of tuples (sb) that lists   |
+|                        |      |      |  the extended types of objects that|
+|                        |      |      |  that can be created in a          |
+|                        |      |      |  container. A boolean value is     |
+|                        |      |      |  associated with each type.  This  |
+|                        |      |      |  boolean indicates whether objects |
+|                        |      |      |  of types derived from the         |
+|                        |      |      |  specified extended type can also  |
+|                        |      |      |  be created in this container.     |
+|                        |      |      |  For example, ("album","true")     |
+|                        |      |      |  would indicate that objects of    |
+|                        |      |      |  type album, album.music and       |
+|                        |      |      |  album.photo can be created in the |
+|                        |      |      |  container.                        |
 |---------------------------------------------------------------------------|
 | ContainerUpdateID      |  u   |  o   |  Contains the value of the         |
 |                        |      |      |  SystemUpdateID state variable     |
@@ -607,7 +634,7 @@ SearchObjectsEx(s Query, u Offset, u Max, as Filter, s SortBy) -> aa{sv}
 
 Upload(s DisplayName, s FilePath) -> (u UploadId, o ObjectPath)
 
-CreateContainer(s DisplayName, s Type, as ChildTypes) -> o ObjectPath
+CreateContainer(s DisplayName, s TypeEx, as ChildTypes) -> o ObjectPath
 
 CreateReference(o ObjectPath) -> o ObjectPath
 
@@ -676,8 +703,8 @@ suitable location for the file.
 
 The CreateContainer method creates a new child container.
 DisplayName is the name of the new container,
-Type is the type and ChildTypes is an array of types that can be stored
-in the new folder, e.g., ['video','container'].
+TypeEx is the extended type and ChildTypes is an array of extended 
+types that can be stored in the new folder, e.g., ['video','container'].
 A special value of ['*'] indicates that no restriction is placed
 on the types of objects that can be stored in the container.
 The path of the newly created object is returned.
