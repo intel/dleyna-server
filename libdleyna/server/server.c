@@ -120,6 +120,8 @@ static const gchar g_server_introspection[] =
 	"       access='read'/>"
 	"    <property type='s' name='"DLS_INTERFACE_PROP_TYPE"'"
 	"       access='read'/>"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_TYPE_EX"'"
+	"       access='read'/>"
 	"    <property type='o' name='"DLS_INTERFACE_PROP_PATH"'"
 	"       access='read'/>"
 	"    <property type='s' name='"DLS_INTERFACE_PROP_DISPLAY_NAME"'"
