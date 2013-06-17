@@ -37,6 +37,7 @@ gchar *dls_search_translate_search_string(GHashTable *filter_map,
 	gchar *op = NULL;
 	gchar *value = NULL;
 	const gchar *translated_value;
+	gchar *translated_type_ex;
 	dls_prop_map_t *prop_map;
 	GString *str;
 	gint start_pos;
@@ -80,6 +81,18 @@ gchar *dls_search_translate_search_string(GHashTable *filter_map,
 				goto on_error;
 			g_free(value);
 			value = g_strdup_printf("\"%s\"", translated_value);
+		} else if (!strcmp(prop, DLS_INTERFACE_PROP_TYPE_EX)) {
+			/* Skip the quotes */
+
+			value[strlen(value) - 1] = 0;
+			translated_type_ex =
+				dls_props_media_spec_ex_to_upnp_class(
+					value + 1);
+			if (!translated_type_ex)
+				goto on_error;
+			g_free(value);
+			value = g_strdup_printf("\"%s\"", translated_type_ex);
+			g_free(translated_type_ex);
 		} else if (!strcmp(prop, DLS_INTERFACE_PROP_PARENT) ||
 			   !strcmp(prop, DLS_INTERFACE_PROP_PATH)) {
 			value[strlen(value) - 1] = 0;
