@@ -295,7 +295,7 @@ static void prv_last_change_decode(GUPnPCDSLastChangeEntry *entry,
 		if (!mclass)
 			goto on_error;
 
-		media_class = dls_props_upnp_class_to_media_spec(mclass);
+		media_class = dls_props_upnp_class_to_media_spec_ex(mclass);
 		if (!media_class)
 			goto on_error;
 
@@ -769,8 +769,18 @@ static void prv_get_capabilities_analyze(GHashTable *property_map,
 		while (caps && *caps) {
 			prop_name = g_hash_table_lookup(property_map, *caps);
 
-			if (prop_name)
+			if (prop_name) {
 				g_variant_builder_add(&caps_vb, "s", prop_name);
+
+				/* TODO: Okay this is not very nice.  A better
+				   way to fix this would be to change the p_map
+				   to be many : many. */
+
+				if (!strcmp(*caps, "upnp:class"))
+					g_variant_builder_add(
+						&caps_vb, "s",
+						DLS_INTERFACE_PROP_TYPE_EX);
+			}
 
 			caps++;
 		}
@@ -2862,7 +2872,7 @@ static gchar *prv_create_new_container_didl(const gchar *parent_id,
 	GUPnPOCMFlags flags;
 	gchar *retval = NULL;
 
-	actual_type = dls_props_media_spec_to_upnp_class(
+	actual_type = dls_props_media_spec_to_upnp_class_ex(
 						task->ut.create_container.type);
 	if (!actual_type)
 		goto on_error;
@@ -2890,7 +2900,7 @@ static gchar *prv_create_new_container_didl(const gchar *parent_id,
 
 	g_variant_iter_init(&iter, task->ut.create_container.child_types);
 	while ((child_type = g_variant_iter_next_value(&iter))) {
-		actual_type = dls_props_media_spec_to_upnp_class(
+		actual_type = dls_props_media_spec_to_upnp_class_ex(
 					g_variant_get_string(child_type, NULL));
 		if (actual_type != NULL)
 			gupnp_didl_lite_container_add_create_class(container,
@@ -3785,7 +3795,7 @@ static gchar *prv_get_current_xml_fragment(GUPnPDIDLLiteObject *object,
 		retval = gupnp_didl_lite_object_get_album_xml_string(object);
 	else if (mask & DLS_UPNP_MASK_PROP_DATE)
 		retval = gupnp_didl_lite_object_get_date_xml_string(object);
-	else if (mask & DLS_UPNP_MASK_PROP_TYPE)
+	else if (mask & DLS_UPNP_MASK_PROP_TYPE_EX)
 		retval = gupnp_didl_lite_object_get_upnp_class_xml_string(
 			object);
 	else if (mask & DLS_UPNP_MASK_PROP_TRACK_NUMBER)
@@ -3825,9 +3835,9 @@ static gchar *prv_get_new_xml_fragment(GUPnPDIDLLiteObject *object,
 					g_variant_get_string(value, NULL));
 
 		retval = gupnp_didl_lite_object_get_date_xml_string(object);
-	} else if (mask & DLS_UPNP_MASK_PROP_TYPE) {
-		upnp_class = dls_props_media_spec_to_upnp_class(
-					g_variant_get_string(value, NULL));
+	} else if (mask & DLS_UPNP_MASK_PROP_TYPE_EX) {
+		upnp_class = dls_props_media_spec_to_upnp_class_ex(
+			g_variant_get_string(value, NULL));
 		if (!upnp_class)
 			goto on_error;
 

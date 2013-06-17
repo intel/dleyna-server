@@ -64,6 +64,7 @@
 #define DLS_UPNP_MASK_PROP_DLNA_CONVERSION		(1LL << 35)
 #define DLS_UPNP_MASK_PROP_DLNA_OPERATION		(1LL << 36)
 #define DLS_UPNP_MASK_PROP_DLNA_FLAGS			(1LL << 37)
+#define DLS_UPNP_MASK_PROP_TYPE_EX			(1LL << 38)
 
 #define DLS_UPNP_MASK_ALL_PROPS 0xffffffffffffffff
 
@@ -134,6 +135,10 @@ GVariant *dls_props_get_item_prop(const gchar *prop, const gchar *root_path,
 
 const gchar *dls_props_media_spec_to_upnp_class(const gchar *m2spec_class);
 
+const gchar *dls_props_media_spec_to_upnp_class_ex(const gchar *m2spec_class);
+
 const gchar *dls_props_upnp_class_to_media_spec(const gchar *upnp_class);
+
+const gchar *dls_props_upnp_class_to_media_spec_ex(const gchar *upnp_class);
 
 #endif /* DLS_PROPS_H__ */
