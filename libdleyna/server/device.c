@@ -36,12 +36,17 @@
 #include "interface.h"
 #include "path.h"
 #include "server.h"
+#include "xml-util.h"
 
 #define DLS_SYSTEM_UPDATE_VAR "SystemUpdateID"
 #define DLS_CONTAINER_UPDATE_VAR "ContainerUpdateIDs"
 #define DLS_LAST_CHANGE_VAR "LastChange"
+#define DLS_NETWORK_INTERFACE_INFO_VAR "NetworkInterfaceInfo"
 #define DLS_DMS_DEVICE_TYPE "urn:schemas-upnp-org:device:MediaServer:"
-
+#define DLS_CONTENT_DIRECTORY_SERVICE_TYPE \
+			"urn:schemas-upnp-org:service:ContentDirectory"
+#define DLS_ENERGY_MANAGEMENT_SERVICE_TYPE \
+			"urn:schemas-upnp-org:service:EnergyManagement:1"
 #define DLS_UPLOAD_STATUS_IN_PROGRESS "IN_PROGRESS"
 #define DLS_UPLOAD_STATUS_CANCELLED "CANCELLED"
 #define DLS_UPLOAD_STATUS_ERROR "ERROR"
@@ -122,6 +127,10 @@ static void prv_last_change_cb(GUPnPServiceProxy *proxy,
 				const char *variable,
 				GValue *value,
 				gpointer user_data);
+static void prv_network_interface_info_cb(GUPnPServiceProxy *proxy,
+				const char *variable,
+				GValue *value,
+				gpointer user_data);
 static void prv_upload_delete(gpointer up);
 static void prv_upload_job_delete(gpointer up);
 static void prv_get_sr_token_for_props(GUPnPServiceProxy *proxy,
@@ -134,6 +143,8 @@ static GUPnPServiceProxyAction *prv_browse_objects_begin_action_cb(
 						dleyna_service_task_t *task,
 						GUPnPServiceProxy *proxy,
 						gboolean *failed);
+
+static void prv_free_network_if_info(dls_network_if_info_t *info);
 
 static void prv_object_builder_delete(void *dob)
 {
@@ -163,32 +174,45 @@ static void prv_count_data_new(dls_async_task_t *cb_data,
 
 static void prv_context_unsubscribe(dls_device_context_t *ctx)
 {
-	if (ctx->timeout_id) {
-		(void) g_source_remove(ctx->timeout_id);
-		ctx->timeout_id = 0;
+	if (ctx->cds.timeout_id) {
+		(void) g_source_remove(ctx->cds.timeout_id);
+		ctx->cds.timeout_id = 0;
 	}
 
-	if (ctx->subscribed) {
-		gupnp_service_proxy_remove_notify(
-					ctx->service_proxy,
-					DLS_SYSTEM_UPDATE_VAR,
-					prv_system_update_cb,
-					ctx->device);
-		gupnp_service_proxy_remove_notify(
-					ctx->service_proxy,
-					DLS_CONTAINER_UPDATE_VAR,
-					prv_container_update_cb,
-					ctx->device);
-		gupnp_service_proxy_remove_notify(
-					ctx->service_proxy,
-					DLS_LAST_CHANGE_VAR,
-					prv_last_change_cb,
-					ctx->device);
+	if (ctx->ems.timeout_id) {
+		(void) g_source_remove(ctx->ems.timeout_id);
+		ctx->ems.timeout_id = 0;
+	}
 
-		gupnp_service_proxy_set_subscribed(ctx->service_proxy,
-						   FALSE);
+	if (ctx->cds.subscribed) {
+		gupnp_service_proxy_remove_notify(ctx->cds.proxy,
+						  DLS_SYSTEM_UPDATE_VAR,
+						  prv_system_update_cb,
+						  ctx->device);
+		gupnp_service_proxy_remove_notify(ctx->cds.proxy,
+						  DLS_CONTAINER_UPDATE_VAR,
+						  prv_container_update_cb,
+						  ctx->device);
+		gupnp_service_proxy_remove_notify(ctx->cds.proxy,
+						  DLS_LAST_CHANGE_VAR,
+						  prv_last_change_cb,
+						  ctx->device);
 
-		ctx->subscribed = FALSE;
+		gupnp_service_proxy_set_subscribed(ctx->cds.proxy, FALSE);
+
+		ctx->cds.subscribed = FALSE;
+	}
+
+	if (ctx->ems.subscribed) {
+		gupnp_service_proxy_remove_notify(
+						ctx->ems.proxy,
+						DLS_NETWORK_INTERFACE_INFO_VAR,
+						prv_network_interface_info_cb,
+						ctx->device);
+
+		gupnp_service_proxy_set_subscribed(ctx->ems.proxy, FALSE);
+
+		ctx->ems.subscribed = FALSE;
 	}
 }
 
@@ -199,35 +223,94 @@ static void prv_context_delete(gpointer context)
 	if (ctx) {
 		prv_context_unsubscribe(ctx);
 
+		if (ctx->device_info)
+			g_object_unref(ctx->device_info);
+
 		if (ctx->device_proxy)
 			g_object_unref(ctx->device_proxy);
 
-		if (ctx->service_proxy)
-			g_object_unref(ctx->service_proxy);
+		prv_free_network_if_info(ctx->network_if_info);
+
+		if (ctx->cds.proxy)
+			g_object_unref(ctx->cds.proxy);
+
+		if (ctx->ems.proxy)
+			g_object_unref(ctx->ems.proxy);
 
 		g_free(ctx->ip_address);
 		g_free(ctx);
 	}
 }
 
+static GUPnPServiceInfo *prv_lookup_em_service(GUPnPDeviceInfo *device_info)
+{
+	GList *child_devices;
+	GList *next;
+	GUPnPDeviceInfo *child_info = NULL;
+	GUPnPServiceInfo *service_info = NULL;
+
+	child_devices = gupnp_device_info_list_devices(device_info);
+
+	next = child_devices;
+	while (next != NULL) {
+		child_info = (GUPnPDeviceInfo *)next->data;
+
+		service_info = gupnp_device_info_get_service(child_info,
+					  DLS_ENERGY_MANAGEMENT_SERVICE_TYPE);
+
+		if (service_info != NULL)
+			break;
+
+		service_info = prv_lookup_em_service(child_info);
+
+		if (service_info != NULL)
+			break;
+
+		next = g_list_next(next);
+	}
+
+	g_list_free_full(child_devices, g_object_unref);
+
+	return service_info;
+}
+
 static void prv_context_new(const gchar *ip_address,
 				GUPnPDeviceProxy *proxy,
+				GUPnPDeviceInfo *device_info,
 				dls_device_t *device,
 				dls_device_context_t **context)
 {
-	const gchar *service_type =
-		"urn:schemas-upnp-org:service:ContentDirectory";
 	dls_device_context_t *ctx = g_new(dls_device_context_t, 1);
 
 	ctx->ip_address = g_strdup(ip_address);
 	ctx->device_proxy = proxy;
+	ctx->device_info = device_info;
+
 	ctx->device = device;
+	ctx->cds.subscribed = FALSE;
+	ctx->cds.timeout_id = 0;
+	ctx->ems.subscribed = FALSE;
+	ctx->ems.timeout_id = 0;
+
+	ctx->network_if_info = NULL;
+
 	g_object_ref(proxy);
-	ctx->service_proxy = (GUPnPServiceProxy *)
-		gupnp_device_info_get_service((GUPnPDeviceInfo *)proxy,
-					      service_type);
-	ctx->subscribed = FALSE;
-	ctx->timeout_id = 0;
+	g_object_ref(device_info);
+
+	ctx->cds.proxy = (GUPnPServiceProxy *)
+				     gupnp_device_info_get_service(
+					   device_info,
+					   DLS_CONTENT_DIRECTORY_SERVICE_TYPE);
+
+	ctx->ems.proxy = (GUPnPServiceProxy *)
+				     gupnp_device_info_get_service(
+					   (GUPnPDeviceInfo *)proxy,
+					   DLS_ENERGY_MANAGEMENT_SERVICE_TYPE);
+
+	if (ctx->ems.proxy == NULL)
+		ctx->ems.proxy = (GUPnPServiceProxy *)
+				     prv_lookup_em_service(
+					   (GUPnPDeviceInfo *)proxy);
 
 	*context = ctx;
 }
@@ -459,6 +542,254 @@ on_error:
 		g_error_free(error);
 }
 
+static void prv_free_network_if_info(dls_network_if_info_t *info)
+{
+	if (info != NULL) {
+		g_free(info->mac_address);
+		g_free(info->device_uuid);
+		g_free(info->network_if_mode);
+		g_free(info->wake_on_pattern);
+		g_free(info->wake_transport);
+		g_list_free_full(info->ip_addresses, g_free);
+
+		g_free(info);
+	}
+}
+
+static dls_network_if_info_t *prv_get_network_if_info(xmlNode *device_if_node)
+{
+	dls_network_if_info_t *info = NULL;
+	GList *ipv4_addresses;
+	GList *ipv6_addresses;
+
+	info = g_new0(dls_network_if_info_t, 1);
+
+	ipv4_addresses = xml_util_get_child_string_list_content_by_name(
+						     device_if_node,
+						     "NetworkInterface",
+						     "AssociatedIpAddresses",
+						     "Ipv4", NULL);
+
+	ipv6_addresses = xml_util_get_child_string_list_content_by_name(
+						     device_if_node,
+						     "NetworkInterface",
+						     "AssociatedIpAddresses",
+						     "Ipv6", NULL);
+
+	info->ip_addresses = g_list_concat(ipv4_addresses, ipv6_addresses);
+
+	info->device_uuid = xml_util_get_child_string_content_by_name(
+							device_if_node,
+							"DeviceUUID", NULL);
+
+	info->mac_address = xml_util_get_child_string_content_by_name(
+							device_if_node,
+							"NetworkInterface",
+							"MacAddress", NULL);
+
+	info->network_if_mode = xml_util_get_child_string_content_by_name(
+							device_if_node,
+							"NetworkInterface",
+							"NetworkInterfaceMode"
+							, NULL);
+
+	info->wake_on_pattern = xml_util_get_child_string_content_by_name(
+							device_if_node,
+							"NetworkInterface",
+							"WakeOnPattern", NULL);
+
+	info->wake_transport = xml_util_get_child_string_content_by_name(
+						device_if_node,
+						"NetworkInterface",
+						"WakeSupportedTransport", NULL);
+
+	if ((info->device_uuid == NULL || strlen(info->device_uuid) > 70) ||
+	    (info->mac_address == NULL || strlen(info->mac_address) != 17) ||
+	    (info->network_if_mode == NULL) || (info->ip_addresses == NULL) ||
+	    (info->wake_on_pattern == NULL) || (info->wake_transport == NULL))
+		goto on_error;
+
+	return info;
+
+on_error:
+	prv_free_network_if_info(info);
+
+	return NULL;
+}
+
+static GList *prv_network_if_info_decode(const gchar *info)
+{
+	xmlDoc *doc;
+	xmlNode *node;
+	GList *info_list = NULL;
+	dls_network_if_info_t *if_info;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	DLEYNA_LOG_DEBUG_NL();
+	DLEYNA_LOG_DEBUG("NetworkInterfaceInfo XML: %s", info);
+	DLEYNA_LOG_DEBUG_NL();
+
+	doc = xmlParseMemory(info, strlen(info) + 1);
+	if (doc == NULL) {
+		DLEYNA_LOG_WARNING("XML: invalid document");
+
+		goto on_exit;
+	}
+
+	node = xmlDocGetRootElement(doc);
+	if (node == NULL) {
+		DLEYNA_LOG_WARNING("XML: empty document");
+
+		goto on_exit;
+	}
+
+	if (node->name == NULL) {
+		DLEYNA_LOG_WARNING("XML: empty document name");
+
+		goto on_exit;
+	}
+
+	if (strcmp((char *)node->name, "NetworkInterfaceInfo")) {
+		DLEYNA_LOG_WARNING("XML: invalid document name");
+
+		goto on_exit;
+	}
+
+	for (node = node->children; node; node = node->next) {
+		if (node->name != NULL &&
+		    !strcmp((char *)node->name, "DeviceInterface")) {
+			if_info = prv_get_network_if_info(node);
+
+			if (if_info != NULL)
+				info_list = g_list_prepend(info_list, if_info);
+		}
+	}
+
+on_exit:
+	DLEYNA_LOG_DEBUG("Exit");
+
+	if (doc != NULL)
+		xmlFreeDoc(doc);
+
+	return info_list;
+}
+
+static gboolean prv_lookup_device_ctx_network_if_info(dls_device_context_t *ctx,
+						dls_network_if_info_t *info,
+						gboolean *sleeping)
+{
+	gboolean found = FALSE;
+	const gchar *udn;
+	gchar *ip_address;
+	GList *next;
+
+	next = info->ip_addresses;
+	while (next != NULL) {
+		ip_address = (gchar *)next->data;
+		if (!strcmp(ctx->ip_address, ip_address)) {
+			udn = gupnp_device_info_get_udn((GUPnPDeviceInfo *)
+							ctx->device_proxy);
+			if (!strcmp(info->device_uuid, udn)) {
+				found = TRUE;
+				if (!strcmp(info->network_if_mode, "IP-up"))
+					*sleeping = FALSE;
+				else
+					*sleeping = TRUE;
+			}
+		}
+
+		if (found)
+			break;
+
+		next = g_list_next(next);
+	}
+
+	return found;
+}
+
+static gboolean prv_get_device_sleeping_state(dls_device_t *device,
+					      const gchar *network_if_info_xml,
+					      gboolean *sleeping)
+{
+	dls_network_if_info_t *info;
+	GList *info_list;
+	GList *next;
+	unsigned int i;
+	dls_device_context_t *ctx;
+	gboolean found = FALSE;
+
+	info_list = prv_network_if_info_decode(network_if_info_xml);
+	if (info_list == NULL)
+		goto on_exit;
+
+	next = info_list;
+	while (next != NULL) {
+		info = (dls_network_if_info_t *)next->data;
+		for (i = 0; i < device->contexts->len; ++i) {
+			ctx = g_ptr_array_index(device->contexts, i);
+			found = prv_lookup_device_ctx_network_if_info(ctx,
+								      info,
+								      sleeping);
+			if (found)
+				break;
+		}
+
+		next = g_list_next(next);
+
+		if (found) {
+			prv_free_network_if_info(ctx->network_if_info);
+
+			ctx->network_if_info = info;
+
+			info_list = g_list_remove(info_list, info);
+
+			break;
+		}
+	}
+
+	g_list_free_full(info_list, (GDestroyNotify)prv_free_network_if_info);
+
+on_exit:
+
+	return found;
+}
+
+static void prv_network_interface_info_cb(GUPnPServiceProxy *proxy,
+					  const char *variable,
+					  GValue *value,
+					  gpointer user_data)
+{
+	dls_device_t *device = user_data;
+	GVariantBuilder *array;
+	GVariant *val;
+	gboolean sleeping;
+
+	if (prv_get_device_sleeping_state(device,
+					  g_value_get_string(value),
+					  &sleeping)) {
+		device->sleeping = sleeping;
+
+		array = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+		g_variant_builder_add(array, "{sv}",
+				      DLS_INTERFACE_PROP_SLEEPING,
+				      g_variant_new_boolean(sleeping));
+		val = g_variant_new("(s@a{sv}as)",
+				    DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE,
+				    g_variant_builder_end(array),
+				    NULL);
+
+		(void) dls_server_get_connector()->notify(device->connection,
+					      device->path,
+					      DLS_INTERFACE_PROPERTIES,
+					      DLS_INTERFACE_PROPERTIES_CHANGED,
+					      val,
+					      NULL);
+
+		g_variant_builder_unref(array);
+	}
+}
+
 static void prv_build_container_update_array(const gchar *root_path,
 					     const gchar *value,
 					     GVariantBuilder *builder)
@@ -599,49 +930,82 @@ static void prv_system_update_cb(GUPnPServiceProxy *proxy,
 	g_variant_builder_unref(array);
 }
 
-static gboolean prv_re_enable_subscription(gpointer user_data)
+static gboolean prv_re_enable_cd_subscription(gpointer user_data)
 {
 	dls_device_context_t *context = user_data;
 
-	context->timeout_id = 0;
+	context->cds.timeout_id = 0;
 
 	return FALSE;
 }
 
-static void prv_subscription_lost_cb(GUPnPServiceProxy *proxy,
+static void prv_cd_subscription_lost_cb(GUPnPServiceProxy *proxy,
 				     const GError *reason,
 				     gpointer user_data)
 {
 	dls_device_context_t *context = user_data;
 
-	if (!context->timeout_id) {
-		gupnp_service_proxy_set_subscribed(context->service_proxy,
-						   TRUE);
-		context->timeout_id = g_timeout_add_seconds(
+	if (!context->cds.timeout_id) {
+		gupnp_service_proxy_set_subscribed(context->cds.proxy, TRUE);
+		context->cds.timeout_id = g_timeout_add_seconds(
 						10,
-						prv_re_enable_subscription,
+						prv_re_enable_cd_subscription,
 						context);
 	} else {
-		g_source_remove(context->timeout_id);
-		gupnp_service_proxy_remove_notify(context->service_proxy,
+		g_source_remove(context->cds.timeout_id);
+		gupnp_service_proxy_remove_notify(context->cds.proxy,
 						  DLS_SYSTEM_UPDATE_VAR,
 						  prv_system_update_cb,
 						  context->device);
-		gupnp_service_proxy_remove_notify(context->service_proxy,
+		gupnp_service_proxy_remove_notify(context->cds.proxy,
 						  DLS_CONTAINER_UPDATE_VAR,
 						  prv_container_update_cb,
 						  context->device);
-		gupnp_service_proxy_remove_notify(context->service_proxy,
+		gupnp_service_proxy_remove_notify(context->cds.proxy,
 						  DLS_LAST_CHANGE_VAR,
 						  prv_last_change_cb,
 						  context->device);
 
-		context->timeout_id = 0;
-		context->subscribed = FALSE;
+		context->cds.timeout_id = 0;
+		context->cds.subscribed = FALSE;
 	}
 }
 
-void dls_device_subscribe_to_contents_change(dls_device_t *device)
+static gboolean prv_re_enable_em_subscription(gpointer user_data)
+{
+	dls_device_context_t *context = user_data;
+
+	context->cds.timeout_id = 0;
+
+	return FALSE;
+}
+
+static void prv_em_subscription_lost_cb(GUPnPServiceProxy *proxy,
+					const GError *reason,
+					gpointer user_data)
+{
+	dls_device_context_t *context = user_data;
+
+	if (!context->ems.timeout_id) {
+		gupnp_service_proxy_set_subscribed(context->ems.proxy, TRUE);
+		context->ems.timeout_id = g_timeout_add_seconds(
+						10,
+						prv_re_enable_em_subscription,
+						context);
+	} else {
+		g_source_remove(context->ems.timeout_id);
+		gupnp_service_proxy_remove_notify(
+						context->ems.proxy,
+						DLS_NETWORK_INTERFACE_INFO_VAR,
+						prv_network_interface_info_cb,
+						context->device);
+
+		context->ems.timeout_id = 0;
+		context->ems.subscribed = FALSE;
+	}
+}
+
+void dls_device_subscribe_to_service_changes(dls_device_t *device)
 {
 	dls_device_context_t *context;
 
@@ -650,31 +1014,47 @@ void dls_device_subscribe_to_contents_change(dls_device_t *device)
 	DLEYNA_LOG_DEBUG("Subscribe for events on context: %s",
 			 context->ip_address);
 
-	gupnp_service_proxy_add_notify(context->service_proxy,
-				       DLS_SYSTEM_UPDATE_VAR,
-				       G_TYPE_UINT,
-				       prv_system_update_cb,
-				       device);
+	if (context->cds.proxy) {
+		gupnp_service_proxy_add_notify(context->cds.proxy,
+					       DLS_SYSTEM_UPDATE_VAR,
+					       G_TYPE_UINT,
+					       prv_system_update_cb,
+					       device);
 
-	gupnp_service_proxy_add_notify(context->service_proxy,
-				       DLS_CONTAINER_UPDATE_VAR,
-				       G_TYPE_STRING,
-				       prv_container_update_cb,
-				       device);
+		gupnp_service_proxy_add_notify(context->cds.proxy,
+					       DLS_CONTAINER_UPDATE_VAR,
+					       G_TYPE_STRING,
+					       prv_container_update_cb,
+					       device);
 
-	gupnp_service_proxy_add_notify(context->service_proxy,
-				       DLS_LAST_CHANGE_VAR,
-				       G_TYPE_STRING,
-				       prv_last_change_cb,
-				       device);
+		gupnp_service_proxy_add_notify(context->cds.proxy,
+					       DLS_LAST_CHANGE_VAR,
+					       G_TYPE_STRING,
+					       prv_last_change_cb,
+					       device);
 
-	context->subscribed = TRUE;
-	gupnp_service_proxy_set_subscribed(context->service_proxy, TRUE);
+		context->cds.subscribed = TRUE;
+		gupnp_service_proxy_set_subscribed(context->cds.proxy, TRUE);
 
-	g_signal_connect(context->service_proxy,
-			 "subscription-lost",
-			 G_CALLBACK(prv_subscription_lost_cb),
-			 context);
+		g_signal_connect(context->cds.proxy, "subscription-lost",
+				 G_CALLBACK(prv_cd_subscription_lost_cb),
+				 context);
+	}
+
+	if (context->ems.proxy) {
+		gupnp_service_proxy_add_notify(context->ems.proxy,
+					       DLS_NETWORK_INTERFACE_INFO_VAR,
+					       G_TYPE_STRING,
+					       prv_network_interface_info_cb,
+					       device);
+
+		context->ems.subscribed = TRUE;
+		gupnp_service_proxy_set_subscribed(context->ems.proxy, TRUE);
+
+		g_signal_connect(context->ems.proxy, "subscription-lost",
+				 G_CALLBACK(prv_em_subscription_lost_cb),
+				 context);
+	}
 }
 
 static void prv_feature_list_add_feature(gchar *root_path,
@@ -1039,7 +1419,7 @@ static GUPnPServiceProxyAction *prv_subscribe(dleyna_service_task_t *task,
 	device = (dls_device_t *)dleyna_service_task_get_user_data(task);
 
 	device->construct_step++;
-	dls_device_subscribe_to_contents_change(device);
+	dls_device_subscribe_to_service_changes(device);
 
 	*failed = FALSE;
 
@@ -1141,7 +1521,7 @@ void dls_device_construct(
 	priv_t->vtable = dispatch_table;
 	priv_t->property_map = property_map;
 
-	s_proxy = context->service_proxy;
+	s_proxy = context->cds.proxy;
 
 	if (dev->construct_step < 1)
 		dleyna_service_task_add(queue_id, prv_get_search_capabilities,
@@ -1179,6 +1559,7 @@ void dls_device_construct(
 dls_device_t *dls_device_new(
 			dleyna_connector_id_t connection,
 			GUPnPDeviceProxy *proxy,
+			GUPnPDeviceInfo *device_info,
 			const gchar *ip_address,
 			const dleyna_connector_dispatch_cb_t *dispatch_table,
 			GHashTable *property_map,
@@ -1200,7 +1581,8 @@ dls_device_t *dls_device_new(
 	dev->contexts = g_ptr_array_new_with_free_func(prv_context_delete);
 	dev->path = new_path;
 
-	context = dls_device_append_new_context(dev, ip_address, proxy);
+	context = dls_device_append_new_context(dev, ip_address,
+						proxy, device_info);
 
 	dls_device_construct(dev, context, connection, dispatch_table,
 			     property_map, queue_id);
@@ -1209,12 +1591,13 @@ dls_device_t *dls_device_new(
 }
 
 dls_device_context_t *dls_device_append_new_context(dls_device_t *device,
-						    const gchar *ip_address,
-						    GUPnPDeviceProxy *proxy)
+						  const gchar *ip_address,
+						  GUPnPDeviceProxy *proxy,
+						  GUPnPDeviceInfo *device_info)
 {
 	dls_device_context_t *context;
 
-	prv_context_new(ip_address, proxy, device, &context);
+	prv_context_new(ip_address, proxy, device_info, device, &context);
 	g_ptr_array_add(device->contexts, context);
 
 	return context;
@@ -1495,8 +1878,13 @@ void dls_device_get_children(dls_client_t *client,
 
 	context = dls_device_get_context(task->target.device, client);
 
+	cb_data->proxy = context->cds.proxy;
+
+	g_object_add_weak_pointer((G_OBJECT(context->cds.proxy)),
+				  (gpointer *)&cb_data->proxy);
+
 	cb_data->action =
-		gupnp_service_proxy_begin_action(context->service_proxy,
+		gupnp_service_proxy_begin_action(cb_data->proxy,
 						 "Browse",
 						 prv_get_children_cb,
 						 cb_data,
@@ -1516,11 +1904,6 @@ void dls_device_get_children(dls_client_t *client,
 						 "SortCriteria", G_TYPE_STRING,
 						 sort_by,
 						 NULL);
-
-	cb_data->proxy = context->service_proxy;
-
-	g_object_add_weak_pointer((G_OBJECT(context->service_proxy)),
-				  (gpointer *)&cb_data->proxy);
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
@@ -1645,7 +2028,7 @@ static void prv_get_all(GUPnPDIDLLiteParser *parser,
 	}
 }
 
-static gboolean prv_subscribed(const dls_device_t *device)
+static gboolean prv_cds_subscribed(const dls_device_t *device)
 {
 	dls_device_context_t *context;
 	unsigned int i;
@@ -1653,7 +2036,7 @@ static gboolean prv_subscribed(const dls_device_t *device)
 
 	for (i = 0; i < device->contexts->len; ++i) {
 		context = g_ptr_array_index(device->contexts, i);
-		if (context->subscribed) {
+		if (context->cds.subscribed) {
 			subscribed = TRUE;
 			break;
 		}
@@ -1712,7 +2095,7 @@ static void prv_get_system_update_id_for_prop(GUPnPServiceProxy *proxy,
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	if (prv_subscribed(device)) {
+	if (prv_cds_subscribed(device)) {
 		suid = device->system_update_id;
 
 		cb_data->task.result = g_variant_ref_sink(
@@ -1805,7 +2188,7 @@ static void prv_get_system_update_id_for_props(GUPnPServiceProxy *proxy,
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	if (prv_subscribed(device)) {
+	if (prv_cds_subscribed(device)) {
 		suid = device->system_update_id;
 
 		cb_task_data = &cb_data->ut.get_all;
@@ -2135,6 +2518,7 @@ static void prv_get_all_ms2spec_props_cb(GUPnPServiceProxy *proxy,
 		goto no_complete;
 	} else if (cb_data->task.type == DLS_TASK_GET_ALL_PROPS &&
 						cb_task_data->device_object) {
+
 		prv_get_system_update_id_for_props(proxy,
 						   cb_data->task.target.device,
 						   cb_data);
@@ -2193,7 +2577,7 @@ static void prv_get_all_ms2spec_props(dls_device_context_t *context,
 	}
 
 	cb_data->action = gupnp_service_proxy_begin_action(
-				context->service_proxy, "Browse",
+				context->cds.proxy, "Browse",
 				prv_get_all_ms2spec_props_cb, cb_data,
 				"ObjectID", G_TYPE_STRING, task->target.id,
 				"BrowseFlag", G_TYPE_STRING, "BrowseMetadata",
@@ -2203,9 +2587,9 @@ static void prv_get_all_ms2spec_props(dls_device_context_t *context,
 				"SortCriteria", G_TYPE_STRING,
 				"", NULL);
 
-	cb_data->proxy = context->service_proxy;
+	cb_data->proxy = context->cds.proxy;
 
-	g_object_add_weak_pointer((G_OBJECT(context->service_proxy)),
+	g_object_add_weak_pointer((G_OBJECT(context->cds.proxy)),
 				  (gpointer *)&cb_data->proxy);
 
 	cb_data->cancel_id = g_cancellable_connect(
@@ -2246,15 +2630,16 @@ void dls_device_get_all_props(dls_client_t *client,
 	if (!strcmp(task_data->interface_name,
 		    DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE)) {
 		if (root_object) {
-			dls_props_add_device(
-				(GUPnPDeviceInfo *)context->device_proxy,
-				task->target.device,
-				cb_task_data->vb);
-
+			dls_props_add_device((GUPnPDeviceInfo *)
+					     context->device_proxy,
+					     context->device_info,
+					     context->ems.proxy,
+					     task->target.device,
+					     cb_task_data->vb);
 			prv_get_system_update_id_for_props(
-							context->service_proxy,
-							task->target.device,
-							cb_data);
+					context->cds.proxy,
+					task->target.device,
+					cb_data);
 		} else {
 			cb_data->error =
 				g_error_new(DLEYNA_SERVER_ERROR,
@@ -2269,11 +2654,12 @@ void dls_device_get_all_props(dls_client_t *client,
 		prv_get_all_ms2spec_props(context, cb_data);
 	} else {
 		if (root_object)
-			dls_props_add_device(
-				(GUPnPDeviceInfo *)context->device_proxy,
-				task->target.device,
-				cb_task_data->vb);
-
+			dls_props_add_device((GUPnPDeviceInfo *)
+					     context->device_proxy,
+					     context->device_info,
+					     context->ems.proxy,
+					     task->target.device,
+					     cb_task_data->vb);
 		prv_get_all_ms2spec_props(context, cb_data);
 	}
 
@@ -2599,8 +2985,13 @@ static void prv_get_ms2spec_prop(dls_device_context_t *context,
 		goto on_error;
 	}
 
+	cb_data->proxy = context->cds.proxy;
+
+	g_object_add_weak_pointer((G_OBJECT(context->cds.proxy)),
+				  (gpointer *)&cb_data->proxy);
+
 	cb_data->action = gupnp_service_proxy_begin_action(
-			context->service_proxy, "Browse",
+			cb_data->proxy, "Browse",
 			prv_get_ms2spec_prop_cb,
 			cb_data,
 			"ObjectID", G_TYPE_STRING, cb_data->task.target.id,
@@ -2612,11 +3003,6 @@ static void prv_get_ms2spec_prop(dls_device_context_t *context,
 			"SortCriteria", G_TYPE_STRING,
 			"",
 			NULL);
-
-	cb_data->proxy = context->service_proxy;
-
-	g_object_add_weak_pointer((G_OBJECT(context->service_proxy)),
-				  (gpointer *)&cb_data->proxy);
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
@@ -2656,23 +3042,25 @@ void dls_device_get_prop(dls_client_t *client,
 				task_data->prop_name,
 				DLS_INTERFACE_PROP_ESV_SYSTEM_UPDATE_ID)) {
 				prv_get_system_update_id_for_prop(
-							context->service_proxy,
+							context->cds.proxy,
 							task->target.device,
 							cb_data);
 			} else if (!strcmp(
 				task_data->prop_name,
 				DLS_INTERFACE_PROP_SV_SERVICE_RESET_TOKEN)) {
 				prv_get_sr_token_for_prop(
-							context->service_proxy,
+							context->cds.proxy,
 							task->target.device,
 							cb_data);
 			} else {
 				cb_data->task.result =
 					dls_props_get_device_prop(
-						(GUPnPDeviceInfo *)
-						context->device_proxy,
-						task->target.device,
-						task_data->prop_name);
+							(GUPnPDeviceInfo *)
+							context->device_proxy,
+							context->device_info,
+							context->ems.proxy,
+							task->target.device,
+							task_data->prop_name);
 
 				if (!cb_data->task.result)
 					cb_data->error = g_error_new(
@@ -2702,7 +3090,7 @@ void dls_device_get_prop(dls_client_t *client,
 				task_data->prop_name,
 				DLS_INTERFACE_PROP_ESV_SYSTEM_UPDATE_ID)) {
 				prv_get_system_update_id_for_prop(
-							context->service_proxy,
+							context->cds.proxy,
 							task->target.device,
 							cb_data);
 				complete = TRUE;
@@ -2710,17 +3098,20 @@ void dls_device_get_prop(dls_client_t *client,
 				task_data->prop_name,
 				DLS_INTERFACE_PROP_SV_SERVICE_RESET_TOKEN)) {
 				prv_get_sr_token_for_prop(
-							context->service_proxy,
+							context->cds.proxy,
 							task->target.device,
 							cb_data);
 				complete = TRUE;
 			} else {
 				cb_data->task.result =
-						dls_props_get_device_prop(
+					dls_props_get_device_prop(
 							(GUPnPDeviceInfo *)
 							context->device_proxy,
+							context->device_info,
+							context->ems.proxy,
 							task->target.device,
 							task_data->prop_name);
+
 				if (cb_data->task.result) {
 					(void) g_idle_add(
 							dls_async_task_complete,
@@ -2919,8 +3310,13 @@ void dls_device_search(dls_client_t *client,
 
 	context = dls_device_get_context(task->target.device, client);
 
+	cb_data->proxy = context->cds.proxy;
+
+	g_object_add_weak_pointer((G_OBJECT(context->cds.proxy)),
+				  (gpointer *)&cb_data->proxy);
+
 	cb_data->action = gupnp_service_proxy_begin_action(
-			context->service_proxy, "Search",
+			cb_data->proxy, "Search",
 			prv_search_cb,
 			cb_data,
 			"ContainerID", G_TYPE_STRING, task->target.id,
@@ -2930,11 +3326,6 @@ void dls_device_search(dls_client_t *client,
 			"RequestedCount", G_TYPE_INT, task->ut.search.count,
 			"SortCriteria", G_TYPE_STRING, sort_by,
 			NULL);
-
-	cb_data->proxy = context->service_proxy;
-
-	g_object_add_weak_pointer((G_OBJECT(context->service_proxy)),
-				  (gpointer *)&cb_data->proxy);
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
@@ -3383,7 +3774,7 @@ void dls_device_browse_objects(dls_client_t *client, dls_task_t *task)
 	dleyna_task_queue_set_user_data(queue_id, task);
 
 	context = dls_device_get_context(task->target.device, client);
-	cb_data->proxy = context->service_proxy;
+	cb_data->proxy = context->cds.proxy;
 
 	cb_task_data = &cb_data->ut.browse_objects;
 	cb_task_data->queue_id = queue_id;
@@ -3391,7 +3782,7 @@ void dls_device_browse_objects(dls_client_t *client, dls_task_t *task)
 	cb_task_data->objects_id = objs;
 	cb_task_data->object_count = length;
 
-	g_object_add_weak_pointer((G_OBJECT(context->service_proxy)),
+	g_object_add_weak_pointer((G_OBJECT(context->cds.proxy)),
 				  (gpointer *)&cb_data->proxy);
 
 	cb_data->cancel_id = g_cancellable_connect(
@@ -3428,8 +3819,13 @@ void dls_device_get_resource(dls_client_t *client,
 	cb_task_data->prop_func = G_CALLBACK(prv_get_resource);
 	cb_task_data->device_object = FALSE;
 
+	cb_data->proxy = context->cds.proxy;
+
+	g_object_add_weak_pointer((G_OBJECT(context->cds.proxy)),
+				  (gpointer *)&cb_data->proxy);
+
 	cb_data->action = gupnp_service_proxy_begin_action(
-				context->service_proxy, "Browse",
+				cb_data->proxy, "Browse",
 				prv_get_all_ms2spec_props_cb, cb_data,
 				"ObjectID", G_TYPE_STRING, task->target.id,
 				"BrowseFlag", G_TYPE_STRING, "BrowseMetadata",
@@ -3438,11 +3834,6 @@ void dls_device_get_resource(dls_client_t *client,
 				"RequestedCount", G_TYPE_INT, 0,
 				"SortCriteria", G_TYPE_STRING,
 				"", NULL);
-
-	cb_data->proxy = context->service_proxy;
-
-	g_object_add_weak_pointer((G_OBJECT(context->service_proxy)),
-				  (gpointer *)&cb_data->proxy);
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
@@ -4127,17 +4518,17 @@ void dls_device_upload(dls_client_t *client,
 	DLEYNA_LOG_DEBUG("DIDL: %s", didl);
 	DLEYNA_LOG_DEBUG_NL();
 
+	cb_data->proxy = context->cds.proxy;
+
+	g_object_add_weak_pointer((G_OBJECT(context->cds.proxy)),
+				  (gpointer *)&cb_data->proxy);
+
 	cb_data->action = gupnp_service_proxy_begin_action(
-					context->service_proxy, "CreateObject",
+					cb_data->proxy, "CreateObject",
 					prv_create_object_upload_cb, cb_data,
 					"ContainerID", G_TYPE_STRING, parent_id,
 					"Elements", G_TYPE_STRING, didl,
 					NULL);
-
-	cb_data->proxy = context->service_proxy;
-
-	g_object_add_weak_pointer((G_OBJECT(context->service_proxy)),
-				  (gpointer *)&cb_data->proxy);
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
@@ -4280,16 +4671,16 @@ void dls_device_delete_object(dls_client_t *client,
 
 	context = dls_device_get_context(task->target.device, client);
 
+	cb_data->proxy = context->cds.proxy;
+
+	g_object_add_weak_pointer((G_OBJECT(context->cds.proxy)),
+				  (gpointer *)&cb_data->proxy);
+
 	cb_data->action = gupnp_service_proxy_begin_action(
-				context->service_proxy, "DestroyObject",
+				cb_data->proxy, "DestroyObject",
 				prv_destroy_object_cb, cb_data,
 				"ObjectID", G_TYPE_STRING, task->target.id,
 				NULL);
-
-	cb_data->proxy = context->service_proxy;
-
-	g_object_add_weak_pointer((G_OBJECT(context->service_proxy)),
-				  (gpointer *)&cb_data->proxy);
 
 	cb_data->cancel_id = g_cancellable_connect(cb_data->cancellable,
 					G_CALLBACK(dls_async_task_cancelled_cb),
@@ -4322,17 +4713,17 @@ void dls_device_create_container(dls_client_t *client,
 
 	DLEYNA_LOG_DEBUG("DIDL: %s", didl);
 
+	cb_data->proxy = context->cds.proxy;
+
+	g_object_add_weak_pointer((G_OBJECT(context->cds.proxy)),
+				  (gpointer *)&cb_data->proxy);
+
 	cb_data->action = gupnp_service_proxy_begin_action(
-					context->service_proxy, "CreateObject",
+					cb_data->proxy, "CreateObject",
 					prv_create_container_cb, cb_data,
 					"ContainerID", G_TYPE_STRING, parent_id,
 					"Elements", G_TYPE_STRING, didl,
 					NULL);
-
-	cb_data->proxy = context->service_proxy;
-
-	g_object_add_weak_pointer((G_OBJECT(context->service_proxy)),
-				  (gpointer *)&cb_data->proxy);
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
@@ -4670,8 +5061,13 @@ void dls_device_update_object(dls_client_t *client,
 
 	context = dls_device_get_context(task->target.device, client);
 
+	cb_data->proxy = context->cds.proxy;
+
+	g_object_add_weak_pointer((G_OBJECT(context->cds.proxy)),
+				  (gpointer *)&cb_data->proxy);
+
 	cb_data->action = gupnp_service_proxy_begin_action(
-				context->service_proxy, "Browse",
+				cb_data->proxy, "Browse",
 				prv_update_object_browse_cb, cb_data,
 				"ObjectID", G_TYPE_STRING, task->target.id,
 				"BrowseFlag", G_TYPE_STRING, "BrowseMetadata",
@@ -4680,11 +5076,6 @@ void dls_device_update_object(dls_client_t *client,
 				"RequestedCount", G_TYPE_INT, 0,
 				"SortCriteria", G_TYPE_STRING,
 				"", NULL);
-
-	cb_data->proxy = context->service_proxy;
-
-	g_object_add_weak_pointer((G_OBJECT(context->service_proxy)),
-				  (gpointer *)&cb_data->proxy);
 
 	cb_data->cancel_id = g_cancellable_connect(cb_data->cancellable,
 					G_CALLBACK(dls_async_task_cancelled_cb),
@@ -4750,8 +5141,13 @@ void dls_device_get_object_metadata(dls_client_t *client,
 
 	context = dls_device_get_context(task->target.device, client);
 
+	cb_data->proxy = context->cds.proxy;
+
+	g_object_add_weak_pointer((G_OBJECT(context->cds.proxy)),
+				  (gpointer *)&cb_data->proxy);
+
 	cb_data->action = gupnp_service_proxy_begin_action(
-				context->service_proxy, "Browse",
+				cb_data->proxy, "Browse",
 				prv_get_object_metadata_cb, cb_data,
 				"ObjectID", G_TYPE_STRING, task->target.id,
 				"BrowseFlag", G_TYPE_STRING, "BrowseMetadata",
@@ -4760,11 +5156,6 @@ void dls_device_get_object_metadata(dls_client_t *client,
 				"RequestedCount", G_TYPE_INT, 0,
 				"SortCriteria", G_TYPE_STRING, "",
 				NULL);
-
-	cb_data->proxy = context->service_proxy;
-
-	g_object_add_weak_pointer((G_OBJECT(context->service_proxy)),
-				  (gpointer *)&cb_data->proxy);
 
 	cb_data->cancel_id = g_cancellable_connect(cb_data->cancellable,
 					G_CALLBACK(dls_async_task_cancelled_cb),
@@ -4852,17 +5243,17 @@ void dls_device_create_reference(dls_client_t *client,
 
 	context = dls_device_get_context(task->target.device, client);
 
+	cb_data->proxy = context->cds.proxy;
+
+	g_object_add_weak_pointer((G_OBJECT(context->cds.proxy)),
+				  (gpointer *)&cb_data->proxy);
+
 	cb_data->action = gupnp_service_proxy_begin_action(
-				context->service_proxy, "CreateReference",
+				cb_data->proxy, "CreateReference",
 				prv_create_reference_cb, cb_data,
 				"ContainerID", G_TYPE_STRING, task->target.id,
 				"ObjectID", G_TYPE_STRING, i_id,
 				NULL);
-
-	cb_data->proxy = context->service_proxy;
-
-	g_object_add_weak_pointer((G_OBJECT(context->service_proxy)),
-				  (gpointer *)&cb_data->proxy);
 
 	cb_data->cancel_id = g_cancellable_connect(
 					cb_data->cancellable,
@@ -4949,7 +5340,6 @@ out:
 void dls_device_get_icon(dls_client_t *client,
 			 dls_task_t *task)
 {
-	GUPnPDeviceInfo *info;
 	dls_device_context_t *context;
 	dls_async_task_t *cb_data = (dls_async_task_t *)task;
 	dls_device_t *device = task->target.device;
@@ -4962,9 +5352,9 @@ void dls_device_get_icon(dls_client_t *client,
 	}
 
 	context = dls_device_get_context(device, client);
-	info = (GUPnPDeviceInfo *)context->device_proxy;
 
-	url = gupnp_device_info_get_icon_url(info, NULL, -1, -1, -1, FALSE,
+	url = gupnp_device_info_get_icon_url(context->device_info,
+					     NULL, -1, -1, -1, FALSE,
 					     &device->icon.mime_type, NULL,
 					     NULL, NULL);
 	if (url == NULL) {
@@ -5007,4 +5397,47 @@ void dls_device_get_icon(dls_client_t *client,
 end:
 
 	(void) g_idle_add(dls_async_task_complete, cb_data);
+}
+
+void dls_device_wake(dls_client_t *client, dls_task_t *task)
+{
+	dls_device_context_t *context;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_device_t *device = task->target.device;
+	dls_network_if_info_t *info;
+	GList *next;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	context = dls_device_get_context(device, client);
+
+	if ((context->ems.proxy == NULL) ||
+	    (context->network_if_info == NULL)) {
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_NOT_SUPPORTED,
+					     "WOL is not supported");
+		goto end;
+	}
+
+	info = context->network_if_info;
+
+	DLEYNA_LOG_DEBUG("MacAddress = %s", info->mac_address);
+	DLEYNA_LOG_DEBUG("DeviceUUID = %s", info->device_uuid);
+	DLEYNA_LOG_DEBUG("NetworkInterfaceMode = %s", info->network_if_mode);
+	DLEYNA_LOG_DEBUG("WakeOnPattern = %s", info->wake_on_pattern);
+	DLEYNA_LOG_DEBUG("WakeSupportedTransport = %s", info->wake_transport);
+
+	next = info->ip_addresses;
+	while (next != NULL) {
+		DLEYNA_LOG_DEBUG("IpAddress = %s", (gchar *)next->data);
+
+		next = g_list_next(next);
+	}
+
+	DLEYNA_LOG_DEBUG("context IpAddress = %s", context->ip_address);
+
+end:
+	(void) g_idle_add(dls_async_task_complete, cb_data);
+
+	DLEYNA_LOG_DEBUG("Exit");
 }

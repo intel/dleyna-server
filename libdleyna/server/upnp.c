@@ -38,6 +38,8 @@
 #include "sort.h"
 #include "upnp.h"
 
+#define DLS_DMS_DEVICE_TYPE "urn:schemas-upnp-org:device:MediaServer:"
+
 struct dls_upnp_t_ {
 	dleyna_connector_id_t connection;
 	const dleyna_connector_dispatch_cb_t *interface_info;
@@ -47,8 +49,8 @@ struct dls_upnp_t_ {
 	dls_upnp_callback_t lost_server;
 	GUPnPContextManager *context_manager;
 	void *user_data;
-	GHashTable *server_udn_map;
-	GHashTable *server_uc_map;
+	GHashTable *device_udn_map;
+	GHashTable *device_uc_map;
 	guint counter;
 };
 
@@ -84,13 +86,13 @@ static void prv_device_chain_end(gboolean cancelled, gpointer data)
 		goto on_clear;
 
 	DLEYNA_LOG_DEBUG("Notify new server available: %s", device->path);
-	g_hash_table_insert(priv_t->upnp->server_udn_map, g_strdup(priv_t->udn),
+	g_hash_table_insert(priv_t->upnp->device_udn_map, g_strdup(priv_t->udn),
 			    device);
 	priv_t->upnp->found_server(device->path, priv_t->upnp->user_data);
 
 on_clear:
 
-	g_hash_table_remove(priv_t->upnp->server_uc_map, priv_t->udn);
+	g_hash_table_remove(priv_t->upnp->device_uc_map, priv_t->udn);
 
 	if (cancelled)
 		dls_device_delete(device);
@@ -106,7 +108,7 @@ static void prv_device_context_switch_end(gboolean cancelled, gpointer data)
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	g_hash_table_remove(priv_t->upnp->server_uc_map, priv_t->udn);
+	g_hash_table_remove(priv_t->upnp->device_uc_map, priv_t->udn);
 	prv_device_new_free(priv_t);
 
 	DLEYNA_LOG_DEBUG("Exit");
@@ -146,10 +148,49 @@ static void prv_update_device_context(prv_device_new_ct_t *priv_t,
 	priv_t->queue_id = queue_id;
 	priv_t->device = device;
 
-	g_hash_table_insert(upnp->server_uc_map, g_strdup(udn), priv_t);
+	g_hash_table_insert(upnp->device_uc_map, g_strdup(udn), priv_t);
 }
 
-static void prv_server_available_cb(GUPnPControlPoint *cp,
+static GUPnPDeviceInfo *prv_lookup_dms_child_device(GUPnPDeviceInfo *proxy)
+{
+	GList *child_devices;
+	GList *next;
+	const gchar *device_type;
+	GUPnPDeviceInfo *info = NULL;
+	GUPnPDeviceInfo *child_info = NULL;
+
+	child_devices = gupnp_device_info_list_device_types(proxy);
+
+	next = child_devices;
+	while (next != NULL) {
+		device_type = (gchar *)next->data;
+
+		child_info = gupnp_device_info_get_device(proxy, device_type);
+
+		if (g_str_has_prefix(device_type, DLS_DMS_DEVICE_TYPE)) {
+			break;
+		} else {
+			info = prv_lookup_dms_child_device(child_info);
+
+			g_object_unref(child_info);
+			child_info = NULL;
+
+			if (info != NULL) {
+				child_info = info;
+
+				break;
+			}
+		}
+
+		next = g_list_next(next);
+	}
+
+	g_list_free_full(child_devices, (GDestroyNotify)g_free);
+
+	return child_info;
+}
+
+static void prv_device_available_cb(GUPnPControlPoint *cp,
 				    GUPnPDeviceProxy *proxy,
 				    gpointer user_data)
 {
@@ -161,8 +202,11 @@ static void prv_server_available_cb(GUPnPControlPoint *cp,
 	const dleyna_task_queue_key_t *queue_id;
 	unsigned int i;
 	prv_device_new_ct_t *priv_t;
+	GUPnPDeviceInfo *device_proxy = (GUPnPDeviceInfo *)proxy;
+	GUPnPDeviceInfo *device_info = NULL;
+	const gchar *device_type;
 
-	udn = gupnp_device_info_get_udn((GUPnPDeviceInfo *)proxy);
+	udn = gupnp_device_info_get_udn(device_proxy);
 
 	ip_address = gupnp_context_get_host_ip(
 		gupnp_control_point_get_context(cp));
@@ -173,10 +217,21 @@ static void prv_server_available_cb(GUPnPControlPoint *cp,
 	DLEYNA_LOG_DEBUG("UDN %s", udn);
 	DLEYNA_LOG_DEBUG("IP Address %s", ip_address);
 
-	device = g_hash_table_lookup(upnp->server_udn_map, udn);
+	device_type = gupnp_device_info_get_device_type(device_proxy);
+
+	if (!g_str_has_prefix(device_type, DLS_DMS_DEVICE_TYPE)) {
+		device_info = prv_lookup_dms_child_device(device_proxy);
+
+		if (device_info == NULL)
+			goto on_error;
+	} else {
+		device_info = device_proxy;
+	}
+
+	device = g_hash_table_lookup(upnp->device_udn_map, udn);
 
 	if (!device) {
-		priv_t = g_hash_table_lookup(upnp->server_uc_map, udn);
+		priv_t = g_hash_table_lookup(upnp->device_uc_map, udn);
 
 		if (priv_t)
 			device = priv_t->device;
@@ -188,7 +243,10 @@ static void prv_server_available_cb(GUPnPControlPoint *cp,
 
 		queue_id = prv_create_device_queue(&priv_t);
 
-		device = dls_device_new(upnp->connection, proxy, ip_address,
+		device = dls_device_new(upnp->connection,
+					proxy,
+					device_info,
+					ip_address,
 					upnp->interface_info,
 					upnp->property_map, upnp->counter,
 					queue_id);
@@ -208,8 +266,10 @@ static void prv_server_available_cb(GUPnPControlPoint *cp,
 
 		if (i == device->contexts->len) {
 			DLEYNA_LOG_DEBUG("Adding Context");
-			(void) dls_device_append_new_context(device, ip_address,
-							     proxy);
+			(void) dls_device_append_new_context(device,
+							     ip_address,
+							     proxy,
+							     device_info);
 		}
 
 		DLEYNA_LOG_DEBUG_NL();
@@ -220,17 +280,17 @@ on_error:
 	return;
 }
 
-static gboolean prv_subscribe_to_contents_change(gpointer user_data)
+static gboolean prv_subscribe_to_service_changes(gpointer user_data)
 {
 	dls_device_t *device = user_data;
 
 	device->timeout_id = 0;
-	dls_device_subscribe_to_contents_change(device);
+	dls_device_subscribe_to_service_changes(device);
 
 	return FALSE;
 }
 
-static void prv_server_unavailable_cb(GUPnPControlPoint *cp,
+static void prv_device_unavailable_cb(GUPnPControlPoint *cp,
 				      GUPnPDeviceProxy *proxy,
 				      gpointer user_data)
 {
@@ -259,10 +319,10 @@ static void prv_server_unavailable_cb(GUPnPControlPoint *cp,
 	DLEYNA_LOG_DEBUG("UDN %s", udn);
 	DLEYNA_LOG_DEBUG("IP Address %s", ip_address);
 
-	device = g_hash_table_lookup(upnp->server_udn_map, udn);
+	device = g_hash_table_lookup(upnp->device_udn_map, udn);
 
 	if (!device) {
-		priv_t = g_hash_table_lookup(upnp->server_uc_map, udn);
+		priv_t = g_hash_table_lookup(upnp->device_uc_map, udn);
 
 		if (priv_t) {
 			device = priv_t->device;
@@ -284,7 +344,7 @@ static void prv_server_unavailable_cb(GUPnPControlPoint *cp,
 	if (i >= device->contexts->len)
 		goto on_error;
 
-	subscribed = context->subscribed;
+	subscribed = (context->cds.subscribed || context->ems.subscribed);
 	if (under_construction)
 		construction_ctx = !strcmp(context->ip_address,
 					   priv_t->ip_address);
@@ -295,7 +355,7 @@ static void prv_server_unavailable_cb(GUPnPControlPoint *cp,
 		if (!under_construction) {
 			DLEYNA_LOG_DEBUG("Last Context lost. Delete device");
 			upnp->lost_server(device->path, upnp->user_data);
-			g_hash_table_remove(upnp->server_udn_map, udn);
+			g_hash_table_remove(upnp->device_udn_map, udn);
 		} else {
 			DLEYNA_LOG_WARNING(
 				"Device under construction. Cancelling");
@@ -307,7 +367,7 @@ static void prv_server_unavailable_cb(GUPnPControlPoint *cp,
 			"Device under construction. Switching context");
 
 		/* Cancel previous contruction task chain */
-		g_hash_table_remove(priv_t->upnp->server_uc_map, priv_t->udn);
+		g_hash_table_remove(priv_t->upnp->device_uc_map, priv_t->udn);
 		dleyna_task_queue_set_finally(priv_t->queue_id,
 					      prv_device_context_switch_end);
 		dleyna_task_processor_cancel_queue(priv_t->queue_id);
@@ -330,7 +390,7 @@ static void prv_server_unavailable_cb(GUPnPControlPoint *cp,
 		DLEYNA_LOG_DEBUG("Subscribe on new context");
 
 		device->timeout_id = g_timeout_add_seconds(1,
-				prv_subscribe_to_contents_change,
+				prv_subscribe_to_service_changes,
 				device);
 	}
 
@@ -351,13 +411,13 @@ static void prv_on_context_available(GUPnPContextManager *context_manager,
 
 	cp = gupnp_control_point_new(
 		context,
-		"urn:schemas-upnp-org:device:MediaServer:1");
+		"upnp:rootdevice");
 
 	g_signal_connect(cp, "device-proxy-available",
-			 G_CALLBACK(prv_server_available_cb), upnp);
+			 G_CALLBACK(prv_device_available_cb), upnp);
 
 	g_signal_connect(cp, "device-proxy-unavailable",
-			 G_CALLBACK(prv_server_unavailable_cb), upnp);
+			 G_CALLBACK(prv_device_unavailable_cb), upnp);
 
 	gssdp_resource_browser_set_active(GSSDP_RESOURCE_BROWSER(cp), TRUE);
 	gupnp_context_manager_manage_control_point(upnp->context_manager, cp);
@@ -378,11 +438,11 @@ dls_upnp_t *dls_upnp_new(dleyna_connector_id_t connection,
 	upnp->found_server = found_server;
 	upnp->lost_server = lost_server;
 
-	upnp->server_udn_map = g_hash_table_new_full(g_str_hash, g_str_equal,
+	upnp->device_udn_map = g_hash_table_new_full(g_str_hash, g_str_equal,
 						     g_free,
 						     dls_device_delete);
 
-	upnp->server_uc_map = g_hash_table_new_full(g_str_hash, g_str_equal,
+	upnp->device_uc_map = g_hash_table_new_full(g_str_hash, g_str_equal,
 						    g_free, NULL);
 
 	dls_prop_maps_new(&upnp->property_map, &upnp->filter_map);
@@ -402,13 +462,13 @@ void dls_upnp_delete(dls_upnp_t *upnp)
 		g_object_unref(upnp->context_manager);
 		g_hash_table_unref(upnp->property_map);
 		g_hash_table_unref(upnp->filter_map);
-		g_hash_table_unref(upnp->server_udn_map);
-		g_hash_table_unref(upnp->server_uc_map);
+		g_hash_table_unref(upnp->device_udn_map);
+		g_hash_table_unref(upnp->device_uc_map);
 		g_free(upnp);
 	}
 }
 
-GVariant *dls_upnp_get_server_ids(dls_upnp_t *upnp)
+GVariant *dls_upnp_get_device_ids(dls_upnp_t *upnp)
 {
 	GVariantBuilder vb;
 	GHashTableIter iter;
@@ -420,7 +480,7 @@ GVariant *dls_upnp_get_server_ids(dls_upnp_t *upnp)
 
 	g_variant_builder_init(&vb, G_VARIANT_TYPE("ao"));
 
-	g_hash_table_iter_init(&iter, upnp->server_udn_map);
+	g_hash_table_iter_init(&iter, upnp->device_udn_map);
 	while (g_hash_table_iter_next(&iter, NULL, &value)) {
 		device = value;
 		DLEYNA_LOG_DEBUG("Have device %s", device->path);
@@ -434,9 +494,9 @@ GVariant *dls_upnp_get_server_ids(dls_upnp_t *upnp)
 	return retval;
 }
 
-GHashTable *dls_upnp_get_server_udn_map(dls_upnp_t *upnp)
+GHashTable *dls_upnp_get_device_udn_map(dls_upnp_t *upnp)
 {
-	return upnp->server_udn_map;
+	return upnp->device_udn_map;
 }
 
 void dls_upnp_get_children(dls_upnp_t *upnp, dls_client_t *client,
@@ -1088,6 +1148,21 @@ void dls_upnp_get_icon(dls_upnp_t *upnp, dls_client_t *client,
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
+void dls_upnp_wake(dls_upnp_t *upnp, dls_client_t *client,
+		   dls_task_t *task,
+		   dls_upnp_task_complete_t cb)
+{
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	cb_data->cb = cb;
+
+	dls_device_wake(client, task);
+
+	DLEYNA_LOG_DEBUG("Exit");
+}
+
 void dls_upnp_unsubscribe(dls_upnp_t *upnp)
 {
 	GHashTableIter iter;
@@ -1096,7 +1171,7 @@ void dls_upnp_unsubscribe(dls_upnp_t *upnp)
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	g_hash_table_iter_init(&iter, upnp->server_udn_map);
+	g_hash_table_iter_init(&iter, upnp->device_udn_map);
 	while (g_hash_table_iter_next(&iter, NULL, &value)) {
 		device = value;
 		dls_device_unsubscribe(device);
@@ -1131,11 +1206,11 @@ gboolean dls_upnp_device_context_exist(dls_device_t *device,
 		goto on_exit;
 
 	/* Check if the device still exist */
-	result = g_hash_table_find(upnp->server_udn_map, prv_device_find,
+	result = g_hash_table_find(upnp->device_udn_map, prv_device_find,
 				   device);
 
 	if (result == NULL)
-		if (g_hash_table_find(upnp->server_uc_map, prv_device_uc_find,
+		if (g_hash_table_find(upnp->device_uc_map, prv_device_uc_find,
 				      device) == NULL)
 			goto on_exit;
 

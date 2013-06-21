@@ -85,6 +85,7 @@ enum dls_interface_type_ {
 /* Device Properties */
 #define DLS_INTERFACE_PROP_LOCATION "Location"
 #define DLS_INTERFACE_PROP_UDN "UDN"
+#define DLS_INTERFACE_PROP_ROOT_UDN "RootUDN"
 #define DLS_INTERFACE_PROP_DEVICE_TYPE "DeviceType"
 #define DLS_INTERFACE_PROP_FRIENDLY_NAME "FriendlyName"
 #define DLS_INTERFACE_PROP_MANUFACTURER "Manufacturer"
@@ -96,6 +97,7 @@ enum dls_interface_type_ {
 #define DLS_INTERFACE_PROP_SERIAL_NUMBER "SerialNumber"
 #define DLS_INTERFACE_PROP_PRESENTATION_URL "PresentationURL"
 #define DLS_INTERFACE_PROP_ICON_URL "IconURL"
+#define DLS_INTERFACE_PROP_SLEEPING "Sleeping"
 #define DLS_INTERFACE_PROP_SV_DLNA_CAPABILITIES "DLNACaps"
 #define DLS_INTERFACE_PROP_SV_SEARCH_CAPABILITIES "SearchCaps"
 #define DLS_INTERFACE_PROP_SV_SORT_CAPABILITIES "SortCaps"
@@ -215,6 +217,7 @@ enum dls_interface_type_ {
 #define DLS_INTERFACE_ICON_BYTES "Bytes"
 #define DLS_INTERFACE_MIME_TYPE "MimeType"
 #define DLS_INTERFACE_REQ_MIME_TYPE "RequestedMimeType"
+#define DLS_INTERFACE_WAKE "Wake"
 
 #define DLS_INTERFACE_GET_METADATA "GetMetaData"
 #define DLS_INTERFACE_METADATA "MetaData"

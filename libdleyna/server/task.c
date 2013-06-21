@@ -97,6 +97,8 @@ static void prv_delete(dls_task_t *task)
 		g_free(task->ut.get_icon.resolution);
 		g_free(task->ut.get_icon.mime_type);
 		break;
+	case DLS_TASK_WAKE:
+		break;
 	default:
 		break;
 	}
@@ -654,6 +656,17 @@ dls_task_t *dls_task_get_icon_new(dleyna_connector_msg_id_t invocation,
 		      &task->ut.get_icon.resolution);
 
 finished:
+
+	return task;
+}
+
+dls_task_t *dls_task_wake_new(dleyna_connector_msg_id_t invocation,
+			      const gchar *path, GError **error)
+{
+	dls_task_t *task;
+
+	task = prv_m2spec_task_new(DLS_TASK_WAKE, invocation, path,
+				   NULL, error, FALSE);
 
 	return task;
 }

@@ -715,7 +715,9 @@ static GVariant *prv_get_artists_prop(GList *list)
 	return g_variant_builder_end(&vb);
 }
 
-void dls_props_add_device(GUPnPDeviceInfo *proxy,
+void dls_props_add_device(GUPnPDeviceInfo *root_proxy,
+			  GUPnPDeviceInfo *proxy,
+			  GUPnPServiceProxy *ems_proxy,
 			  const dls_device_t *device,
 			  GVariantBuilder *vb)
 {
@@ -728,6 +730,10 @@ void dls_props_add_device(GUPnPDeviceInfo *proxy,
 
 	prv_add_string_prop(vb, DLS_INTERFACE_PROP_UDN,
 			    gupnp_device_info_get_udn(proxy));
+
+	if (proxy != root_proxy)
+		prv_add_string_prop(vb, DLS_INTERFACE_PROP_ROOT_UDN,
+				    gupnp_device_info_get_udn(root_proxy));
 
 	prv_add_string_prop(vb, DLS_INTERFACE_PROP_DEVICE_TYPE,
 			    gupnp_device_info_get_device_type(proxy));
@@ -802,9 +808,15 @@ void dls_props_add_device(GUPnPDeviceInfo *proxy,
 		g_variant_builder_add(vb, "{sv}",
 				      DLS_INTERFACE_PROP_SV_FEATURE_LIST,
 				      device->feature_list);
+
+	if (ems_proxy != NULL)
+		prv_add_bool_prop(vb, DLS_INTERFACE_PROP_SLEEPING,
+				  device->sleeping);
 }
 
-GVariant *dls_props_get_device_prop(GUPnPDeviceInfo *proxy,
+GVariant *dls_props_get_device_prop(GUPnPDeviceInfo *root_proxy,
+				    GUPnPDeviceInfo *proxy,
+				    GUPnPServiceProxy *ems_proxy,
 				    const dls_device_t *device,
 				    const gchar *prop)
 {
@@ -818,6 +830,9 @@ GVariant *dls_props_get_device_prop(GUPnPDeviceInfo *proxy,
 		str = gupnp_device_info_get_location(proxy);
 	} else if (!strcmp(DLS_INTERFACE_PROP_UDN, prop)) {
 		str = gupnp_device_info_get_udn(proxy);
+	} else if (!strcmp(DLS_INTERFACE_PROP_ROOT_UDN, prop)) {
+		if (proxy != root_proxy)
+			str = gupnp_device_info_get_udn(root_proxy);
 	} else if (!strcmp(DLS_INTERFACE_PROP_DEVICE_TYPE, prop)) {
 		str = gupnp_device_info_get_device_type(proxy);
 	} else if (!strcmp(DLS_INTERFACE_PROP_FRIENDLY_NAME, prop)) {
@@ -900,6 +915,16 @@ GVariant *dls_props_get_device_prop(GUPnPDeviceInfo *proxy,
 			DLEYNA_LOG_DEBUG("Prop %s = %s", prop, copy);
 #endif
 		}
+	} else if (!strcmp(DLS_INTERFACE_PROP_SLEEPING, prop)) {
+		if (ems_proxy != NULL) {
+			retval = g_variant_ref_sink(
+				      g_variant_new_boolean(device->sleeping));
+		}
+
+#if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
+			DLEYNA_LOG_DEBUG("Prop %s = %s", prop,
+					 device->sleeping ? "TRUE":"FALSE");
+#endif
 	}
 
 	if (!retval) {
