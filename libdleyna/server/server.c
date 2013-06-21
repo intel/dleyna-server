@@ -150,8 +150,7 @@ static const gchar g_server_introspection[] =
 	"    <signal name='"DLS_INTERFACE_PROPERTIES_CHANGED"'>"
 	"      <arg type='s' name='"DLS_INTERFACE_INTERFACE_NAME"'/>"
 	"      <arg type='a{sv}' name='"DLS_INTERFACE_CHANGED_PROPERTIES"'/>"
-	"      <arg type='as' name='"
-	DLS_INTERFACE_INVALIDATED_PROPERTIES"'/>"
+	"      <arg type='as' name='"DLS_INTERFACE_INVALIDATED_PROPERTIES"'/>"
 	"    </signal>"
 	"  </interface>"
 	"  <interface name='"DLS_INTERFACE_MEDIA_OBJECT"'>"
@@ -468,11 +467,9 @@ static const gchar g_server_introspection[] =
 	"       access='read'/>"
 	"    <property type='s' name='"DLS_INTERFACE_PROP_MANUFACTURER"'"
 	"       access='read'/>"
-	"    <property type='s' name='"
-	DLS_INTERFACE_PROP_MANUFACTURER_URL"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_MANUFACTURER_URL"'"
 	"       access='read'/>"
-	"    <property type='s' name='"
-	DLS_INTERFACE_PROP_MODEL_DESCRIPTION"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_MODEL_DESCRIPTION"'"
 	"       access='read'/>"
 	"    <property type='s' name='"DLS_INTERFACE_PROP_MODEL_NAME"'"
 	"       access='read'/>"
@@ -983,7 +980,8 @@ on_error:
 static void prv_object_method_call(dleyna_connector_id_t conn,
 				   const gchar *sender, const gchar *object,
 				   const gchar *interface,
-				   const gchar *method, GVariant *parameters,
+				   const gchar *method,
+				   GVariant *parameters,
 				   dleyna_connector_msg_id_t invocation)
 {
 	dls_task_t *task;
@@ -1014,9 +1012,11 @@ finished:
 }
 
 static void prv_item_method_call(dleyna_connector_id_t conn,
-				 const gchar *sender, const gchar *object,
+				 const gchar *sender,
+				 const gchar *object,
 				 const gchar *interface,
-				 const gchar *method, GVariant *parameters,
+				 const gchar *method,
+				 GVariant *parameters,
 				 dleyna_connector_msg_id_t invocation)
 {
 	dls_task_t *task;
@@ -1149,9 +1149,11 @@ finished:
 }
 
 static void prv_device_method_call(dleyna_connector_id_t conn,
-				   const gchar *sender, const gchar *object,
+				   const gchar *sender,
+				   const gchar *object,
 				   const gchar *interface,
-				   const gchar *method, GVariant *parameters,
+				   const gchar *method,
+				   GVariant *parameters,
 				   dleyna_connector_msg_id_t invocation)
 {
 	dls_task_t *task;
