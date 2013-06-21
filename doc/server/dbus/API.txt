@@ -204,6 +204,9 @@ below:
 |------------------------------------------------------------------------------|
 | UDN               |     s     | m  | The Unique Device Name of the server.   |
 |------------------------------------------------------------------------------|
+| RootUDN           |     s     | o  | The Unique Device Name of the root      |
+|                   |           |    | device, if the server is a sub-device.  |
+|------------------------------------------------------------------------------|
 | FriendlyName      |     s     | m  | The friendly name of the media server.  |
 -------------------------------------------------------------------------------|
 | IconURL           |     s     | o  | A URL pointing to an icon that          |
@@ -265,7 +268,9 @@ below:
 | SystemUpdateID    |     u     | m  | An integer value that is incremenented  |
 |                   |           |    | every time changes are made to the DMS. |
 |------------------------------------------------------------------------------|
-
+| Sleeping          |     b     | o  | An boolean value which represents the   |
+|                   |           |    | server sleeping state.                  |
+|------------------------------------------------------------------------------|
 (* where m/o indicates whether the property is optional or mandatory )
 (1) A value of -1 for the srs-rt-retention-period capability denotes an
 infinite retention period.
@@ -350,6 +355,7 @@ Both RequestedMimeType and Resolution parameters are currently
 reserved for future use and should be set as an empty string.
 
 BrowseObjects(as ObjectPath, as Filter) -> aa{sv}
+
 This method returns properties of all media objects specified by the first
 parameter.  The list of properties to return is specified by the second
 parameter.
@@ -374,6 +380,10 @@ The purposes of this method are:
 2. It should be used in preference to GetAll, if an application wishes to
    retrieve a subset of an object's properties. Browse is likely to be more
    efficient than GetAll in such cases.
+
+Wake() -> void
+
+Sends a magic packet to the server to wake it up if it is in sleeping state.
 
 
 Signals:

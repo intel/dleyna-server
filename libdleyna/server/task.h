@@ -57,7 +57,8 @@ enum dls_task_type_t_ {
 	DLS_TASK_GET_ICON,
 	DLS_TASK_MANAGER_GET_ALL_PROPS,
 	DLS_TASK_MANAGER_GET_PROP,
-	DLS_TASK_MANAGER_SET_PROP
+	DLS_TASK_MANAGER_SET_PROP,
+	DLS_TASK_WAKE
 };
 typedef enum dls_task_type_t_ dls_task_type_t;
 
@@ -308,6 +309,10 @@ dls_task_t *dls_task_manager_set_prop_new(dleyna_connector_msg_id_t invocation,
 					  const gchar *path,
 					  GVariant *parameters,
 					  GError **error);
+
+dls_task_t *dls_task_wake_new(dleyna_connector_msg_id_t invocation,
+			      const gchar *path,
+			      GError **error);
 
 void dls_task_cancel(dls_task_t *task);
 

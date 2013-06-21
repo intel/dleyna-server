@@ -32,13 +32,32 @@
 #include "client.h"
 #include "props.h"
 
+typedef struct dls_network_if_info_t_ dls_network_if_info_t;
+struct dls_network_if_info_t_ {
+	gchar *system_name;
+	gchar *mac_address;
+	gchar *device_uuid;
+	gchar *network_if_mode;
+	gchar *wake_on_pattern;
+	gchar *wake_transport;
+	GList *ip_addresses;
+};
+
+typedef struct dls_service_t_ dls_service_t;
+struct dls_service_t_ {
+	GUPnPServiceProxy *proxy;
+	gboolean subscribed;
+	guint timeout_id;
+};
+
 struct dls_device_context_t_ {
 	gchar *ip_address;
 	GUPnPDeviceProxy *device_proxy;
-	GUPnPServiceProxy *service_proxy;
+	GUPnPDeviceInfo *device_info;
 	dls_device_t *device;
-	gboolean subscribed;
-	guint timeout_id;
+	dls_service_t cds;
+	dls_service_t ems;
+	dls_network_if_info_t *network_if_info;
 };
 
 typedef struct dls_device_icon_t_ dls_device_icon_t;
@@ -66,11 +85,13 @@ struct dls_device_t_ {
 	gboolean has_last_change;
 	guint construct_step;
 	dls_device_icon_t icon;
+	gboolean sleeping;
 };
 
 dls_device_context_t *dls_device_append_new_context(dls_device_t *device,
-						    const gchar *ip_address,
-						    GUPnPDeviceProxy *proxy);
+						const gchar *ip_address,
+						GUPnPDeviceProxy *proxy,
+						GUPnPDeviceInfo *device_info);
 void dls_device_delete(void *device);
 
 void dls_device_unsubscribe(void *device);
@@ -86,6 +107,7 @@ void dls_device_construct(
 dls_device_t *dls_device_new(
 			dleyna_connector_id_t connection,
 			GUPnPDeviceProxy *proxy,
+			GUPnPDeviceInfo *device_info,
 			const gchar *ip_address,
 			const dleyna_connector_dispatch_cb_t *dispatch_table,
 			GHashTable *filter_map,
@@ -120,7 +142,7 @@ void dls_device_get_resource(dls_client_t *client,
 			     dls_task_t *task,
 			     const gchar *upnp_filter);
 
-void dls_device_subscribe_to_contents_change(dls_device_t *device);
+void dls_device_subscribe_to_service_changes(dls_device_t *device);
 
 void dls_device_upload(dls_client_t *client,
 		       dls_task_t *task, const gchar *parent_id);
@@ -151,5 +173,8 @@ void dls_device_create_reference(dls_client_t *client,
 
 void dls_device_get_icon(dls_client_t *client,
 			 dls_task_t *task);
+
+void dls_device_wake(dls_client_t *client,
+		     dls_task_t *task);
 
 #endif /* DLS_DEVICE_H__ */

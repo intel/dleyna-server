@@ -191,6 +191,9 @@ class Device(Container):
         bytes, mime = self._deviceIF.GetIcon(mime_type, resolution)
         print "Icon mime type: " + mime
 
+    def wake(self):
+        return self._deviceIF.Wake()
+
 class UPNP(object):
 
     def __init__(self):

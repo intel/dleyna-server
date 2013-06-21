@@ -43,6 +43,7 @@ PKG_CHECK_MODULES([GUPNP], [gupnp-1.0 >= 0.20.3])
 PKG_CHECK_MODULES([GUPNPAV], [gupnp-av-1.0 >= 0.11.5])
 PKG_CHECK_MODULES([GUPNPDLNA], [gupnp-dlna-2.0 >= 0.9.4])
 PKG_CHECK_MODULES([SOUP], [libsoup-2.4 >= 2.28.2])
+PKG_CHECK_MODULES([LIBXML], [libxml-2.0])
 
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h string.h syslog.h])

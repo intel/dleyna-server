@@ -10,6 +10,7 @@ AM_CFLAGS =	$(GLIB_CFLAGS)				\
 		$(GUPNPAV_CFLAGS)			\
 		$(GUPNPDLNA_CFLAGS)			\
 		$(SOUP_CFLAGS)				\
+		$(LIBXML_CFLAGS)			\
 		-include config.h
 
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
@@ -31,7 +32,8 @@ libdleyna_server_1_0_la_SOURCES =	$(libdleyna_serverinc_HEADERS)	\
 					search.c	 		\
 					sort.c		 		\
 					task.c		 		\
-					upnp.c
+					upnp.c				\
+					xml-util.c
 
 libdleyna_server_1_0_la_LIBADD =	$(GLIB_LIBS)		\
 					$(GIO_LIBS)		\
@@ -40,7 +42,8 @@ libdleyna_server_1_0_la_LIBADD =	$(GLIB_LIBS)		\
 					$(GUPNP_LIBS)		\
 					$(GUPNPAV_LIBS) 	\
 					$(GUPNPDLNA_LIBS) 	\
-					$(SOUP_LIBS)
+					$(SOUP_LIBS)		\
+					$(LIBXML_LIBS)
 
 MAINTAINERCLEANFILES =	Makefile.in		\
 			aclocal.m4		\
@@ -69,7 +72,8 @@ EXTRA_DIST = 	$(sysconf_DATA)			\
 		server.h			\
 		sort.h				\
 		task.h				\
-		upnp.h
+		upnp.h				\
+		xml-util.h
 
 CLEANFILES = $(pkgconfig_DATA) dleyna-server-service.conf
 DISTCLEANFILES = $(pkgconfig_DATA) dleyna-server-service.conf
