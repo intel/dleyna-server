@@ -2872,7 +2872,7 @@ static gchar *prv_create_new_container_didl(const gchar *parent_id,
 	GUPnPOCMFlags flags;
 	gchar *retval = NULL;
 
-	actual_type = dls_props_media_spec_to_upnp_class_ex(
+	actual_type = dls_props_media_spec_ex_to_upnp_class(
 						task->ut.create_container.type);
 	if (!actual_type)
 		goto on_error;
@@ -2901,7 +2901,7 @@ static gchar *prv_create_new_container_didl(const gchar *parent_id,
 
 	g_variant_iter_init(&iter, task->ut.create_container.child_types);
 	while ((child_type = g_variant_iter_next_value(&iter))) {
-		actual_type = dls_props_media_spec_to_upnp_class_ex(
+		actual_type = dls_props_media_spec_ex_to_upnp_class(
 					g_variant_get_string(child_type, NULL));
 		if (actual_type != NULL) {
 			gupnp_didl_lite_container_add_create_class(container,
@@ -3839,7 +3839,7 @@ static gchar *prv_get_new_xml_fragment(GUPnPDIDLLiteObject *object,
 
 		retval = gupnp_didl_lite_object_get_date_xml_string(object);
 	} else if (mask & DLS_UPNP_MASK_PROP_TYPE_EX) {
-		upnp_class = dls_props_media_spec_to_upnp_class_ex(
+		upnp_class = dls_props_media_spec_ex_to_upnp_class(
 			g_variant_get_string(value, NULL));
 		if (!upnp_class)
 			goto on_error;

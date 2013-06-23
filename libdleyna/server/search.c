@@ -86,7 +86,7 @@ gchar *dls_search_translate_search_string(GHashTable *filter_map,
 
 			value[strlen(value) - 1] = 0;
 			translated_type_ex =
-				dls_props_media_spec_to_upnp_class_ex(
+				dls_props_media_spec_ex_to_upnp_class(
 					value + 1);
 			if (!translated_type_ex)
 				goto on_error;

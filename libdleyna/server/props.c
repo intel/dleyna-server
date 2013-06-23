@@ -1170,7 +1170,7 @@ on_error:
 	return retval;
 }
 
-gchar *dls_props_media_spec_to_upnp_class_ex(const gchar *m2spec_class)
+gchar *dls_props_media_spec_ex_to_upnp_class(const gchar *m2spec_class)
 {
 	gchar *retval = NULL;
 	const gchar *basic_type;

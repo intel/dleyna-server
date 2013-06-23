@@ -135,7 +135,7 @@ GVariant *dls_props_get_item_prop(const gchar *prop, const gchar *root_path,
 
 const gchar *dls_props_media_spec_to_upnp_class(const gchar *m2spec_class);
 
-gchar *dls_props_media_spec_to_upnp_class_ex(const gchar *m2spec_class);
+gchar *dls_props_media_spec_ex_to_upnp_class(const gchar *m2spec_class);
 
 const gchar *dls_props_upnp_class_to_media_spec(const gchar *upnp_class);
 
