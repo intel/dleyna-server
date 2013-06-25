@@ -119,12 +119,13 @@ need  non-local  addresses  to  pass  to renderers  running  on  other
 devices.   DMCs should  therefore call  this function  with  the value
 FALSE before requesting any URLs from any servers.
 
-Rescan()
+Rescan() -> void
 
-Calls a rescan to be performed by gupnp library to make sure every server is
-still alive. Every server that hasn't responded after a certain amount of
-time (see gupnp_context_manager_rescan_control_points() and
-gssdp_resource_browser_rescan() code) is considered as unavailable.
+Forces a rescan for DMSs on the local area network.  This is useful to
+detect DMSs which have shut down without sending BYE messages or to
+discover new DMSs which for some reason were not detected when either
+they, or the device on which dLeyna-server runs, was started or joined
+the network.  New in version 0.0.2.
 
 
 Signals:
@@ -249,7 +250,7 @@ is emitted when this property changes.
 Methods:
 ---------
 
-The com.intel.dLeynaServer.MediaDevice interface currently exposes six methods:
+The com.intel.dLeynaServer.MediaDevice interface currently exposes seven methods:
 
 UploadToAnyContainer(s DisplayName, s FilePath) -> (u UploadId, o ObjectPath)
 
@@ -446,7 +447,7 @@ additional values for the Type property.
 Additional Values for the Type Property:
 ----------------------------------------
 
-The MediaServer2Spec type property can be set to one of only seven
+The MediaServer2Spec Type property can be set to one of only seven
 possible values:  'container', 'video', 'video.movie', 'audio',
 'music', 'image' or 'image.photo'.  This causes a number of problems
 for dLeyna-server.  First, there is only one value for container, so
@@ -507,13 +508,13 @@ Additional Properties:
 |                 |       |      |  For objects where this is not the case, |
 |                 |       |      |  e.g., an album, the TypeEx value is     |
 |                 |       |      |  formed by removing the                  |
-|                 |       |      |  "object."  the prefix from the upnp     |
+|                 |       |      |  "object." prefix from the UPnP          |
 |                 |       |      |  class. For example, the TypeEx value    |
-|                 |       |      |  for the upnp class,                     |
+|                 |       |      |  for the UPnP class,                     |
 |                 |       |      |  object.container.playlistContainer is   |
 |                 |       |      |  container.playlistContainer.            |
 |                 |       |      |                                          |
-|                 |       |      |  Since version 0.2.0.                    |
+|                 |       |      |  New in version 0.2.0.                   |
 |---------------------------------------------------------------------------|
 
 
@@ -540,7 +541,10 @@ Only the following properties can be updated: 'Date', 'DisplayName',
 
 GetMetaData() -> s
 
-Returns the object meta data information in DIDL-Lite XML format.
+Returns the object meta data information in DIDL-Lite XML format.  This
+is useful when writing Digital Media Controllers. The controllers can
+pass this information to the DMR which can use it to determine the server
+side streaming options for the object. New in v0.0.2.
 
 
 org.gnome.MediaContainer2
@@ -612,12 +616,13 @@ Additional properties unsupported by org.gnome.MediaContainer2
 |                        |      |      |  since the last initialization     |
 |---------------------------------------------------------------------------|
 | Resources              |aa{sv}|  o   |  Returns the set of resources      |
-|                        |      |      |  associated with a container       |
+|                        |      |      |  associated with a container.      |
+|                        |      |      |  New in v0.0.2                     |
 |---------------------------------------------------------------------------|
 | DLNAConversion         | a{sb}|  o   |                                    |
 | DLNAFlags              | a{sb}|  o   |                                    |
 | DLNAOperation          | a{sb}|  o   |  See "Container properties"        |
-| DLNAProfile            |  s   |  o   |  paragraph below.                  |
+| DLNAProfile            |  s   |  o   |  paragraph below. New in v0.0.2    |
 | MIMEType               |  s   |  o   |                                    |
 | Size                   |  x   |  o   |                                    |
 | UpdateCount            |  u   |  o   |                                    |
@@ -729,7 +734,9 @@ The path of the newly created object is returned.
 
 The CreateReference method creates a reference in the container to the object
 identified by the ObjectPath parameter. This method returns the d-Bus path of
-the newly created reference.
+the newly created reference.  CreateReference is useful when creating
+server side playlists.  CreateContainer can be used to create a new playlist,
+and CreateReference can be used to add items to that playlist.
 
 The GetCompatibleResources method: see description in MediaItem2.
 
@@ -877,8 +884,16 @@ the names of the org.gnome.UPnP.MediaItem2 properties to which they
 correspond, e.g., MIMEType, Size.
 However, four additional properties are included.
 
-Additional properties:
-----------------------
+Please note that if you want the resource properties to be included in the
+results of a call to one of the List or the Search functions, and you
+are explicitly filtering properties, you must include "Resources" in
+the filter array.  The filter parameter also applies to the contents
+of the returned resources.  So if you specify a filter of ["MIMEType",
+"URL", "Resources"] the dictionaries in the resources array will contain
+only these properties.
+
+dLeyna-server defines four additional resource properties.  These have been
+added to improve our DLNA support.
 
 |---------------------------------------------------------------------------|
 |     Name        | Type  | m/o* |              Description                 |
@@ -886,8 +901,10 @@ Additional properties:
 | DLNAConversion  | a{sb} |  o   |  Indicates whether the content of the    |
 |                 |       |      |  Resource is in original source format   |
 |                 |       |      |  or if the content is transcoded.        |
-|                 |       |      |  There are 1 key: Transcoded.            |
+|                 |       |      |  There is 1 key: Transcoded.             |
 |                 |       |      |  See Reference (4): DLNA.ORG_CI.         |
+|                 |       |      |                                          |
+|                 |       |      |  New in v0.0.2                           |
 |---------------------------------------------------------------------------|
 | DLNAFlags       | a{sb} |  o   |  A dictionary of boolean values          |
 |                 |       |      |  indicating the values of the various    |
@@ -898,25 +915,23 @@ Additional properties:
 |                 |       |      |  RTSPPause, StreamingTM, InteractiveTM   |
 |                 |       |      |  BackgroundTM, ConnectionStall, DLNA_V15 |
 |                 |       |      |  See Reference (5): DLNA.ORG_FLAGS.      |
+|                 |       |      |                                          |
+|                 |       |      |  New in v0.0.2                           |
 |---------------------------------------------------------------------------|
 | DLNAOperation   | a{sb} |  o   |  A dictionary of boolean values          |
 |                 |       |      |  indicating the values of the various    |
 |                 |       |      |  DLNA Operation attributes. There are 2  |
 |                 |       |      |  keys: RangeSeek and TimeSeek.           |
 |                 |       |      |  See Reference (6): DLNA.ORG_OP.         |
+|                 |       |      |                                          |
+|                 |       |      |  New in v0.0.2                           |
 |---------------------------------------------------------------------------|
 | UpdateCount     |  u    |  o   |  Contains the number of times the        |
 |                 |       |      |  implementation detects that a change    |
 |                 |       |      |  was made to the resource.               |
+|                 |       |      |                                          |
+|                 |       |      |  New in v0.0.2                           |
 |---------------------------------------------------------------------------|
-
-Please note that if you want these properties to be included in the
-results of a call to one of the List or the Search functions, and you
-are explicitly filtering properties, you must include "Resource" in
-the filter array.  The filter parameter also applies to the contents
-of the returned resources.  So if you specify a filter of ["MIMEType",
-"URL"] the dictionaries in the resources array will contain only these
-properties.
 
 
 GetCompatibleResource
@@ -952,23 +967,29 @@ below:
 |---------------------------------------------------------------------------|
 |     Name        | Type | m/o* |              Description                  |
 |---------------------------------------------------------------------------|
-| AlbumArtURL     |  s   |  o   | Contains the URL of the album art         |
-|                 |      |      |  associated with an item                  |
+| AlbumArtURL     |  s    |  o   | Contains the URL of the album art        |
+|                 |       |      |  associated with an item                 |
 |---------------------------------------------------------------------------|
-| RefPath         |  o   |  o   | The presence of this property indicates   |
-|                 |      |      |  that the item is a reference item that   |
-|                 |      |      |  references another item located elsewhere|
-|                 |      |      |  in the DMS's directory structure. The    |
-|                 |      |      |  value of this property is the path of    |
-|                 |      |      |  the referenced item.                     |
+| RefPath         |  o    |  o   | The presence of this property indicates  |
+|                 |       |      |  that the item is a reference item that  |
+|                 |       |      |  references another item located         |
+|                 |       |      |  elsewhere in the DMS's directory        |
+|                 |       |      |  structure. The value of this property   |
+|                 |       |      |  is the path of the referenced item.     |
 |---------------------------------------------------------------------------|
-| Artists         |  o   |  m   | An array of all the artists who           |
-|                 |      |      |  contributed towards the creation of the  |
-|                 |      |      |  item. The array will be empty if no      |
-|                 |      |      |  artists are associated with the item.    |
+| Artists         |  o    |  m   | An array of all the artists who          |
+|                 |       |      |  contributed towards the creation of the |
+|                 |       |      |  item. The array will be empty if no     |
+|                 |       |      |  artists are associated with the item.   |
 |---------------------------------------------------------------------------|
-
-
+| DLNAConversion  | a{sb} |  o   |  These 4 properties are copied from the  |
+|--------------------------------   currently selected resource into the    |
+| DLNAFlags       | a{sb} |  o   |  org.gnome.UPnP.MediaItem2 object.       |
+|--------------------------------                                           |
+| DLNAOperation   | a{sb} |  o   |                                          |
+|--------------------------------                                           |
+| UpdateCount     |  u    |  o   |                                          |
+-----------------------------------------------------------------------------
 
 Dleyna-server-service does not implement the
 org.gnome.UPnP.MediaItem2.AlbumArt property for the same reasons that
