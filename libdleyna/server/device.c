@@ -52,6 +52,8 @@
 #define DLS_UPLOAD_STATUS_ERROR "ERROR"
 #define DLS_UPLOAD_STATUS_COMPLETED "COMPLETED"
 
+#define DLS_DEFAULT_WAKE_PORT 9
+
 typedef gboolean(*dls_device_count_cb_t)(dls_async_task_t *cb_data,
 					 gint count);
 
@@ -91,6 +93,16 @@ typedef struct dls_device_download_t_ dls_device_download_t;
 struct dls_device_download_t_ {
 	SoupSession *session;
 	SoupMessage *msg;
+	dls_async_task_t *task;
+};
+
+typedef struct dls_tcp_wake_t_ dls_tcp_wake_t;
+struct dls_tcp_wake_t_ {
+	GOutputStream *output_stream;
+	GSocketConnection *socket_connection;
+	guint8 *buffer;
+	gssize to_send;
+	gssize sent;
 	dls_async_task_t *task;
 };
 
@@ -5399,24 +5411,270 @@ end:
 	(void) g_idle_add(dls_async_task_complete, cb_data);
 }
 
+static void prv_free_tcp_data(dls_tcp_wake_t *tcp_data)
+{
+	if (tcp_data != NULL) {
+		g_free(tcp_data->buffer);
+
+		g_object_unref(tcp_data->socket_connection);
+
+		g_object_unref(tcp_data->output_stream);
+
+		g_free(tcp_data);
+	}
+}
+
+static void tcp_wake_cb(GObject *source, GAsyncResult *result,
+		       gpointer user_data)
+{
+	dls_tcp_wake_t *tcp_data = (dls_tcp_wake_t *)user_data;
+	dls_async_task_t *cb_data = (dls_async_task_t *)tcp_data->task;
+	GError *tcp_error = NULL;
+	gssize written;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	if (tcp_data->socket_connection == NULL) {
+		tcp_data->socket_connection =
+			g_socket_client_connect_to_host_finish(
+							G_SOCKET_CLIENT(source),
+							result, &tcp_error);
+
+		g_object_unref(source);
+
+		g_object_unref(result);
+
+		if (tcp_data->socket_connection == NULL) {
+			cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+						     DLEYNA_ERROR_IO,
+						     "Failed to connect");
+			if (tcp_error) {
+				DLEYNA_LOG_WARNING("Failed to connect: %s",
+						   tcp_error->message);
+				g_error_free(tcp_error);
+			}
+
+			goto on_complete;
+		}
+
+		tcp_data->output_stream =
+			g_io_stream_get_output_stream(
+				G_IO_STREAM(tcp_data->socket_connection));
+
+		goto on_write;
+	}
+
+	written = g_output_stream_write_finish(G_OUTPUT_STREAM(source), result,
+					       &tcp_error);
+
+	if (written < 0) {
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_IO,
+					     "Failed to write");
+		if (tcp_error) {
+			DLEYNA_LOG_WARNING("Failed to write: %s",
+					   tcp_error->message);
+			g_error_free(tcp_error);
+		}
+
+		goto on_complete;
+	}
+
+	tcp_data->sent += written;
+
+	if (tcp_data->sent == tcp_data->to_send)
+		goto on_complete;
+
+on_write:
+	g_output_stream_write_async(tcp_data->output_stream,
+				    tcp_data->buffer + tcp_data->sent,
+				    tcp_data->to_send - tcp_data->sent,
+				    G_PRIORITY_DEFAULT,
+				    cb_data->cancellable,
+				    tcp_wake_cb, tcp_data);
+
+	goto on_exit;
+
+on_complete:
+	prv_free_tcp_data(tcp_data);
+
+	if (!g_cancellable_is_cancelled(cb_data->cancellable))
+		(void) g_idle_add(dls_async_task_complete, cb_data);
+
+	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
+
+on_exit:
+	DLEYNA_LOG_DEBUG("Exit");
+
+	return;
+}
+
+static gboolean prv_hex_char_to_byte(const gchar hex_char, uint8_t *byte)
+{
+	gchar ch;
+	gboolean result = TRUE;
+
+	if (!g_ascii_isxdigit(hex_char))
+		goto on_exit;
+
+	ch = g_ascii_toupper(hex_char);
+
+	if (ch >= '0' && ch <= '9')
+		*byte = ch - '0';
+	else if (ch >= 'A' && ch <= 'F')
+		*byte = 10 + ch - 'A';
+
+on_exit:
+	return result;
+}
+
+static uint8_t *prv_hex_str_to_bin(const gchar *hex_str, gsize *out_len)
+{
+	gsize i;
+	gsize j;
+	uint8_t *buffer = NULL;
+	uint8_t byte;
+	gsize len;
+
+	len = strlen(hex_str);
+
+	if (len % 2 != 0) {
+		DLEYNA_LOG_WARNING("Invalid Hex String");
+		goto on_exit;
+	}
+
+	buffer = g_malloc(len / 2);
+
+	for (i = 0, j = 0; i < len; i += 2, j++) {
+		if (!prv_hex_char_to_byte(hex_str[i], &buffer[j]))
+			goto on_error;
+
+		if (!prv_hex_char_to_byte(hex_str[i+1], &byte))
+			goto on_error;
+
+		buffer[j] = (buffer[j] << 4) + byte;
+	}
+
+	*out_len = j;
+
+	goto on_exit;
+
+on_error:
+	g_free(buffer);
+	buffer = NULL;
+
+on_exit:
+	return buffer;
+}
+
+static void prv_device_wake_tcp(guint8 *packet, gsize packet_len,
+				const gchar *host,
+				dls_async_task_t *cb_data)
+{
+	GSocketClient *socket_client;
+	dls_tcp_wake_t *tcp_data;
+
+	socket_client = g_socket_client_new();
+
+	tcp_data = g_new0(dls_tcp_wake_t, 1);
+	tcp_data->task = cb_data;
+	tcp_data->buffer = packet;
+	tcp_data->to_send = packet_len;
+
+	cb_data->cancel_id =
+		g_cancellable_connect(cb_data->cancellable,
+				      G_CALLBACK(dls_async_task_cancelled_cb),
+				      cb_data, NULL);
+
+	g_socket_client_connect_to_host_async(socket_client,
+					      host, DLS_DEFAULT_WAKE_PORT,
+					      cb_data->cancellable,
+					      tcp_wake_cb, tcp_data);
+}
+
+static GError *prv_device_wake_udp(guint8 *packet, gsize packet_len,
+				   GInetAddress *host_inet_address,
+				   GSocketFamily socket_family,
+				   gboolean broadcast)
+{
+	GSocket *socket;
+	GError *send_error;
+	GError *error = NULL;
+	gssize bytes_sent;
+	GSocketAddress *host_address = NULL;
+
+	socket = g_socket_new(socket_family,
+			      G_SOCKET_TYPE_DATAGRAM,
+			      G_SOCKET_PROTOCOL_UDP, NULL);
+
+	if (socket == NULL) {
+		error = g_error_new(DLEYNA_SERVER_ERROR, DLEYNA_ERROR_IO,
+				    "Cannot create UDP socket");
+		goto on_complete;
+	}
+
+	host_address = g_inet_socket_address_new(host_inet_address,
+						 DLS_DEFAULT_WAKE_PORT);
+
+	g_socket_set_blocking(socket, FALSE);
+
+	if (broadcast)
+		g_socket_set_broadcast(socket, broadcast);
+
+	bytes_sent = g_socket_send_to(socket, host_address,
+				      (const gchar *)packet, packet_len,
+				      NULL, &send_error);
+
+	if (bytes_sent == -1) {
+		error = g_error_new(DLEYNA_SERVER_ERROR, DLEYNA_ERROR_IO,
+				    "Failed to send UDP packet");
+
+		DLEYNA_LOG_WARNING("Failed to send UDP packet: %s",
+				   send_error->message);
+
+		g_error_free(send_error);
+	}
+
+on_complete:
+	if (socket) {
+		g_socket_close(socket, NULL);
+
+		g_object_unref(socket);
+	}
+
+	if (host_address)
+		g_object_unref(host_address);
+
+	return error;
+}
+
+
 void dls_device_wake(dls_client_t *client, dls_task_t *task)
 {
 	dls_device_context_t *context;
 	dls_async_task_t *cb_data = (dls_async_task_t *)task;
 	dls_device_t *device = task->target.device;
 	dls_network_if_info_t *info;
-	GList *next;
+	GSocketFamily socket_family;
+	GSocketProtocol socket_protocol;
+	GInetAddress *host_inet_address = NULL;
+	gboolean broadcast = FALSE;
+	gsize packet_len;
+	guint8 *packet = NULL;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
 	context = dls_device_get_context(device, client);
 
+	if (!device->sleeping)
+		goto on_complete;
+
 	if ((context->ems.proxy == NULL) ||
 	    (context->network_if_info == NULL)) {
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_NOT_SUPPORTED,
-					     "WOL is not supported");
-		goto end;
+					     "Wake is not supported");
+		goto on_complete;
 	}
 
 	info = context->network_if_info;
@@ -5427,17 +5685,74 @@ void dls_device_wake(dls_client_t *client, dls_task_t *task)
 	DLEYNA_LOG_DEBUG("WakeOnPattern = %s", info->wake_on_pattern);
 	DLEYNA_LOG_DEBUG("WakeSupportedTransport = %s", info->wake_transport);
 
-	next = info->ip_addresses;
-	while (next != NULL) {
-		DLEYNA_LOG_DEBUG("IpAddress = %s", (gchar *)next->data);
-
-		next = g_list_next(next);
+	if (!strcmp(info->wake_transport, "UDP-Broadcast")) {
+		socket_protocol = G_SOCKET_PROTOCOL_UDP;
+		broadcast = TRUE;
+	} else if (!strcmp(info->wake_transport, "UDP-Unicast")) {
+		socket_protocol = G_SOCKET_PROTOCOL_UDP;
+	} else if (!strcmp(info->wake_transport, "TCP-Unicast")) {
+		socket_protocol = G_SOCKET_PROTOCOL_TCP;
+	} else  {
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_NOT_SUPPORTED,
+					     "Unsupported wake transport");
+		goto on_complete;
 	}
 
-	DLEYNA_LOG_DEBUG("context IpAddress = %s", context->ip_address);
+	DLEYNA_LOG_DEBUG("Sending WakeOn to IpAddress = %s",
+			 context->ip_address);
 
-end:
+	host_inet_address = g_inet_address_new_from_string(context->ip_address);
+
+	if (host_inet_address == NULL) {
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_HOST_FAILED,
+					     "Invalid host address: %s",
+					     context->ip_address);
+		goto on_complete;
+	}
+
+	socket_family = g_inet_address_get_family(host_inet_address);
+
+	if ((socket_family != G_SOCKET_FAMILY_IPV4) &&
+	    (socket_family != G_SOCKET_FAMILY_IPV6)) {
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_HOST_FAILED,
+					     "Invalid host address family: %s",
+					     context->ip_address);
+		goto on_complete;
+	}
+
+	packet = prv_hex_str_to_bin(info->wake_on_pattern, &packet_len);
+
+	if (packet == NULL) {
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_HOST_FAILED,
+					     "Invalid wake on pattern");
+		goto on_complete;
+	}
+
+	if (socket_protocol == G_SOCKET_PROTOCOL_UDP) {
+		cb_data->error = prv_device_wake_udp(packet, packet_len,
+						     host_inet_address,
+						     socket_family, broadcast);
+	} else {
+		prv_device_wake_tcp(packet, packet_len, context->ip_address,
+				    cb_data);
+
+		goto on_exit;
+	}
+
+on_complete:
+	if (host_inet_address != NULL)
+		g_object_unref(host_inet_address);
+
+	g_free(packet);
+
 	(void) g_idle_add(dls_async_task_complete, cb_data);
 
+on_exit:
 	DLEYNA_LOG_DEBUG("Exit");
+
+	return;
 }
