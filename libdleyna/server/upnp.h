@@ -43,6 +43,8 @@ GVariant *dls_upnp_get_device_ids(dls_upnp_t *upnp);
 
 GHashTable *dls_upnp_get_device_udn_map(dls_upnp_t *upnp);
 
+GHashTable *dls_upnp_get_sleeping_device_udn_map(dls_upnp_t *upnp);
+
 void dls_upnp_get_children(dls_upnp_t *upnp, dls_client_t *client,
 			   dls_task_t *task,
 			   dls_upnp_task_complete_t cb);
