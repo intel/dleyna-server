@@ -50,6 +50,7 @@ struct dls_upnp_t_ {
 	GUPnPContextManager *context_manager;
 	void *user_data;
 	GHashTable *device_udn_map;
+	GHashTable *sleeping_device_udn_map;
 	GHashTable *device_uc_map;
 	guint counter;
 };
@@ -205,6 +206,9 @@ static void prv_device_available_cb(GUPnPControlPoint *cp,
 	GUPnPDeviceInfo *device_proxy = (GUPnPDeviceInfo *)proxy;
 	GUPnPDeviceInfo *device_info = NULL;
 	const gchar *device_type;
+	gboolean subscribe = FALSE;
+	gpointer key;
+	gpointer val;
 
 	udn = gupnp_device_info_get_udn(device_proxy);
 
@@ -229,6 +233,33 @@ static void prv_device_available_cb(GUPnPControlPoint *cp,
 	}
 
 	device = g_hash_table_lookup(upnp->device_udn_map, udn);
+
+	if (!device) {
+		device = g_hash_table_lookup(upnp->sleeping_device_udn_map,
+					     udn);
+
+		if (device != NULL) {
+			if (g_hash_table_lookup_extended(
+						  upnp->sleeping_device_udn_map,
+						  udn,
+						  &key,
+						  &val)) {
+				g_hash_table_steal(
+						upnp->sleeping_device_udn_map,
+						udn);
+
+				g_free(key);
+			}
+
+			g_hash_table_insert(upnp->device_udn_map, g_strdup(udn),
+					    device);
+
+			dls_device_delete_context(device->sleeping_context);
+			device->sleeping_context = NULL;
+			device->sleeping = FALSE;
+			subscribe = TRUE;
+		}
+	}
 
 	if (!device) {
 		priv_t = g_hash_table_lookup(upnp->device_uc_map, udn);
@@ -270,6 +301,8 @@ static void prv_device_available_cb(GUPnPControlPoint *cp,
 							     ip_address,
 							     proxy,
 							     device_info);
+			if (subscribe)
+				dls_device_subscribe_to_service_changes(device);
 		}
 
 		DLEYNA_LOG_DEBUG_NL();
@@ -305,6 +338,9 @@ static void prv_device_unavailable_cb(GUPnPControlPoint *cp,
 	gboolean under_construction = FALSE;
 	prv_device_new_ct_t *priv_t;
 	const dleyna_task_queue_key_t *queue_id;
+	dls_device_context_t *lost_context;
+	gpointer key;
+	gpointer val;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -349,13 +385,51 @@ static void prv_device_unavailable_cb(GUPnPControlPoint *cp,
 		construction_ctx = !strcmp(context->ip_address,
 					   priv_t->ip_address);
 
-	(void) g_ptr_array_remove_index(device->contexts, i);
+	g_ptr_array_set_free_func(device->contexts, NULL);
+
+	lost_context = g_ptr_array_remove_index(device->contexts, i);
+
+	g_ptr_array_set_free_func(device->contexts,
+				  (GDestroyNotify)dls_device_delete_context);
 
 	if (device->contexts->len == 0) {
 		if (!under_construction) {
-			DLEYNA_LOG_DEBUG("Last Context lost. Delete device");
-			upnp->lost_server(device->path, upnp->user_data);
-			g_hash_table_remove(upnp->device_udn_map, udn);
+			DLEYNA_LOG_DEBUG("Last Context lost.");
+
+			if (!device->sleeping) {
+				DLEYNA_LOG_DEBUG("Delete device.");
+
+				upnp->lost_server(device->path,
+						  upnp->user_data);
+
+				g_hash_table_remove(upnp->device_udn_map, udn);
+			} else {
+				DLEYNA_LOG_DEBUG("Persist sleeping device.");
+
+				dleyna_task_processor_remove_queues_for_sink(
+						dls_server_get_task_processor(),
+						device->path);
+
+				g_hash_table_insert(
+						upnp->sleeping_device_udn_map,
+						g_strdup(udn),
+						device);
+
+				if (g_hash_table_lookup_extended(
+							  upnp->device_udn_map,
+							  udn,
+							  &key,
+							  &val)) {
+					g_hash_table_steal(upnp->device_udn_map,
+							   udn);
+
+					g_free(key);
+				}
+
+				device->sleeping_context = lost_context;
+
+				lost_context = NULL;
+			}
 		} else {
 			DLEYNA_LOG_WARNING(
 				"Device under construction. Cancelling");
@@ -393,6 +467,9 @@ static void prv_device_unavailable_cb(GUPnPControlPoint *cp,
 				prv_subscribe_to_service_changes,
 				device);
 	}
+
+	if (lost_context != NULL)
+		dls_device_delete_context(lost_context);
 
 on_error:
 
@@ -439,8 +516,13 @@ dls_upnp_t *dls_upnp_new(dleyna_connector_id_t connection,
 	upnp->lost_server = lost_server;
 
 	upnp->device_udn_map = g_hash_table_new_full(g_str_hash, g_str_equal,
-						     g_free,
-						     dls_device_delete);
+						g_free,
+						dls_device_delete);
+
+	upnp->sleeping_device_udn_map = g_hash_table_new_full(g_str_hash,
+						g_str_equal,
+						g_free,
+						dls_device_delete);
 
 	upnp->device_uc_map = g_hash_table_new_full(g_str_hash, g_str_equal,
 						    g_free, NULL);
@@ -463,6 +545,7 @@ void dls_upnp_delete(dls_upnp_t *upnp)
 		g_hash_table_unref(upnp->property_map);
 		g_hash_table_unref(upnp->filter_map);
 		g_hash_table_unref(upnp->device_udn_map);
+		g_hash_table_unref(upnp->sleeping_device_udn_map);
 		g_hash_table_unref(upnp->device_uc_map);
 		g_free(upnp);
 	}
@@ -487,6 +570,13 @@ GVariant *dls_upnp_get_device_ids(dls_upnp_t *upnp)
 		g_variant_builder_add(&vb, "o", device->path);
 	}
 
+	g_hash_table_iter_init(&iter, upnp->sleeping_device_udn_map);
+	while (g_hash_table_iter_next(&iter, NULL, &value)) {
+		device = value;
+		DLEYNA_LOG_DEBUG("Have sleeping device %s", device->path);
+		g_variant_builder_add(&vb, "o", device->path);
+	}
+
 	retval = g_variant_ref_sink(g_variant_builder_end(&vb));
 
 	DLEYNA_LOG_DEBUG("Exit");
@@ -497,6 +587,11 @@ GVariant *dls_upnp_get_device_ids(dls_upnp_t *upnp)
 GHashTable *dls_upnp_get_device_udn_map(dls_upnp_t *upnp)
 {
 	return upnp->device_udn_map;
+}
+
+GHashTable *dls_upnp_get_sleeping_device_udn_map(dls_upnp_t *upnp)
+{
+	return upnp->sleeping_device_udn_map;
 }
 
 void dls_upnp_get_children(dls_upnp_t *upnp, dls_client_t *client,

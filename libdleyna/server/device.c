@@ -21,6 +21,7 @@
  */
 
 #include <string.h>
+#include <stdint.h>
 #include <libgupnp/gupnp-error.h>
 #include <libgupnp-dlna/gupnp-dlna-profile.h>
 #include <libgupnp-dlna/gupnp-dlna-profile-guesser.h>
@@ -228,10 +229,8 @@ static void prv_context_unsubscribe(dls_device_context_t *ctx)
 	}
 }
 
-static void prv_context_delete(gpointer context)
+void dls_device_delete_context(dls_device_context_t *ctx)
 {
-	dls_device_context_t *ctx = context;
-
 	if (ctx) {
 		prv_context_unsubscribe(ctx);
 
@@ -253,6 +252,7 @@ static void prv_context_delete(gpointer context)
 		g_free(ctx);
 	}
 }
+
 
 static GUPnPServiceInfo *prv_lookup_em_service(GUPnPDeviceInfo *device_info)
 {
@@ -346,6 +346,7 @@ void dls_device_delete(void *device)
 						dev->connection, dev->id);
 
 		g_ptr_array_unref(dev->contexts);
+		dls_device_delete_context(dev->sleeping_context);
 		g_free(dev->path);
 		g_variant_unref(dev->search_caps);
 		g_variant_unref(dev->sort_caps);
@@ -577,43 +578,49 @@ static dls_network_if_info_t *prv_get_network_if_info(xmlNode *device_if_node)
 	info = g_new0(dls_network_if_info_t, 1);
 
 	ipv4_addresses = xml_util_get_child_string_list_content_by_name(
-						     device_if_node,
-						     "NetworkInterface",
-						     "AssociatedIpAddresses",
-						     "Ipv4", NULL);
+							device_if_node,
+							"NetworkInterface",
+							"AssociatedIpAddresses",
+							"Ipv4",
+							NULL);
 
 	ipv6_addresses = xml_util_get_child_string_list_content_by_name(
-						     device_if_node,
-						     "NetworkInterface",
-						     "AssociatedIpAddresses",
-						     "Ipv6", NULL);
+							device_if_node,
+							"NetworkInterface",
+							"AssociatedIpAddresses",
+							"Ipv6",
+							NULL);
 
 	info->ip_addresses = g_list_concat(ipv4_addresses, ipv6_addresses);
 
 	info->device_uuid = xml_util_get_child_string_content_by_name(
-							device_if_node,
-							"DeviceUUID", NULL);
+						device_if_node,
+						"DeviceUUID",
+						NULL);
 
 	info->mac_address = xml_util_get_child_string_content_by_name(
-							device_if_node,
-							"NetworkInterface",
-							"MacAddress", NULL);
+						device_if_node,
+						"NetworkInterface",
+						"MacAddress",
+						NULL);
 
 	info->network_if_mode = xml_util_get_child_string_content_by_name(
-							device_if_node,
-							"NetworkInterface",
-							"NetworkInterfaceMode"
-							, NULL);
+						device_if_node,
+						"NetworkInterface",
+						"NetworkInterfaceMode",
+						NULL);
 
 	info->wake_on_pattern = xml_util_get_child_string_content_by_name(
-							device_if_node,
-							"NetworkInterface",
-							"WakeOnPattern", NULL);
+						device_if_node,
+						"NetworkInterface",
+						"WakeOnPattern",
+						NULL);
 
 	info->wake_transport = xml_util_get_child_string_content_by_name(
 						device_if_node,
 						"NetworkInterface",
-						"WakeSupportedTransport", NULL);
+						"WakeSupportedTransport",
+						NULL);
 
 	if ((info->device_uuid == NULL || strlen(info->device_uuid) > 70) ||
 	    (info->mac_address == NULL || strlen(info->mac_address) != 17) ||
@@ -1590,7 +1597,8 @@ dls_device_t *dls_device_new(
 	dev = g_new0(dls_device_t, 1);
 
 	dev->connection = connection;
-	dev->contexts = g_ptr_array_new_with_free_func(prv_context_delete);
+	dev->contexts = g_ptr_array_new_with_free_func((GDestroyNotify)
+						  dls_device_delete_context);
 	dev->path = new_path;
 
 	context = dls_device_append_new_context(dev, ip_address,
@@ -3045,7 +3053,10 @@ void dls_device_get_prop(dls_client_t *client,
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	context = dls_device_get_context(task->target.device, client);
+	if (task->target.device->contexts->len != 0)
+		context = dls_device_get_context(task->target.device, client);
+	else
+		context = task->target.device->sleeping_context;
 
 	if (!strcmp(task_data->interface_name,
 		    DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE)) {

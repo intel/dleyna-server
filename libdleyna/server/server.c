@@ -945,6 +945,12 @@ gboolean dls_server_get_object_info(const gchar *object_path,
 				dls_upnp_get_device_udn_map(g_context.upnp));
 
 	if (*device == NULL) {
+		*device = dls_device_from_path(*root_path,
+				dls_upnp_get_sleeping_device_udn_map(
+							      g_context.upnp));
+	}
+
+	if (*device == NULL) {
 		DLEYNA_LOG_WARNING("Cannot locate device for %s", *root_path);
 
 		*error = g_error_new(DLEYNA_SERVER_ERROR,
@@ -963,6 +969,14 @@ gboolean dls_server_get_object_info(const gchar *object_path,
 on_error:
 
 	return FALSE;
+}
+
+gboolean dls_server_is_device_sleeping(dls_device_t *dev)
+{
+	if (dev->sleeping_context != NULL)
+		return TRUE;
+	else
+		return FALSE;
 }
 
 static const gchar *prv_get_device_id(const gchar *object, GError **error)

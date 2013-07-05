@@ -72,6 +72,7 @@ struct dls_device_t_ {
 	guint id;
 	gchar *path;
 	GPtrArray *contexts;
+	dls_device_context_t *sleeping_context;
 	guint timeout_id;
 	GHashTable *uploads;
 	GHashTable *upload_jobs;
@@ -92,6 +93,7 @@ dls_device_context_t *dls_device_append_new_context(dls_device_t *device,
 						const gchar *ip_address,
 						GUPnPDeviceProxy *proxy,
 						GUPnPDeviceInfo *device_info);
+
 void dls_device_delete(void *device);
 
 void dls_device_unsubscribe(void *device);
@@ -118,6 +120,8 @@ dls_device_t *dls_device_from_path(const gchar *path, GHashTable *device_list);
 
 dls_device_context_t *dls_device_get_context(const dls_device_t *device,
 					     dls_client_t *client);
+
+void dls_device_delete_context(dls_device_context_t *context);
 
 void dls_device_get_children(dls_client_t *client,
 			     dls_task_t *task,
