@@ -1145,11 +1145,11 @@ static gboolean prv_control_point_start_service(
 	g_context.connection = connection;
 
 	g_context.dls_id = g_context.connector->publish_object(
-							connection,
-							DLEYNA_SERVER_OBJECT,
-							TRUE,
-							0,
-							g_root_vtables);
+						connection,
+						DLEYNA_SERVER_OBJECT,
+						TRUE,
+						DLEYNA_SERVER_INTERFACE_MANAGER,
+						g_root_vtables);
 
 	if (g_context.dls_id)
 		g_context.upnp = dls_upnp_new(connection,
