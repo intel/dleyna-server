@@ -101,7 +101,6 @@ void dls_props_add_device(GUPnPDeviceInfo *root_proxy,
 
 GVariant *dls_props_get_device_prop(GUPnPDeviceInfo *root_proxy,
 				    GUPnPDeviceInfo *proxy,
-				    GUPnPServiceProxy *ems_proxy,
 				    const dls_device_t *device,
 				    const gchar *prop);
 

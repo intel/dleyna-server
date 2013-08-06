@@ -808,15 +808,10 @@ void dls_props_add_device(GUPnPDeviceInfo *root_proxy,
 		g_variant_builder_add(vb, "{sv}",
 				      DLS_INTERFACE_PROP_SV_FEATURE_LIST,
 				      device->feature_list);
-
-	if (ems_proxy != NULL)
-		prv_add_bool_prop(vb, DLS_INTERFACE_PROP_SLEEPING,
-				  device->sleeping);
 }
 
 GVariant *dls_props_get_device_prop(GUPnPDeviceInfo *root_proxy,
 				    GUPnPDeviceInfo *proxy,
-				    GUPnPServiceProxy *ems_proxy,
 				    const dls_device_t *device,
 				    const gchar *prop)
 {
@@ -915,16 +910,6 @@ GVariant *dls_props_get_device_prop(GUPnPDeviceInfo *root_proxy,
 			DLEYNA_LOG_DEBUG("Prop %s = %s", prop, copy);
 #endif
 		}
-	} else if (!strcmp(DLS_INTERFACE_PROP_SLEEPING, prop)) {
-		if (ems_proxy != NULL) {
-			retval = g_variant_ref_sink(
-				      g_variant_new_boolean(device->sleeping));
-		}
-
-#if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
-			DLEYNA_LOG_DEBUG("Prop %s = %s", prop,
-					 device->sleeping ? "TRUE":"FALSE");
-#endif
 	}
 
 	if (!retval) {
