@@ -976,7 +976,7 @@ gboolean dls_server_is_device_sleeping(dls_device_t *dev)
 	if (dev->sleeping_context != NULL)
 		return TRUE;
 	else
-		return FALSE;
+		return dev->sleeping;
 }
 
 static const gchar *prv_get_device_id(const gchar *object, GError **error)

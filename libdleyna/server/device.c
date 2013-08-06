@@ -157,6 +157,10 @@ static GUPnPServiceProxyAction *prv_browse_objects_begin_action_cb(
 						GUPnPServiceProxy *proxy,
 						gboolean *failed);
 
+static void prv_get_sleeping_for_props(GUPnPServiceProxy *proxy,
+			     const dls_device_t *device,
+			     dls_async_task_t *cb_data);
+
 static void prv_free_network_if_info(dls_network_if_info_t *info);
 
 static void prv_object_builder_delete(void *dob)
@@ -706,9 +710,17 @@ static gboolean prv_lookup_device_ctx_network_if_info(dls_device_context_t *ctx,
 	next = info->ip_addresses;
 	while (next != NULL) {
 		ip_address = (gchar *)next->data;
+		DLEYNA_LOG_DEBUG("Network Interface Info: IP address = %s",
+				 ip_address);
+
 		if (!strcmp(ctx->ip_address, ip_address)) {
 			udn = gupnp_device_info_get_udn((GUPnPDeviceInfo *)
 							ctx->device_proxy);
+
+			DLEYNA_LOG_DEBUG("Device Context: UUID = %s", udn);
+			DLEYNA_LOG_DEBUG("Network Interface Info: UUID = %s",
+					 info->device_uuid);
+
 			if (!strcmp(info->device_uuid, udn)) {
 				found = TRUE;
 				if (!strcmp(info->network_if_mode, "IP-up"))
@@ -718,8 +730,11 @@ static gboolean prv_lookup_device_ctx_network_if_info(dls_device_context_t *ctx,
 			}
 		}
 
-		if (found)
+		if (found) {
+			DLEYNA_LOG_DEBUG("Network Interface Info: mode = %s",
+					 info->network_if_mode);
 			break;
+		}
 
 		next = g_list_next(next);
 	}
@@ -747,6 +762,8 @@ static gboolean prv_get_device_sleeping_state(dls_device_t *device,
 		info = (dls_network_if_info_t *)next->data;
 		for (i = 0; i < device->contexts->len; ++i) {
 			ctx = g_ptr_array_index(device->contexts, i);
+			DLEYNA_LOG_DEBUG("Device Context[%u]: IP address = %s",
+					 i, ctx->ip_address);
 			found = prv_lookup_device_ctx_network_if_info(ctx,
 								      info,
 								      sleeping);
@@ -2233,6 +2250,7 @@ static void prv_get_system_update_id_for_props(GUPnPServiceProxy *proxy,
 					     (gpointer *)&cb_data->proxy);
 
 	cb_data->proxy = proxy;
+
 	g_object_add_weak_pointer((G_OBJECT(proxy)),
 				  (gpointer *)&cb_data->proxy);
 
@@ -2243,6 +2261,136 @@ static void prv_get_system_update_id_for_props(GUPnPServiceProxy *proxy,
 					cb_data, NULL);
 
 on_complete:
+
+	DLEYNA_LOG_DEBUG("Exit");
+}
+
+static gboolean prv_ems_subscribed(const dls_device_t *device)
+{
+	dls_device_context_t *context;
+	unsigned int i;
+	gboolean subscribed = FALSE;
+
+	for (i = 0; i < device->contexts->len; ++i) {
+		context = g_ptr_array_index(device->contexts, i);
+		if (context->ems.subscribed) {
+			subscribed = TRUE;
+			break;
+		}
+	}
+
+	return subscribed;
+}
+
+static void prv_sleeping_for_props_cb(GUPnPServiceProxy *proxy,
+				      GUPnPServiceProxyAction *action,
+				      gpointer user_data)
+{
+	GError *error = NULL;
+	const gchar *message;
+	gchar *info = NULL;
+	gboolean end;
+	dls_async_task_t *cb_data = user_data;
+	dls_async_get_all_t *cb_task_data;
+	gboolean sleeping;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	end = gupnp_service_proxy_end_action(proxy, action, &error,
+					     "NetworkInterfaceInfo",
+					     G_TYPE_STRING,
+					     &info, NULL);
+
+	if (!end || (info == NULL)) {
+		message = (error != NULL) ? error->message : "Invalid result";
+		DLEYNA_LOG_WARNING("NetworkInterfaceInfo retrieval failed: %s",
+				   message);
+
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_OPERATION_FAILED,
+					     "GetInterfaceInfo failed: %s",
+					     message);
+		goto on_complete;
+	}
+
+	if (prv_get_device_sleeping_state(cb_data->task.target.device,
+					  info,
+					  &sleeping)) {
+		cb_task_data = &cb_data->ut.get_all;
+		g_variant_builder_add(cb_task_data->vb, "{sv}",
+				      DLS_INTERFACE_PROP_SLEEPING,
+				      g_variant_new_boolean(sleeping));
+
+		cb_data->task.result = g_variant_ref_sink(g_variant_builder_end(
+							     cb_task_data->vb));
+	}
+
+	g_free(info);
+
+on_complete:
+
+	(void) g_idle_add(dls_async_task_complete, cb_data);
+	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
+
+	if (error)
+		g_error_free(error);
+
+	DLEYNA_LOG_DEBUG("Exit");
+}
+
+static void prv_get_sleeping_for_props(GUPnPServiceProxy *proxy,
+				       const dls_device_t *device,
+				       dls_async_task_t *cb_data)
+{
+	dls_async_get_all_t *cb_task_data;
+	gboolean sleeping;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	cb_task_data = &cb_data->ut.get_all;
+
+	if (proxy == NULL)
+		goto on_complete;
+
+	if (prv_ems_subscribed(device)) {
+		sleeping = device->sleeping;
+
+		g_variant_builder_add(cb_task_data->vb, "{sv}",
+				      DLS_INTERFACE_PROP_SLEEPING,
+				      g_variant_new_boolean(sleeping));
+
+		goto on_complete;
+	}
+
+	cb_data->action = gupnp_service_proxy_begin_action(
+					proxy, "GetInterfaceInfo",
+					prv_sleeping_for_props_cb,
+					cb_data,
+					NULL);
+
+	if (cb_data->proxy != NULL)
+		g_object_remove_weak_pointer((G_OBJECT(cb_data->proxy)),
+					     (gpointer *)&cb_data->proxy);
+
+	cb_data->proxy = proxy;
+
+	g_object_add_weak_pointer((G_OBJECT(proxy)),
+				  (gpointer *)&cb_data->proxy);
+
+	if (!cb_data->cancel_id)
+		cb_data->cancel_id = g_cancellable_connect(
+					cb_data->cancellable,
+					G_CALLBACK(dls_async_task_cancelled_cb),
+					cb_data, NULL);
+
+	return;
+
+on_complete:
+
+	cb_data->task.result = g_variant_ref_sink(g_variant_builder_end(
+						  cb_task_data->vb));
+
+	(void) g_idle_add(dls_async_task_complete, cb_data);
 
 	DLEYNA_LOG_DEBUG("Exit");
 }
@@ -2364,6 +2512,8 @@ static void prv_service_reset_for_props_cb(GUPnPServiceProxy *proxy,
 
 	DLEYNA_LOG_DEBUG("Enter");
 
+	cb_task_data = &cb_data->ut.get_all;
+
 	end = gupnp_service_proxy_end_action(proxy, action, &error,
 					    "ResetToken", G_TYPE_STRING,
 					    &token, NULL);
@@ -2380,13 +2530,9 @@ static void prv_service_reset_for_props_cb(GUPnPServiceProxy *proxy,
 		goto on_complete;
 	}
 
-	cb_task_data = &cb_data->ut.get_all;
 	g_variant_builder_add(cb_task_data->vb, "{sv}",
 			      DLS_INTERFACE_PROP_SV_SERVICE_RESET_TOKEN,
 			      g_variant_new_string(token));
-
-	cb_data->task.result = g_variant_ref_sink(g_variant_builder_end(
-							cb_task_data->vb));
 
 	DLEYNA_LOG_DEBUG("Service Reset %s", token);
 
@@ -2394,8 +2540,18 @@ static void prv_service_reset_for_props_cb(GUPnPServiceProxy *proxy,
 
 on_complete:
 
-	(void) g_idle_add(dls_async_task_complete, cb_data);
-	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
+	if ((!cb_data->error) && (cb_task_data->proxy))
+		prv_get_sleeping_for_props(cb_task_data->proxy,
+					   cb_data->task.target.device,
+					   cb_data);
+	else {
+		cb_data->task.result = g_variant_ref_sink(g_variant_builder_end(
+							     cb_task_data->vb));
+
+		(void) g_idle_add(dls_async_task_complete, cb_data);
+		g_cancellable_disconnect(cb_data->cancellable,
+					 cb_data->cancel_id);
+	}
 
 	if (error)
 		g_error_free(error);
@@ -2414,10 +2570,10 @@ static void prv_get_sr_token_for_props(GUPnPServiceProxy *proxy,
 	if (prv_get_media_server_version(device) < 3) {
 		cb_task_data = &cb_data->ut.get_all;
 
-		cb_data->task.result = g_variant_ref_sink(g_variant_builder_end(
-							cb_task_data->vb));
+		prv_get_sleeping_for_props(cb_task_data->proxy,
+					   device, cb_data);
 
-		goto on_complete; /* No error here, just skip the property */
+		goto on_exit; /* No error here, just skip the property */
 	}
 
 	cb_data->action = gupnp_service_proxy_begin_action(
@@ -2440,13 +2596,107 @@ static void prv_get_sr_token_for_props(GUPnPServiceProxy *proxy,
 					G_CALLBACK(dls_async_task_cancelled_cb),
 					cb_data, NULL);
 
+on_exit:
+
 	DLEYNA_LOG_DEBUG("Exit");
 
 	return;
+}
+
+static void prv_sleeping_for_prop_cb(GUPnPServiceProxy *proxy,
+				     GUPnPServiceProxyAction *action,
+				     gpointer user_data)
+{
+	GError *error = NULL;
+	const gchar *message;
+	gchar *info = NULL;
+	gboolean end;
+	dls_async_task_t *cb_data = user_data;
+	gboolean sleeping;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	end = gupnp_service_proxy_end_action(proxy, action, &error,
+					     "NetworkInterfaceInfo",
+					     G_TYPE_STRING,
+					     &info, NULL);
+
+	if (!end || (info == NULL)) {
+		message = (error != NULL) ? error->message : "Invalid result";
+		DLEYNA_LOG_WARNING("NetworkInterfaceInfo retrieval failed: %s",
+				   message);
+
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_OPERATION_FAILED,
+					     "GetNetworkInterfaceInfo failed: %s",
+					     message);
+
+		goto on_complete;
+	}
+
+	if (prv_get_device_sleeping_state(cb_data->task.target.device,
+					  info,
+					  &sleeping)) {
+		cb_data->task.result = g_variant_ref_sink(
+					      g_variant_new_boolean(sleeping));
+	}
+
+	g_free(info);
 
 on_complete:
 
 	(void) g_idle_add(dls_async_task_complete, cb_data);
+	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
+
+	if (error)
+		g_error_free(error);
+
+	DLEYNA_LOG_DEBUG("Exit");
+}
+
+static void prv_get_sleeping_for_prop(GUPnPServiceProxy *proxy,
+				      const dls_device_t *device,
+				      dls_async_task_t *cb_data)
+{
+	gboolean sleeping;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	if (proxy == NULL) {
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_UNKNOWN_PROPERTY,
+					     "Unknown property");
+
+		(void) g_idle_add(dls_async_task_complete, cb_data);
+
+		goto on_complete;
+	} else if ((device->contexts->len == 0) || prv_ems_subscribed(device)) {
+		sleeping = device->sleeping;
+
+		cb_data->task.result = g_variant_ref_sink(
+					g_variant_new_boolean(sleeping));
+
+		(void) g_idle_add(dls_async_task_complete, cb_data);
+
+		goto on_complete;
+	}
+
+	cb_data->action = gupnp_service_proxy_begin_action(
+					proxy, "GetInterfaceInfo",
+					prv_sleeping_for_prop_cb,
+					cb_data,
+					NULL);
+
+	cb_data->proxy = proxy;
+
+	g_object_add_weak_pointer((G_OBJECT(proxy)),
+				  (gpointer *)&cb_data->proxy);
+
+	cb_data->cancel_id = g_cancellable_connect(
+					cb_data->cancellable,
+					G_CALLBACK(dls_async_task_cancelled_cb),
+					cb_data, NULL);
+on_complete:
 
 	DLEYNA_LOG_DEBUG("Exit");
 }
@@ -2538,7 +2788,6 @@ static void prv_get_all_ms2spec_props_cb(GUPnPServiceProxy *proxy,
 		goto no_complete;
 	} else if (cb_data->task.type == DLS_TASK_GET_ALL_PROPS &&
 						cb_task_data->device_object) {
-
 		prv_get_system_update_id_for_props(proxy,
 						   cb_data->task.target.device,
 						   cb_data);
@@ -2646,6 +2895,7 @@ void dls_device_get_all_props(dls_client_t *client,
 
 	cb_task_data->vb = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 	cb_task_data->device_object = root_object;
+	cb_task_data->proxy = context->ems.proxy;
 
 	if (!strcmp(task_data->interface_name,
 		    DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE)) {
@@ -3075,19 +3325,25 @@ void dls_device_get_prop(dls_client_t *client,
 							context->cds.proxy,
 							task->target.device,
 							cb_data);
+			} else if (!strcmp(
+				task_data->prop_name,
+				DLS_INTERFACE_PROP_SLEEPING)) {
+				prv_get_sleeping_for_prop(
+							context->ems.proxy,
+							task->target.device,
+							cb_data);
 			} else {
 				cb_data->task.result =
 					dls_props_get_device_prop(
 							(GUPnPDeviceInfo *)
 							context->device_proxy,
 							context->device_info,
-							context->ems.proxy,
 							task->target.device,
 							task_data->prop_name);
 
 				if (!cb_data->task.result)
 					cb_data->error = g_error_new(
-							DLEYNA_SERVER_ERROR,
+						DLEYNA_SERVER_ERROR,
 						DLEYNA_ERROR_UNKNOWN_PROPERTY,
 						"Unknown property");
 
@@ -3125,13 +3381,20 @@ void dls_device_get_prop(dls_client_t *client,
 							task->target.device,
 							cb_data);
 				complete = TRUE;
+			} else if (!strcmp(
+				task_data->prop_name,
+				DLS_INTERFACE_PROP_SLEEPING)) {
+				prv_get_sleeping_for_prop(
+							context->ems.proxy,
+							task->target.device,
+							cb_data);
+				complete = TRUE;
 			} else {
 				cb_data->task.result =
 					dls_props_get_device_prop(
 							(GUPnPDeviceInfo *)
 							context->device_proxy,
 							context->device_info,
-							context->ems.proxy,
 							task->target.device,
 							task_data->prop_name);
 
@@ -3841,6 +4104,7 @@ void dls_device_get_resource(dls_client_t *client,
 	cb_task_data->vb = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 	cb_task_data->prop_func = G_CALLBACK(prv_get_resource);
 	cb_task_data->device_object = FALSE;
+	cb_task_data->proxy = context->ems.proxy;
 
 	cb_data->proxy = context->cds.proxy;
 
@@ -5677,8 +5941,10 @@ void dls_device_wake(dls_client_t *client, dls_task_t *task)
 
 	context = dls_device_get_context(device, client);
 
-	if (!device->sleeping)
+	if (!device->sleeping) {
+		DLEYNA_LOG_DEBUG("Device is not sleeping");
 		goto on_complete;
+	}
 
 	if ((context->ems.proxy == NULL) ||
 	    (context->network_if_info == NULL)) {
