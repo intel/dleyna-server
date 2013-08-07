@@ -14,7 +14,7 @@ AM_CFLAGS =	$(GLIB_CFLAGS)				\
 
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 
-lib_LTLIBRARIES = libdleyna-server-1.0.la
+pkglib_LTLIBRARIES = libdleyna-server-1.0.la
 
 libdleyna_serverinc_HEADERS = 	control-point-server.h
 
