@@ -2,7 +2,7 @@ prefix=@prefix@
 exec_prefix=@exec_prefix@
 libexecdir=@libexecdir@
 includedir=${prefix}/include
-libdir=@libdir@
+libdir=@libdir@/@PACKAGE@
 
 Name: @PACKAGE@
 Description: UPnP & DLNA server library
