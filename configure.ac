@@ -247,7 +247,7 @@ CFLAGS    : '${CFLAGS}'
 	- enable-werror         : ${enable_werror}
 	- enable-debug          : ${enable_debug}
 	- enable-never-quit     : ${enable_never_quit}
-	- with_connector-name   : ${with_connector_name}
+	- with-connector-name   : ${with_connector_name}
 	- disable-optimization  : ${disable_optimization}
 	- with-log-level        : ${with_log_level}
 	- with-log-type         : ${with_log_type}
