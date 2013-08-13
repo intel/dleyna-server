@@ -122,7 +122,7 @@ class _UscStore(object):
                 self.__config.remove_section(path)
             elif not os.path.exists(path):
                 if self.__config.get(path, self.TYPE_OPTION) == 'container':
-                    deleted_containers.append(path + '/')
+                    deleted_containers.append(path + os.sep)
 
                 self.remove_file(path)
 
@@ -204,7 +204,8 @@ class UscController(object):
     >>> controller.start_sync()
     """
 
-    CONFIG_PATH = os.environ['HOME'] + '/.config/upload-sync-controller.conf'
+    CONFIG_PATH = os.path.join(os.environ['HOME'],
+                               '.config/upload-sync-controller.conf')
     ROOT_CONTAINER_ID_OPTION = 'root_container_id'
     DATA_PATH_SECTION = '__paths__'
     DATA_PATH_OPTION = 'data_path'
@@ -242,7 +243,7 @@ class UscController(object):
             self.__config.write(configfile)
 
     def __set_data_path(self, rel_path):
-        data_path = os.environ['HOME'] + '/' + rel_path
+        data_path = os.environ['HOME'] + os.sep + rel_path
 
         if not self.__config.has_section(UscController.DATA_PATH_SECTION):
             self.__config.add_section(UscController.DATA_PATH_SECTION)
