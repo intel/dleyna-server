@@ -97,7 +97,7 @@ class _UscStore(object):
 
         return False
 
-    def __remove_file(self, path):
+    def remove_file(self, path):
         id = self.__config.get(path, self.REMOTE_ID_OPTION)
         print u'\tDeleting server object {0}'.format(id)
         try:
@@ -124,11 +124,11 @@ class _UscStore(object):
                 if self.__config.get(path, self.TYPE_OPTION) == 'container':
                     deleted_containers.append(path + '/')
 
-                self.__remove_file(path)
+                self.remove_file(path)
 
         self.__write_config()
 
-    def __add_file(self, container, name, parent):
+    def add_file(self, container, name, parent):
         new_path = os.path.join(parent, name)
         if os.path.isdir(new_path):
             if self.__config.has_section(new_path):
@@ -156,7 +156,29 @@ class _UscStore(object):
     def sync_added_files(self, container, path):
         children = os.listdir(path)
         for child in children:
-            self.__add_file(container, child, path)
+            self.add_file(container, child, path)
+
+        self.__write_config()
+
+    def set_root(self, path, id):
+        self.__config.add_section(path)
+        self.__config.set(path, self.REMOTE_ID_OPTION, id)
+        self.__config.set(path, self.TYPE_OPTION, 'container')
+
+        self.__write_config()
+
+    def object_id_from_path(self, path):
+        return self.__config.get(path, self.REMOTE_ID_OPTION)
+
+    def rename_file(self, path1, path2):
+        self.__config.add_section(path2)
+
+        id = self.__config.get(path1, self.REMOTE_ID_OPTION)
+        self.__config.set(path2, self.REMOTE_ID_OPTION, id)
+        type = self.__config.get(path1, self.TYPE_OPTION)
+        self.__config.set(path2, self.TYPE_OPTION, type)
+
+        self.__config.remove_section(path1)
 
         self.__write_config()
 
@@ -267,6 +289,90 @@ class UscController(object):
                 yield device, uuid, self.__config.has_option(uuid,
                                     UscController.ROOT_CONTAINER_ID_OPTION)
 
+    def __remove_monitor(self, path):
+        for item in self.__monitor_list.keys():
+            if item.startswith(path):
+                print u'\tStop monitoring {0}'.format(path)
+                del self.__monitor_list[item]
+
+    def __add_monitor(self, path):
+        print u'\tStart monitoring {0}'.format(path)
+        gfile = gio.File(path)
+        monitor = gfile.monitor_directory(gio.FILE_MONITOR_SEND_MOVED, None)
+        monitor.connect("changed", self.__directory_changed) 
+        self.__monitor_list[path] = monitor
+
+    def __monitor_directory(self, path):
+        self.__add_monitor(path)
+        children = os.listdir(path)
+        for child in children:
+            new_path = os.path.join(path, child)
+            if os.path.isdir(new_path):
+                self.__monitor_directory(new_path)
+
+    def __start_monitoring(self):
+        self.__monitor_list = {}
+        self.__monitor_directory(self.__track_path)
+
+        print u'Type ctrl-c to stop.'
+        try:
+            main_loop = glib.MainLoop()
+            main_loop.run()
+        except:
+            print u'Monitoring stopped.'
+
+    def __directory_changed(self, monitor, file1, file2, evt_type):
+        print
+        if evt_type == gio.FILE_MONITOR_EVENT_CREATED:
+            (parent, name) = os.path.split(file1.get_path())
+            for store in self.__store_list:
+                parent_id = store.object_id_from_path(parent)
+                container = _UscContainer(parent_id)
+                store.add_file(container, name, parent)
+
+            if os.path.isdir(file1.get_path()):
+                self.__monitor_directory(file1.get_path())
+        elif evt_type == gio.FILE_MONITOR_EVENT_MOVED:
+            (parent1, name1) = os.path.split(file1.get_path())
+            (parent2, name2) = os.path.split(file2.get_path())
+            renamed = (parent1 == parent2)
+
+            if file1.get_path() in self.__monitor_list:
+                self.__remove_monitor(file1.get_path())
+
+            for store in self.__store_list:
+                object_id = store.object_id_from_path(file1.get_path())
+                obj = MediaObject(object_id)
+                dlna_managed = obj.get_prop('DLNAManaged')
+
+                if renamed and dlna_managed['ChangeMeta']:
+                    print u'\tRenaming {0} to {1}'.format(name1, name2)
+
+                    props = {'DisplayName' : name2}
+                    obj.update(props, [])
+
+                    store.rename_file(file1.get_path(), file2.get_path())
+                else:
+                    store.remove_file(file1.get_path())
+
+                    parent_id = store.object_id_from_path(parent2)
+                    container = _UscContainer(parent_id)
+
+                    store.add_file(container, name2, parent2)
+
+            if os.path.isdir(file2.get_path()):
+                self.__monitor_directory(file2.get_path())
+        elif evt_type == gio.FILE_MONITOR_EVENT_DELETED:
+            if file1.get_path() in self.__monitor_list:
+                self.__remove_monitor(file1.get_path())
+            
+            for store in self.__store_list:
+                store.remove_file(file1.get_path())
+        else:
+            return
+
+        print u'Type ctrl-c to stop.'
+
     def track(self, track_path):
         """Sets the local folder that is to be synchronized."""
         
@@ -286,13 +392,12 @@ class UscController(object):
             print u'Error: track path is not set'
             return
 
-        count = 0
+        self.__store_list = []
         print u'Syncing...'
         for device, uuid, init in self.__need_sync(self.__upnp.get_servers()):
-            count += 1
-
             store = _UscStore(self.__store_path, uuid)
             store.initialize()
+            self.__store_list.append(store)
 
             if not init:
                 print u'Performing initial sync for server {0}:'.format(uuid)
@@ -301,6 +406,7 @@ class UscController(object):
                 self.__config.set(uuid, UscController.ROOT_CONTAINER_ID_OPTION,
                                   root)
                 self.__write_config()
+                store.set_root(self.__track_path, root)
             else:
                 print u'Performing normal sync for server {0}:'.format(uuid)
                 root = self.__config.get(uuid,
@@ -312,11 +418,12 @@ class UscController(object):
             store.sync_added_files(root_container, self.__track_path)
             print u'Done.'
 
-        if count == 0:
+        if len(self.__store_list) == 0:
             print u'Nothing to do, stopping.'
             return
 
-        # TODO: monitor changes
+        print u'Now monitoring local changes...'
+        self.__start_monitoring()
 
     def servers(self):
         """Displays media servers available on the network.
