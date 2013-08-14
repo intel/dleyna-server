@@ -40,6 +40,7 @@ struct dls_network_if_info_t_ {
 	gchar *network_if_mode;
 	gchar *wake_on_pattern;
 	gchar *wake_transport;
+	guint max_wake_on_delay;
 	GList *ip_addresses;
 	guint ip_address_position;
 };
@@ -73,6 +74,7 @@ struct dls_device_t_ {
 	gchar *path;
 	GPtrArray *contexts;
 	dls_device_context_t *sleeping_context;
+	guint wake_on_timeout_id;
 	guint timeout_id;
 	GHashTable *uploads;
 	GHashTable *upload_jobs;

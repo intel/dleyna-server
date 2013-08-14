@@ -254,6 +254,13 @@ static void prv_device_available_cb(GUPnPControlPoint *cp,
 			g_hash_table_insert(upnp->device_udn_map, g_strdup(udn),
 					    device);
 
+			if (device->wake_on_timeout_id) {
+				DLEYNA_LOG_DEBUG("Stop WAKE-ON watcher...");
+
+				(void) g_source_remove(
+						 device->wake_on_timeout_id);
+				device->wake_on_timeout_id = 0;
+			}
 			dls_device_delete_context(device->sleeping_context);
 			device->sleeping_context = NULL;
 			device->sleeping = FALSE;
@@ -592,6 +599,18 @@ GHashTable *dls_upnp_get_device_udn_map(dls_upnp_t *upnp)
 GHashTable *dls_upnp_get_sleeping_device_udn_map(dls_upnp_t *upnp)
 {
 	return upnp->sleeping_device_udn_map;
+}
+
+void dls_upnp_delete_sleeping_device(dls_upnp_t *upnp, dls_device_t *device)
+{
+	const char *udn;
+	dls_device_context_t *ctx = device->sleeping_context;
+
+	udn = gupnp_device_info_get_udn((GUPnPDeviceInfo *)ctx->device_proxy);
+
+	upnp->lost_server(device->path, upnp->user_data);
+
+	g_hash_table_remove(upnp->sleeping_device_udn_map, udn);
 }
 
 void dls_upnp_get_children(dls_upnp_t *upnp, dls_client_t *client,
