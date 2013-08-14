@@ -54,6 +54,7 @@
 #define DLS_UPLOAD_STATUS_COMPLETED "COMPLETED"
 
 #define DLS_DEFAULT_WAKE_PORT 9
+#define DLS_DEFAULT_WAKE_ON_DELAY 30
 
 typedef gboolean(*dls_device_count_cb_t)(dls_async_task_t *cb_data,
 					 gint count);
@@ -104,6 +105,7 @@ struct dls_tcp_wake_t_ {
 	guint8 *buffer;
 	gssize to_send;
 	gssize sent;
+	guint max_wake_on_delay;
 	dls_async_task_t *task;
 };
 
@@ -349,6 +351,10 @@ void dls_device_delete(void *device)
 
 		g_ptr_array_unref(dev->contexts);
 		dls_device_delete_context(dev->sleeping_context);
+
+		if (dev->wake_on_timeout_id)
+			(void) g_source_remove(dev->wake_on_timeout_id);
+
 		g_free(dev->path);
 		g_variant_unref(dev->search_caps);
 		g_variant_unref(dev->sort_caps);
@@ -577,6 +583,7 @@ static dls_network_if_info_t *prv_get_network_if_info(xmlNode *device_if_node,
 	dls_network_if_info_t *info = NULL;
 	GList *ipv4_addresses;
 	GList *ipv6_addresses;
+	gchar *wake_on_delay = NULL;
 
 	info = g_new0(dls_network_if_info_t, 1);
 
@@ -624,6 +631,20 @@ static dls_network_if_info_t *prv_get_network_if_info(xmlNode *device_if_node,
 						"NetworkInterface",
 						"WakeSupportedTransport",
 						NULL);
+
+	wake_on_delay = xml_util_get_child_string_content_by_name(
+						device_if_node,
+						"NetworkInterface",
+						"MaxWakeOnDelay",
+						NULL);
+
+	if (wake_on_delay == NULL) {
+		info->max_wake_on_delay = DLS_DEFAULT_WAKE_ON_DELAY;
+	} else {
+		info->max_wake_on_delay = atoi(wake_on_delay);
+
+		g_free(wake_on_delay);
+	}
 
 	if ((info->device_uuid == NULL || strlen(info->device_uuid) > 70) ||
 	    (info->mac_address == NULL || strlen(info->mac_address) != 17) ||
@@ -5720,6 +5741,30 @@ static void prv_free_tcp_data(dls_tcp_wake_t *tcp_data)
 	}
 }
 
+static gboolean prv_wake_on_timeout_elapsed(gpointer user_data)
+{
+	dls_device_t *device = user_data;
+
+	DLEYNA_LOG_DEBUG("WAKE-ON time-out ellapsed.");
+
+	dls_server_delete_sleeping_device(device);
+
+	return FALSE;
+}
+
+static void prv_start_wake_on_watcher(dls_device_t *device, guint timeout)
+{
+	if (device->wake_on_timeout_id)
+		(void) g_source_remove(device->wake_on_timeout_id);
+
+	DLEYNA_LOG_DEBUG("Starting WAKE-ON watcher...");
+
+	device->wake_on_timeout_id = g_timeout_add_seconds(
+						timeout,
+						prv_wake_on_timeout_elapsed,
+						device);
+}
+
 static void tcp_wake_cb(GObject *source, GAsyncResult *result,
 		       gpointer user_data)
 {
@@ -5794,8 +5839,13 @@ on_write:
 on_complete:
 	prv_free_tcp_data(tcp_data);
 
-	if (!g_cancellable_is_cancelled(cb_data->cancellable))
+	if (!g_cancellable_is_cancelled(cb_data->cancellable)) {
 		(void) g_idle_add(dls_async_task_complete, cb_data);
+
+		if (cb_data->task.target.device->sleeping_context != NULL)
+			prv_start_wake_on_watcher(cb_data->task.target.device,
+						  tcp_data->max_wake_on_delay);
+	}
 
 	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
 
@@ -5865,6 +5915,7 @@ on_exit:
 
 static void prv_device_wake_tcp(guint8 *packet, gsize packet_len,
 				const gchar *host,
+				guint max_wake_on_delay,
 				dls_async_task_t *cb_data)
 {
 	GSocketClient *socket_client;
@@ -5876,6 +5927,7 @@ static void prv_device_wake_tcp(guint8 *packet, gsize packet_len,
 	tcp_data->task = cb_data;
 	tcp_data->buffer = packet;
 	tcp_data->to_send = packet_len;
+	tcp_data->max_wake_on_delay = max_wake_on_delay;
 
 	cb_data->cancel_id =
 		g_cancellable_connect(cb_data->cancellable,
@@ -5998,6 +6050,7 @@ void dls_device_wake(dls_client_t *client, dls_task_t *task)
 	DLEYNA_LOG_DEBUG("NetworkInterfaceMode = %s", info->network_if_mode);
 	DLEYNA_LOG_DEBUG("WakeOnPattern = %s", info->wake_on_pattern);
 	DLEYNA_LOG_DEBUG("WakeSupportedTransport = %s", info->wake_transport);
+	DLEYNA_LOG_DEBUG("WakeOnDelay = %u", info->max_wake_on_delay);
 
 	wake_on_ip_address = (gchar *)g_list_nth_data(info->ip_addresses,
 						info->ip_address_position);
@@ -6039,9 +6092,13 @@ void dls_device_wake(dls_client_t *client, dls_task_t *task)
 		cb_data->error = prv_device_wake_udp(packet, packet_len,
 						     host_inet_address,
 						     socket_family, broadcast);
+
+		if (device->sleeping_context != NULL)
+			prv_start_wake_on_watcher(device,
+						  info->max_wake_on_delay);
 	} else {
 		prv_device_wake_tcp(packet, packet_len, wake_on_ip_address,
-				    cb_data);
+				    info->max_wake_on_delay, cb_data);
 
 		goto on_exit;
 	}

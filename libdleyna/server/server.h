@@ -42,6 +42,8 @@ dls_upnp_t *dls_server_get_upnp(void);
 
 gboolean dls_server_is_device_sleeping(dls_device_t *dev);
 
+void dls_server_delete_sleeping_device(dls_device_t *dev);
+
 dleyna_task_processor_t *dls_server_get_task_processor(void);
 
 const dleyna_connector_t *dls_server_get_connector(void);

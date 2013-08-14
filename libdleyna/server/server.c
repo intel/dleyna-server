@@ -979,6 +979,12 @@ gboolean dls_server_is_device_sleeping(dls_device_t *dev)
 		return dev->sleeping;
 }
 
+void dls_server_delete_sleeping_device(dls_device_t *dev)
+{
+	if (dev->sleeping_context != NULL)
+		dls_upnp_delete_sleeping_device(g_context.upnp, dev);
+}
+
 static const gchar *prv_get_device_id(const gchar *object, GError **error)
 {
 	dls_device_t *device;
