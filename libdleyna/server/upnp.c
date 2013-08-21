@@ -383,7 +383,7 @@ dls_upnp_t *dls_upnp_new(dleyna_connector_id_t connection,
 						     dls_device_delete);
 
 	upnp->server_uc_map = g_hash_table_new_full(g_str_hash, g_str_equal,
-						     g_free, NULL);
+						    g_free, NULL);
 
 	dls_prop_maps_new(&upnp->property_map, &upnp->filter_map);
 
@@ -1130,4 +1130,9 @@ void dls_upnp_rescan(dls_upnp_t *upnp)
 	DLEYNA_LOG_DEBUG("re-scanning control points");
 
 	gupnp_context_manager_rescan_control_points(upnp->context_manager);
+}
+
+GUPnPContextManager *dls_upnp_get_context_manager(dls_upnp_t *upnp)
+{
+	return upnp->context_manager;
 }

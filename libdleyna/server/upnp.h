@@ -112,4 +112,6 @@ gboolean dls_upnp_device_context_exist(dls_device_t *device,
 
 void dls_upnp_rescan(dls_upnp_t *upnp);
 
+GUPnPContextManager *dls_upnp_get_context_manager(dls_upnp_t *upnp);
+
 #endif /* DLS_UPNP_H__ */

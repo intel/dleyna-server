@@ -12,6 +12,7 @@ never-quit=@never_quit@
 # IPC connector name
 connector-name=@with_connector_name@
 
+
 # Log configuration options
 [log]
 
@@ -35,3 +36,15 @@ log-type=@with_log_type@
 # You can't enable levels disabled at compile time
 # level=8 means all level flags defined at compile time.
 log-level=@with_log_level@
+
+
+# Network filtering
+[netf]
+
+# true: Enable the network filtering.
+# false: Disable the network filtering.
+netf-enabled=false
+
+# Comma-separated list of interface name, SSID or IP address.
+# If netf is enabled but the list is empty, it behaves as disabled.
+netf-list=

@@ -2042,3 +2042,67 @@ on_error:
 
 	return retval;
 }
+
+static void prv_add_list_wl_entries(gpointer data, gpointer user_data)
+{
+	GVariantBuilder *vb = (GVariantBuilder *)user_data;
+	gchar *entry = (gchar *)data;
+
+	g_variant_builder_add(vb, "s",  entry);
+}
+
+void dls_props_add_manager(GUPnPContextManager *manager, GVariantBuilder *vb)
+{
+	GUPnPWhiteList *wl;
+	GList *list;
+	GVariantBuilder vb2;
+
+	wl = gupnp_context_manager_get_white_list(manager);
+	list = gupnp_white_list_get_entries(wl);
+
+	prv_add_bool_prop(vb, DLS_INTERFACE_PROP_WHITE_LIST_ENABLED,
+			  gupnp_white_list_get_enabled(wl));
+
+	g_variant_builder_init(&vb2, G_VARIANT_TYPE("as"));
+	g_list_foreach(list, prv_add_list_wl_entries, &vb2);
+
+	g_variant_builder_add(vb, "{sv}", DLS_INTERFACE_PROP_WHITE_LIST_ENTRIES,
+			      g_variant_builder_end(&vb2));
+}
+
+GVariant *dls_props_get_manager_prop(GUPnPContextManager *manager,
+				     const gchar *prop)
+{
+	GVariant *retval = NULL;
+	GUPnPWhiteList *wl;
+	GVariantBuilder vb;
+	GList *list;
+	gboolean b_value;
+#if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
+	gchar *prop_str;
+#endif
+
+	wl = gupnp_context_manager_get_white_list(manager);
+
+	if (!strcmp(prop, DLS_INTERFACE_PROP_WHITE_LIST_ENABLED)) {
+		b_value = gupnp_white_list_get_enabled(wl);
+		retval = g_variant_ref_sink(g_variant_new_boolean(b_value));
+
+	} else if (!strcmp(prop, DLS_INTERFACE_PROP_WHITE_LIST_ENTRIES)) {
+		list = gupnp_white_list_get_entries(wl);
+
+		g_variant_builder_init(&vb, G_VARIANT_TYPE("as"));
+		g_list_foreach(list, prv_add_list_wl_entries, &vb);
+		retval = g_variant_ref_sink(g_variant_builder_end(&vb));
+	}
+
+#if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
+	if (retval) {
+		prop_str = g_variant_print(retval, FALSE);
+		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, prop_str);
+		g_free(prop_str);
+	}
+#endif
+
+	return retval;
+}

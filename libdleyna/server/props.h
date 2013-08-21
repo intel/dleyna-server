@@ -23,6 +23,7 @@
 #ifndef DLS_PROPS_H__
 #define DLS_PROPS_H__
 
+#include <libgupnp/gupnp.h>
 #include <libgupnp-av/gupnp-av.h>
 #include "async.h"
 
@@ -48,7 +49,7 @@
 #define DLS_UPNP_MASK_PROP_WIDTH			(1LL << 19)
 #define DLS_UPNP_MASK_PROP_HEIGHT			(1LL << 20)
 #define DLS_UPNP_MASK_PROP_COLOR_DEPTH			(1LL << 21)
-#define DLS_UPNP_MASK_PROP_ALBUM_ART_URL			(1LL << 22)
+#define DLS_UPNP_MASK_PROP_ALBUM_ART_URL		(1LL << 22)
 #define DLS_UPNP_MASK_PROP_RESOURCES			(1LL << 23)
 #define DLS_UPNP_MASK_PROP_URL				(1LL << 24)
 #define DLS_UPNP_MASK_PROP_REFPATH			(1LL << 25)
@@ -140,5 +141,10 @@ gchar *dls_props_media_spec_ex_to_upnp_class(const gchar *m2spec_class);
 const gchar *dls_props_upnp_class_to_media_spec(const gchar *upnp_class);
 
 const gchar *dls_props_upnp_class_to_media_spec_ex(const gchar *upnp_class);
+
+void dls_props_add_manager(GUPnPContextManager *manager, GVariantBuilder *vb);
+
+GVariant *dls_props_get_manager_prop(GUPnPContextManager *manager,
+				     const gchar *prop);
 
 #endif /* DLS_PROPS_H__ */
