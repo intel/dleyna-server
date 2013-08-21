@@ -41,6 +41,7 @@ struct dls_network_if_info_t_ {
 	gchar *wake_on_pattern;
 	gchar *wake_transport;
 	GList *ip_addresses;
+	guint ip_address_position;
 };
 
 typedef struct dls_service_t_ dls_service_t;

@@ -573,7 +573,8 @@ static void prv_free_network_if_info(dls_network_if_info_t *info)
 	}
 }
 
-static dls_network_if_info_t *prv_get_network_if_info(xmlNode *device_if_node)
+static dls_network_if_info_t *prv_get_network_if_info(xmlNode *device_if_node,
+						      const gchar *udn)
 {
 	dls_network_if_info_t *info = NULL;
 	GList *ipv4_addresses;
@@ -632,6 +633,9 @@ static dls_network_if_info_t *prv_get_network_if_info(xmlNode *device_if_node)
 	    (info->wake_on_pattern == NULL) || (info->wake_transport == NULL))
 		goto on_error;
 
+	if (strcmp(info->device_uuid, udn))
+		goto on_error;
+
 	return info;
 
 on_error:
@@ -640,7 +644,7 @@ on_error:
 	return NULL;
 }
 
-static GList *prv_network_if_info_decode(const gchar *info)
+static GList *prv_network_if_info_decode(const gchar *info, const gchar *udn)
 {
 	xmlDoc *doc;
 	xmlNode *node;
@@ -682,7 +686,7 @@ static GList *prv_network_if_info_decode(const gchar *info)
 	for (node = node->children; node; node = node->next) {
 		if (node->name != NULL &&
 		    !strcmp((char *)node->name, "DeviceInterface")) {
-			if_info = prv_get_network_if_info(node);
+			if_info = prv_get_network_if_info(node, udn);
 
 			if (if_info != NULL)
 				info_list = g_list_prepend(info_list, if_info);
@@ -698,50 +702,6 @@ on_exit:
 	return info_list;
 }
 
-static gboolean prv_lookup_device_ctx_network_if_info(dls_device_context_t *ctx,
-						dls_network_if_info_t *info,
-						gboolean *sleeping)
-{
-	gboolean found = FALSE;
-	const gchar *udn;
-	gchar *ip_address;
-	GList *next;
-
-	next = info->ip_addresses;
-	while (next != NULL) {
-		ip_address = (gchar *)next->data;
-		DLEYNA_LOG_DEBUG("Network Interface Info: IP address = %s",
-				 ip_address);
-
-		if (!strcmp(ctx->ip_address, ip_address)) {
-			udn = gupnp_device_info_get_udn((GUPnPDeviceInfo *)
-							ctx->device_proxy);
-
-			DLEYNA_LOG_DEBUG("Device Context: UUID = %s", udn);
-			DLEYNA_LOG_DEBUG("Network Interface Info: UUID = %s",
-					 info->device_uuid);
-
-			if (!strcmp(info->device_uuid, udn)) {
-				found = TRUE;
-				if (!strcmp(info->network_if_mode, "IP-up"))
-					*sleeping = FALSE;
-				else
-					*sleeping = TRUE;
-			}
-		}
-
-		if (found) {
-			DLEYNA_LOG_DEBUG("Network Interface Info: mode = %s",
-					 info->network_if_mode);
-			break;
-		}
-
-		next = g_list_next(next);
-	}
-
-	return found;
-}
-
 static gboolean prv_get_device_sleeping_state(dls_device_t *device,
 					      const gchar *network_if_info_xml,
 					      gboolean *sleeping)
@@ -752,41 +712,103 @@ static gboolean prv_get_device_sleeping_state(dls_device_t *device,
 	unsigned int i;
 	dls_device_context_t *ctx;
 	gboolean found = FALSE;
+	const gchar *udn;
+	GList *next_ip;
+	guint ip_idx = 0;
+	gchar *ip_address;
 
-	info_list = prv_network_if_info_decode(network_if_info_xml);
-	if (info_list == NULL)
+	DLEYNA_LOG_DEBUG("Enter");
+
+	if (device->contexts->len == 0)
 		goto on_exit;
+
+	ctx = g_ptr_array_index(device->contexts, 0);
+
+	udn = gupnp_device_info_get_udn((GUPnPDeviceInfo *)ctx->device_proxy);
+
+	info_list = prv_network_if_info_decode(network_if_info_xml, udn);
+	if (info_list == NULL) {
+		DLEYNA_LOG_DEBUG("no UDN match found.");
+
+		goto on_exit;
+	}
+
+	DLEYNA_LOG_DEBUG("Device UUID = %s", udn);
 
 	next = info_list;
 	while (next != NULL) {
 		info = (dls_network_if_info_t *)next->data;
 		for (i = 0; i < device->contexts->len; ++i) {
 			ctx = g_ptr_array_index(device->contexts, i);
-			DLEYNA_LOG_DEBUG("Device Context[%u]: IP address = %s",
+
+			DLEYNA_LOG_DEBUG("Context[%u] - IP address = %s",
 					 i, ctx->ip_address);
-			found = prv_lookup_device_ctx_network_if_info(ctx,
-								      info,
-								      sleeping);
+
+			next_ip = info->ip_addresses;
+			while (next_ip != NULL) {
+				ip_address = (gchar *)next_ip->data;
+
+				DLEYNA_LOG_DEBUG(
+				 "Network Interface Info - IP address #%u = %s",
+				 ip_idx, ip_address);
+
+				if (!strcmp(ctx->ip_address, ip_address)) {
+					found = TRUE;
+
+					DLEYNA_LOG_DEBUG("IP+UDN match found");
+
+					break;
+				}
+
+				next_ip = g_list_next(next_ip);
+
+				ip_idx++;
+			}
+
 			if (found)
 				break;
 		}
 
 		next = g_list_next(next);
 
-		if (found) {
-			prv_free_network_if_info(ctx->network_if_info);
-
-			ctx->network_if_info = info;
-
-			info_list = g_list_remove(info_list, info);
-
+		if (found)
 			break;
-		}
 	}
+
+	if (!found) {
+		DLEYNA_LOG_DEBUG("IP+UDN match not found, use UDN match only");
+
+		ctx = g_ptr_array_index(device->contexts, 0);
+
+		info = (dls_network_if_info_t *)info_list->data;
+
+		ip_idx = 0;
+
+		found = TRUE;
+	}
+
+	info->ip_address_position = ip_idx;
+
+	DLEYNA_LOG_DEBUG("Matching Network Interface Info:");
+	DLEYNA_LOG_DEBUG("- Mode = %s", info->network_if_mode);
+	DLEYNA_LOG_DEBUG("- Wake-on IP address = %s",
+			 (gchar *)g_list_nth_data(info->ip_addresses, ip_idx));
+
+	if (!strcmp(info->network_if_mode, "IP-up"))
+		*sleeping = FALSE;
+	else
+		*sleeping = TRUE;
+
+	prv_free_network_if_info(ctx->network_if_info);
+
+	ctx->network_if_info = info;
+
+	info_list = g_list_remove(info_list, info);
 
 	g_list_free_full(info_list, (GDestroyNotify)prv_free_network_if_info);
 
 on_exit:
+	DLEYNA_LOG_DEBUG("Exit");
 
 	return found;
 }
@@ -5873,7 +5895,7 @@ static GError *prv_device_wake_udp(guint8 *packet, gsize packet_len,
 				   gboolean broadcast)
 {
 	GSocket *socket;
-	GError *send_error;
+	GError *send_error = NULL;
 	GError *error = NULL;
 	gssize bytes_sent;
 	GSocketAddress *host_address = NULL;
@@ -5936,15 +5958,16 @@ void dls_device_wake(dls_client_t *client, dls_task_t *task)
 	gboolean broadcast = FALSE;
 	gsize packet_len;
 	guint8 *packet = NULL;
+	gchar *wake_on_ip_address;
 
 	DLEYNA_LOG_DEBUG("Enter");
-
-	context = dls_device_get_context(device, client);
 
 	if (!device->sleeping) {
 		DLEYNA_LOG_DEBUG("Device is not sleeping");
 		goto on_complete;
 	}
+
+	context = dls_device_get_context(device, client);
 
 	if ((context->ems.proxy == NULL) ||
 	    (context->network_if_info == NULL)) {
@@ -5976,16 +5999,19 @@ void dls_device_wake(dls_client_t *client, dls_task_t *task)
 		goto on_complete;
 	}
 
-	DLEYNA_LOG_DEBUG("Sending WakeOn to IpAddress = %s",
-			 context->ip_address);
+	wake_on_ip_address = (gchar *)g_list_nth_data(info->ip_addresses,
+						info->ip_address_position);
 
-	host_inet_address = g_inet_address_new_from_string(context->ip_address);
+	DLEYNA_LOG_DEBUG("Context IP Address = %s", context->ip_address);
+	DLEYNA_LOG_DEBUG("Wake ON IP Address = %s", wake_on_ip_address);
+
+	host_inet_address = g_inet_address_new_from_string(wake_on_ip_address);
 
 	if (host_inet_address == NULL) {
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_HOST_FAILED,
 					     "Invalid host address: %s",
-					     context->ip_address);
+					     wake_on_ip_address);
 		goto on_complete;
 	}
 
@@ -5996,7 +6022,7 @@ void dls_device_wake(dls_client_t *client, dls_task_t *task)
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_HOST_FAILED,
 					     "Invalid host address family: %s",
-					     context->ip_address);
+					     wake_on_ip_address);
 		goto on_complete;
 	}
 
@@ -6014,7 +6040,7 @@ void dls_device_wake(dls_client_t *client, dls_task_t *task)
 						     host_inet_address,
 						     socket_family, broadcast);
 	} else {
-		prv_device_wake_tcp(packet, packet_len, context->ip_address,
+		prv_device_wake_tcp(packet, packet_len, wake_on_ip_address,
 				    cb_data);
 
 		goto on_exit;
