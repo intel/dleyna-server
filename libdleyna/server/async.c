@@ -34,6 +34,7 @@ void dls_async_task_delete(dls_async_task_t *cb_data)
 		if (cb_data->ut.bas.vbs)
 			g_ptr_array_unref(cb_data->ut.bas.vbs);
 		break;
+	case DLS_TASK_MANAGER_GET_ALL_PROPS:
 	case DLS_TASK_GET_ALL_PROPS:
 	case DLS_TASK_GET_RESOURCE:
 		if (cb_data->ut.get_all.vb)

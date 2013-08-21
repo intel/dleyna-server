@@ -35,6 +35,7 @@
 #include "control-point-server.h"
 #include "device.h"
 #include "interface.h"
+#include "manager.h"
 #include "path.h"
 #include "server.h"
 #include "upnp.h"
@@ -52,9 +53,10 @@ struct dls_server_context_t_ {
 	dleyna_task_processor_t *processor;
 	const dleyna_connector_t *connector;
 	dleyna_settings_t *settings;
-	guint dls_id;
+	guint dls_id[DLS_MANAGER_INTERFACE_INFO_MAX];
 	GHashTable *watchers;
 	dls_upnp_t *upnp;
+	dls_manager_t *manager;
 };
 
 static dls_server_context_t g_context;
@@ -82,11 +84,51 @@ static const gchar g_root_introspection[] =
 	"      <arg type='b' name='"DLS_INTERFACE_PREFER"'"
 	"           direction='in'/>"
 	"    </method>"
+	"    <method name='"DLS_INTERFACE_WHITE_LIST_ENABLE"'>"
+	"      <arg type='b' name='"DLS_INTERFACE_IS_ENABLED"'"
+	"           direction='in'/>"
+	"    </method>"
+	"    <method name='"DLS_INTERFACE_WHITE_LIST_ADD_ENTRIES"'>"
+	"      <arg type='as' name='"DLS_INTERFACE_ENTRY_LIST"'"
+	"           direction='in'/>"
+	"    </method>"
+	"    <method name='"DLS_INTERFACE_WHITE_LIST_REMOVE_ENTRIES"'>"
+	"      <arg type='as' name='"DLS_INTERFACE_ENTRY_LIST"'"
+	"           direction='in'/>"
+	"    </method>"
+	"    <method name='"DLS_INTERFACE_WHITE_LIST_CLEAR"'>"
+	"    </method>"
 	"    <signal name='"DLS_INTERFACE_FOUND_SERVER"'>"
 	"      <arg type='o' name='"DLS_INTERFACE_PATH"'/>"
 	"    </signal>"
 	"    <signal name='"DLS_INTERFACE_LOST_SERVER"'>"
 	"      <arg type='o' name='"DLS_INTERFACE_PATH"'/>"
+	"    </signal>"
+	"    <property type='as' name='"DLS_INTERFACE_PROP_WHITE_LIST_ENTRIES"'"
+	"       access='read'/>"
+	"    <property type='b' name='"DLS_INTERFACE_PROP_WHITE_LIST_ENABLED"'"
+	"       access='read'/>"
+	"  </interface>"
+	"  <interface name='"DLS_INTERFACE_PROPERTIES"'>"
+	"    <method name='"DLS_INTERFACE_GET"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_INTERFACE_NAME"'"
+	"           direction='in'/>"
+	"      <arg type='s' name='"DLS_INTERFACE_PROPERTY_NAME"'"
+	"           direction='in'/>"
+	"      <arg type='v' name='"DLS_INTERFACE_VALUE"'"
+	"           direction='out'/>"
+	"    </method>"
+	"    <method name='"DLS_INTERFACE_GET_ALL"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_INTERFACE_NAME"'"
+	"           direction='in'/>"
+	"      <arg type='a{sv}' name='"DLS_INTERFACE_PROPERTIES_VALUE"'"
+	"           direction='out'/>"
+	"    </method>"
+	"    <signal name='"DLS_INTERFACE_PROPERTIES_CHANGED"'>"
+	"      <arg type='s' name='"DLS_INTERFACE_INTERFACE_NAME"'/>"
+	"      <arg type='a{sv}' name='"DLS_INTERFACE_CHANGED_PROPERTIES"'/>"
+	"      <arg type='as' name='"
+	DLS_INTERFACE_INVALIDATED_PROPERTIES"'/>"
 	"    </signal>"
 	"  </interface>"
 	"</node>";
@@ -476,6 +518,12 @@ static const gchar g_server_introspection[] =
 	"  </interface>"
 	"</node>";
 
+static const gchar *g_manager_interfaces[DLS_MANAGER_INTERFACE_INFO_MAX] = {
+	/* MUST be in the exact same order as g_root_introspection */
+	DLEYNA_SERVER_INTERFACE_MANAGER,
+	DLS_INTERFACE_PROPERTIES
+};
+
 const dleyna_connector_t *dls_server_get_connector(void)
 {
 	return g_context.connector;
@@ -538,6 +586,22 @@ static void prv_process_sync_task(dls_task_t *task)
 	case DLS_TASK_CANCEL_UPLOAD:
 		dls_upnp_cancel_upload(g_context.upnp, task);
 		break;
+	case DLS_TASK_WHITE_LIST_ENABLE:
+		dls_manager_wl_enable(task);
+		dls_task_complete(task);
+		break;
+	case DLS_TASK_WHITE_LIST_ADD_ENTRIES:
+		dls_manager_wl_add_entries(task);
+		dls_task_complete(task);
+		break;
+	case DLS_TASK_WHITE_LIST_REMOVE_ENTRIES:
+		dls_manager_wl_remove_entries(task);
+		dls_task_complete(task);
+		break;
+	case DLS_TASK_WHITE_LIST_CLEAR:
+		dls_manager_wl_clear(task);
+		dls_task_complete(task);
+		break;
 	default:
 		goto finished;
 		break;
@@ -578,6 +642,14 @@ static void prv_process_async_task(dls_task_t *task)
 	client = g_hash_table_lookup(g_context.watchers, client_name);
 
 	switch (task->type) {
+	case DLS_TASK_MANAGER_GET_PROP:
+		dls_manager_get_prop(g_context.manager, task,
+				     prv_async_task_complete);
+		break;
+	case DLS_TASK_MANAGER_GET_ALL_PROPS:
+		dls_manager_get_all_props(g_context.manager, task,
+					  prv_async_task_complete);
+		break;
 	case DLS_TASK_GET_CHILDREN:
 		dls_upnp_get_children(g_context.upnp, client, task,
 				      prv_async_task_complete);
@@ -661,13 +733,21 @@ static void prv_delete_task(dleyna_task_atom_t *task, gpointer user_data)
 	dls_task_delete((dls_task_t *)task);
 }
 
-static void prv_method_call(dleyna_connector_id_t conn,
-			    const gchar *sender,
-			    const gchar *object,
-			    const gchar *interface,
-			    const gchar *method,
-			    GVariant *parameters,
-			    dleyna_connector_msg_id_t invocation);
+static void prv_manager_root_method_call(dleyna_connector_id_t conn,
+					 const gchar *sender,
+					 const gchar *object,
+					 const gchar *interface,
+					 const gchar *method,
+					 GVariant *parameters,
+					 dleyna_connector_msg_id_t invocation);
+
+static void prv_manager_props_method_call(dleyna_connector_id_t conn,
+					  const gchar *sender,
+					  const gchar *object,
+					  const gchar *interface,
+					  const gchar *method,
+					  GVariant *parameters,
+					  dleyna_connector_msg_id_t invocation);
 
 static void prv_object_method_call(dleyna_connector_id_t conn,
 				   const gchar *sender,
@@ -709,13 +789,16 @@ static void prv_device_method_call(dleyna_connector_id_t conn,
 				   GVariant *parameters,
 				   dleyna_connector_msg_id_t invocation);
 
-static const dleyna_connector_dispatch_cb_t g_root_vtables[1] = {
-	prv_method_call
+static const dleyna_connector_dispatch_cb_t
+			g_root_vtables[DLS_MANAGER_INTERFACE_INFO_MAX] = {
+	/* MUST be in the exact same order as g_root_introspection */
+	prv_manager_root_method_call,
+	prv_manager_props_method_call
 };
 
 static const dleyna_connector_dispatch_cb_t
 				g_server_vtables[DLS_INTERFACE_INFO_MAX] = {
-	/* MUST be in the exact same order as g_dls_server_introspection */
+	/* MUST be in the exact same order as g_server_introspection */
 	prv_props_method_call,
 	prv_object_method_call,
 	prv_con_method_call,
@@ -771,7 +854,8 @@ static void prv_add_task(dls_task_t *task, const gchar *source,
 	dleyna_task_queue_add_task(queue_id, &task->atom);
 }
 
-static void prv_method_call(dleyna_connector_id_t conn,
+static void prv_manager_root_method_call(
+				dleyna_connector_id_t conn,
 				const gchar *sender, const gchar *object,
 				const gchar *interface,
 				const gchar *method, GVariant *parameters,
@@ -795,11 +879,53 @@ static void prv_method_call(dleyna_connector_id_t conn,
 	} else if (!strcmp(method, DLS_INTERFACE_PREFER_LOCAL_ADDRESSES)) {
 		task = dls_task_prefer_local_addresses_new(invocation,
 							   parameters);
+	} else if (!strcmp(method, DLS_INTERFACE_WHITE_LIST_ENABLE)) {
+		task = dls_task_wl_enable_new(invocation, parameters);
+	} else if (!strcmp(method, DLS_INTERFACE_WHITE_LIST_ADD_ENTRIES)) {
+		task = dls_task_wl_add_entries_new(invocation, parameters);
+	} else if (!strcmp(method, DLS_INTERFACE_WHITE_LIST_REMOVE_ENTRIES)) {
+		task = dls_task_wl_remove_entries_new(invocation, parameters);
+	} else if (!strcmp(method, DLS_INTERFACE_WHITE_LIST_CLEAR)) {
+		task = dls_task_wl_clear_new(invocation);
 	} else {
 		goto finished;
 	}
 
 	prv_add_task(task, sender, DLS_SERVER_SINK);
+
+finished:
+
+	return;
+}
+
+static void prv_manager_props_method_call(dleyna_connector_id_t conn,
+					  const gchar *sender,
+					  const gchar *object,
+					  const gchar *interface,
+					  const gchar *method,
+					  GVariant *parameters,
+					  dleyna_connector_msg_id_t invocation)
+{
+	dls_task_t *task;
+	GError *error = NULL;
+
+	if (!strcmp(method, DLS_INTERFACE_GET_ALL))
+		task = dls_task_manager_get_props_new(invocation, object,
+						      parameters, &error);
+	else if (!strcmp(method, DLS_INTERFACE_GET))
+		task = dls_task_manager_get_prop_new(invocation, object,
+						     parameters, &error);
+	else
+		goto finished;
+
+	if (!task) {
+		g_context.connector->return_error(invocation, error);
+		g_error_free(error);
+
+		goto finished;
+	}
+
+	prv_add_task(task, sender, task->target.path);
 
 finished:
 
@@ -1141,40 +1267,54 @@ static gboolean prv_control_point_start_service(
 					dleyna_connector_id_t connection)
 {
 	gboolean retval = TRUE;
+	uint i;
 
 	g_context.connection = connection;
 
-	g_context.dls_id = g_context.connector->publish_object(
+	for (i = 0; i < DLS_MANAGER_INTERFACE_INFO_MAX; i++)
+		g_context.dls_id[i] = g_context.connector->publish_object(
 						connection,
 						DLEYNA_SERVER_OBJECT,
 						TRUE,
-						DLEYNA_SERVER_INTERFACE_MANAGER,
-						g_root_vtables);
+						g_manager_interfaces[i],
+						g_root_vtables + i);
 
-	if (g_context.dls_id)
+	if (g_context.dls_id[DLS_MANAGER_INTERFACE_MANAGER]) {
 		g_context.upnp = dls_upnp_new(connection,
 					      g_server_vtables,
 					      prv_found_media_server,
 					      prv_lost_media_server,
 					      NULL);
-	else
+
+		g_context.manager = dls_manager_new(connection,
+			       dls_upnp_get_context_manager(g_context.upnp));
+	} else {
 		retval = FALSE;
+	}
+
+	dleyna_settings_init_white_list(g_context.settings);
 
 	return retval;
 }
 
 static void prv_control_point_stop_service(void)
 {
+	uint i;
+
+	if (g_context.manager)
+		dls_manager_delete(g_context.manager);
+
 	if (g_context.upnp) {
 		dls_upnp_unsubscribe(g_context.upnp);
 		dls_upnp_delete(g_context.upnp);
 	}
 
 	if (g_context.connection) {
-		if (g_context.dls_id)
-			g_context.connector->unpublish_object(
+		for (i = 0; i < DLS_MANAGER_INTERFACE_INFO_MAX; i++)
+			if (g_context.dls_id[i])
+				g_context.connector->unpublish_object(
 							g_context.connection,
-							g_context.dls_id);
+							g_context.dls_id[i]);
 	}
 }
 
