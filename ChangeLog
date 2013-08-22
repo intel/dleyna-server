@@ -1,3 +1,12 @@
+version 0.2.1
+	- Various build optimizations
+	- Fix a crash case when the server stops
+	- Added the new TypeEx property and fixed Type
+	- Some documentation fixes
+	- Code cleanup
+	- Add a sample upload sync controller app
+	- Add network filtering support
+
 version 0.1.0
 	- Prepare for first stable branch
 
