@@ -210,7 +210,7 @@ enum dls_interface_type_ {
 #define DLS_INTERFACE_CREATE_REFERENCE "CreateReference"
 #define DLS_INTERFACE_REFPATH "RefPath"
 
-#define DLS_INTERFACE_ENTRIES_LIST "EntriesList"
+#define DLS_INTERFACE_ENTRY_LIST "EntryList"
 #define DLS_INTERFACE_IS_ENABLED "IsEnabled"
 
 #endif /* DLEYNA_SERVER_INTERFACE_H__ */
