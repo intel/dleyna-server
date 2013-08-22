@@ -244,8 +244,6 @@ void dls_device_delete_context(dls_device_context_t *ctx)
 		if (ctx->device_proxy)
 			g_object_unref(ctx->device_proxy);
 
-		prv_free_network_if_info(ctx->network_if_info);
-
 		if (ctx->cds.proxy)
 			g_object_unref(ctx->cds.proxy);
 
@@ -308,8 +306,6 @@ static void prv_context_new(const gchar *ip_address,
 	ctx->ems.subscribed = FALSE;
 	ctx->ems.timeout_id = 0;
 
-	ctx->network_if_info = NULL;
-
 	g_object_ref(proxy);
 	g_object_ref(device_info);
 
@@ -348,6 +344,8 @@ void dls_device_delete(void *device)
 		if (dev->id)
 			(void) dls_server_get_connector()->unpublish_subtree(
 						dev->connection, dev->id);
+
+		prv_free_network_if_info(dev->network_if_info);
 
 		g_ptr_array_unref(dev->contexts);
 		dls_device_delete_context(dev->sleeping_context);
@@ -799,9 +797,9 @@ static gboolean prv_get_device_sleeping_state(dls_device_t *device,
 	else
 		*sleeping = TRUE;
 
-	prv_free_network_if_info(ctx->network_if_info);
+	prv_free_network_if_info(device->network_if_info);
 
-	ctx->network_if_info = info;
+	device->network_if_info = info;
 
 	info_list = g_list_remove(info_list, info);
 
@@ -5970,14 +5968,14 @@ void dls_device_wake(dls_client_t *client, dls_task_t *task)
 	context = dls_device_get_context(device, client);
 
 	if ((context->ems.proxy == NULL) ||
-	    (context->network_if_info == NULL)) {
+	    (device->network_if_info == NULL)) {
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_NOT_SUPPORTED,
 					     "Wake is not supported");
 		goto on_complete;
 	}
 
-	info = context->network_if_info;
+	info = device->network_if_info;
 
 	DLEYNA_LOG_DEBUG("MacAddress = %s", info->mac_address);
 	DLEYNA_LOG_DEBUG("DeviceUUID = %s", info->device_uuid);
