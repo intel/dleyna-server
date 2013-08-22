@@ -36,9 +36,9 @@ The Manager Object:
 -------------------
 
 There is only ever a single instance of this object.  The manager
-object exposes a single d-Bus interface,
-com.intel.dLeynaServer.Manager.
-
+object exposes two d-Bus interfaces:
+1 - com.intel.dLeynaServer.Manager.
+2 - org.freedesktop.DBus.Properties.
 
 com.intel.dLeynaServer.Manager
 ------------------------------
@@ -126,6 +126,39 @@ detect DMSs which have shut down without sending BYE messages or to
 discover new DMSs which for some reason were not detected when either
 they, or the device on which dLeyna-server runs, was started or joined
 the network.  New in version 0.0.2.
+
+WhiteListEnable(b enabled) -> void
+Enable or disable the Network Filtering feature.
+When enabled, only devices that are on allowed networks will be available.
+
+WhiteListAddEntries(as EntryList) -> void
+Add new entries to the list of allowed networks. An Entry could be an interface
+name (eth0), an ip address (127.0.0.1) or a SSID (MyWiFi)
+
+WhiteListRemoveEntries(as EntryList) -> void
+Remove entries from the list of allowed networks.
+
+WhiteListClear() -> void
+Remove all entries from the list, but it doesn't change the 'enabled' flag.
+
+
+Properties:
+---------
+
+The com.intel.dLeynaServer.Manager interface exposes information via a number
+of d-Bus properties.  These properties are described below:
+
+|------------------------------------------------------------------------------|
+|     Name          |   Type    |m/o*|              Description                |
+|------------------------------------------------------------------------------|
+| WhiteListEntries  |     as    | m  | The list of entries that compose the    |
+|                   |           |    | white list used to filter the networks. |
+|------------------------------------------------------------------------------|
+| WhiteListEnabled  |     b     | m  | True if the Network Filtering is active.|
+|------------------------------------------------------------------------------|
+
+A org.freedesktop.DBus.Properties.PropertiesChanged signal is emitted when
+these properties change.
 
 
 Signals:
@@ -473,7 +506,7 @@ dLeyna-server solves these two different problems in two ways:
 
 Adding an additional value to MediaServer2Spec's Type property breaks our
 compliance with this spec a little, but it is necessary to achieve UPnP
-certification. 
+certification.
 
 Additional Properties:
 ----------------------
@@ -586,7 +619,7 @@ Additional properties unsupported by org.gnome.MediaContainer2
 |---------------------------------------------------------------------------|
 |     Name               | Type | m/o* |              Description           |
 |---------------------------------------------------------------------------|
-| CreateClasses          |a(sb) |  o   |  The CreateClasses property is an  |      
+| CreateClasses          |a(sb) |  o   |  The CreateClasses property is an  |
 |                        |      |      |  array of tuples (sb) that lists   |
 |                        |      |      |  the extended types of objects that|
 |                        |      |      |  that can be created in a          |
@@ -726,7 +759,7 @@ suitable location for the file.
 
 The CreateContainer method creates a new child container.
 DisplayName is the name of the new container,
-TypeEx is the extended type and ChildTypes is an array of extended 
+TypeEx is the extended type and ChildTypes is an array of extended
 types that can be stored in the new folder, e.g., ['video','container'].
 A special value of ['*'] indicates that no restriction is placed
 on the types of objects that can be stored in the container.

@@ -190,9 +190,25 @@ class UPNP(object):
     def __init__(self):
         bus = dbus.SessionBus()
         self._manager = dbus.Interface(bus.get_object(
-                'com.intel.dleyna-server',
-                '/com/intel/dLeynaServer'),
-                                        'com.intel.dLeynaServer.Manager')
+						'com.intel.dleyna-server',
+						'/com/intel/dLeynaServer'),
+                                       'com.intel.dLeynaServer.Manager')
+        self._propsIF = dbus.Interface(bus.get_object(
+						'com.intel.dleyna-server',
+						'/com/intel/dLeynaServer'),
+                                       'org.freedesktop.DBus.Properties')
+
+    def get_props(self, iface = ""):
+        return self._propsIF.GetAll(iface)
+
+    def get_prop(self, prop_name, iface = ""):
+        return self._propsIF.Get(iface, prop_name)
+
+    def print_prop(self, prop_name, iface = ""):
+        print_properties(self._propsIF.Get(iface, prop_name))
+
+    def print_props(self, iface = ""):
+        print_properties(self._propsIF.GetAll(iface))
 
     def server_from_name(self, friendly_name):
         retval = None
@@ -237,3 +253,15 @@ class UPNP(object):
 
     def rescan(self):
         self._manager.Rescan()
+
+    def white_list_enable(self, enable):
+        self._manager.WhiteListEnable(enable)
+
+    def white_list_add(self, entries):
+        self._manager.WhiteListAddEntries(entries)
+
+    def white_list_remove(self, entries):
+        self._manager.WhiteListRemoveEntries(entries)
+
+    def white_list_clear(self):
+        self._manager.WhiteListClear()

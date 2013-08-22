@@ -1,7 +1,7 @@
 AC_PREREQ([2.66])
 
 AC_INIT([dleyna-server],
-	[0.2.0],
+	[0.2.1],
 	[https://github.com/01org/dleyna-server/issues/new],
 	,
 	[https://01.org/dleyna/])
@@ -83,7 +83,7 @@ AC_ARG_ENABLE(master-build,,
 		[master_build=no])
 
 AS_IF([test "x$master_build" = "xno"],
-      [PKG_CHECK_MODULES([DLEYNA_CORE], [dleyna-core-1.0 >= 0.2.1])],
+      [PKG_CHECK_MODULES([DLEYNA_CORE], [dleyna-core-1.0 >= 0.2.2])],
       [this_abs_top_srcdir=`cd "$srcdir" && pwd`;
        DLEYNA_CORE_CFLAGS="-I$this_abs_top_srcdir/../dleyna-core";
        DLEYNA_CORE_LIBS="-L$this_abs_top_srcdir/../dleyna-core/.libs -ldleyna-core-1.0"
