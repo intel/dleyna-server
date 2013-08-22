@@ -690,7 +690,7 @@ ListItemsEx(u Offset, u Max, as Filter, s SortBy) -> aa{sv}
 
 ListContainersEx(u Offset, u Max, as Filter, s SortBy) -> aa{sv}
 
-SearchObjectsEx(s Query, u Offset, u Max, as Filter, s SortBy) -> aa{sv}
+SearchObjectsEx(s Query, u Offset, u Max, as Filter, s SortBy) -> (aa{sv}u)
 
 Upload(s DisplayName, s FilePath) -> (u UploadId, o ObjectPath)
 
