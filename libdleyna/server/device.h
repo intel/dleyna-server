@@ -58,7 +58,6 @@ struct dls_device_context_t_ {
 	dls_device_t *device;
 	dls_service_t cds;
 	dls_service_t ems;
-	dls_network_if_info_t *network_if_info;
 };
 
 typedef struct dls_device_icon_t_ dls_device_icon_t;
@@ -88,6 +87,7 @@ struct dls_device_t_ {
 	guint construct_step;
 	dls_device_icon_t icon;
 	gboolean sleeping;
+	dls_network_if_info_t *network_if_info;
 };
 
 dls_device_context_t *dls_device_append_new_context(dls_device_t *device,
