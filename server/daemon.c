@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 	if (!prv_init_signal_handler(mask))
 		goto out;
 
-	retval = dleyna_main_loop_start(DLS_SERVER_SERVICE_NAME,
+	retval = dleyna_main_loop_start(DLS_SERVER_SERVICE_NAME, VERSION,
 					dleyna_control_point_get_server(),
 					NULL);
 
