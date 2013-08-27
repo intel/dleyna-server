@@ -453,6 +453,14 @@ static const gchar g_server_introspection[] =
 	"      <arg type='s' name='"DLS_INTERFACE_MIME_TYPE"'"
 	"           direction='out'/>"
 	"    </method>"
+	"    <method name='"DLS_INTERFACE_BROWSE_OBJECTS"'>"
+	"      <arg type='ao' name='"DLS_INTERFACE_OBJECTS_PATH"'"
+	"           direction='in'/>"
+	"      <arg type='as' name='"DLS_INTERFACE_FILTER"'"
+	"           direction='in'/>"
+	"      <arg type='aa{sv}' name='"DLS_INTERFACE_CHILDREN"'"
+	"           direction='out'/>"
+	"    </method>"
 	"    <property type='s' name='"DLS_INTERFACE_PROP_LOCATION"'"
 	"       access='read'/>"
 	"    <property type='s' name='"DLS_INTERFACE_PROP_UDN"'"
@@ -665,6 +673,10 @@ static void prv_process_async_task(dls_task_t *task)
 	case DLS_TASK_SEARCH:
 		dls_upnp_search(g_context.upnp, client, task,
 				prv_async_task_complete);
+		break;
+	case DLS_TASK_BROWSE_OBJECTS:
+		dls_upnp_browse_objects(g_context.upnp, client, task,
+					prv_async_task_complete);
 		break;
 	case DLS_TASK_GET_RESOURCE:
 		dls_upnp_get_resource(g_context.upnp, client, task,
@@ -1189,6 +1201,9 @@ static void prv_device_method_call(dleyna_connector_id_t conn,
 	} else if (!strcmp(method, DLS_INTERFACE_GET_ICON)) {
 		task = dls_task_get_icon_new(invocation, object, parameters,
 					     &error);
+	} else if (!strcmp(method, DLS_INTERFACE_BROWSE_OBJECTS)) {
+		task = dls_task_browse_objects_new(invocation, object,
+						   parameters, &error);
 	} else if (!strcmp(method, DLS_INTERFACE_CANCEL)) {
 		task = NULL;
 

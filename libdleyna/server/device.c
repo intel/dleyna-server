@@ -2821,6 +2821,288 @@ static void prv_get_resource(GUPnPDIDLLiteParser *parser,
 			       task_data->protocol_info);
 }
 
+static void prv_browse_objects_add_error_result(dls_async_browse_objects_t *bo,
+						const gchar *path,
+						GError *error)
+{
+	GVariantBuilder evb;
+	GVariant* gv_result;
+
+	DLEYNA_LOG_WARNING("%s: %s", path, error->message);
+
+	g_variant_builder_init(&evb, G_VARIANT_TYPE("a{sv}"));
+
+	if (bo->get_all.filter_mask & DLS_UPNP_MASK_PROP_PATH)
+		g_variant_builder_add(
+			&evb, "{sv}", DLS_INTERFACE_PROP_PATH,
+			g_variant_new_object_path(path));
+
+	gv_result = dls_props_get_error_prop(error);
+
+	g_variant_builder_add(&evb, "{sv}",
+			      DLS_INTERFACE_PROP_ERROR, gv_result);
+
+	gv_result = g_variant_builder_end(&evb);
+
+	g_variant_builder_add(bo->avb, "@a{sv}", gv_result);
+}
+
+static void prv_browse_objects_end_action_cb(GUPnPServiceProxy *proxy,
+					     GUPnPServiceProxyAction *action,
+					     gpointer user_data)
+{
+	GError *error = NULL;
+	dls_async_task_t *cb_data = user_data;
+	dls_async_browse_objects_t *cb_task_data = &cb_data->ut.browse_objects;
+	GUPnPDIDLLiteParser *parser = NULL;
+	gchar *result = NULL;
+	const gchar *message;
+	gboolean end;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	end = gupnp_service_proxy_end_action(proxy, action, &error,
+					     "Result", G_TYPE_STRING, &result,
+					     NULL);
+
+	if (!end || (result == NULL)) {
+		message = (error != NULL) ? error->message : "Invalid result";
+		DLEYNA_LOG_WARNING("Browse Object operation failed: %s",
+				   message);
+
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_OPERATION_FAILED,
+					     "Browse operation failed: %s",
+					     message);
+		goto on_exit;
+	}
+
+	DLEYNA_LOG_DEBUG_NL();
+	DLEYNA_LOG_DEBUG("Result: %s", result);
+	DLEYNA_LOG_DEBUG_NL();
+
+	cb_task_data->get_all.vb = g_variant_builder_new(
+						G_VARIANT_TYPE("a{sv}"));
+
+	parser = gupnp_didl_lite_parser_new();
+
+	g_signal_connect(parser, "object-available",
+			 G_CALLBACK(prv_get_all),
+			 cb_data);
+
+	if (!gupnp_didl_lite_parser_parse_didl(parser, result, &error)) {
+		if (error->code == GUPNP_XML_ERROR_EMPTY_NODE) {
+			DLEYNA_LOG_WARNING("Property not defined for object");
+
+			cb_data->error = g_error_new(
+						DLEYNA_SERVER_ERROR,
+						DLEYNA_ERROR_UNKNOWN_PROPERTY,
+						"Property not defined for object");
+		} else {
+			DLEYNA_LOG_WARNING(
+					"Unable to parse results of browse: %s",
+					error->message);
+
+			cb_data->error = g_error_new(
+						DLEYNA_SERVER_ERROR,
+						DLEYNA_ERROR_OPERATION_FAILED,
+						"Unable to parse results of browse: %s",
+						error->message);
+		}
+
+		goto on_exit;
+	}
+
+	g_variant_builder_add(cb_task_data->avb, "@a{sv}",
+			      g_variant_builder_end(cb_task_data->get_all.vb));
+
+on_exit:
+
+	if (cb_data->error != NULL) {
+		message = cb_task_data->objects_id[cb_task_data->index - 1];
+		prv_browse_objects_add_error_result(cb_task_data, message,
+						    cb_data->error);
+		g_error_free(cb_data->error);
+		cb_data->error = NULL;
+	}
+
+	if (cb_task_data->get_all.vb) {
+		g_variant_builder_unref(cb_data->ut.get_all.vb);
+		cb_data->ut.get_all.vb = NULL;
+	}
+
+	if (parser)
+		g_object_unref(parser);
+
+	if (error)
+		g_error_free(error);
+
+	g_free(result);
+
+	DLEYNA_LOG_DEBUG("Exit");
+}
+
+static GUPnPServiceProxyAction *prv_browse_objects_begin_action_cb(
+						dleyna_service_task_t *task,
+						GUPnPServiceProxy *proxy,
+						gboolean *failed)
+{
+	GUPnPServiceProxyAction *action;
+	dls_task_t *user_data;
+	dls_async_browse_objects_t *cb_task_data;
+	const gchar *path;
+	gchar *root_path = NULL;
+	gchar *id = NULL;
+	GError *error = NULL;
+
+	DLEYNA_LOG_DEBUG("Enter called");
+
+	user_data = (dls_task_t *)dleyna_service_task_get_user_data(task);
+	cb_task_data = &((dls_async_task_t *)user_data)->ut.browse_objects;
+	path = cb_task_data->objects_id[cb_task_data->index];
+
+	/* Process anyway. We will add an entry with error */
+	(void) dls_path_get_path_and_id(path, &root_path, &id, &error);
+
+	if (error != NULL) {
+		DLEYNA_LOG_WARNING("%s: %s", path, error->message);
+
+		prv_browse_objects_add_error_result(cb_task_data, path, error);
+		action = NULL;
+		g_error_free(error);
+
+		goto exit;
+	}
+
+	DLEYNA_LOG_DEBUG("Browse Metadata for path [id]: %s [%s]", path, id);
+
+	action = gupnp_service_proxy_begin_action(
+			proxy, "Browse",
+			dleyna_service_task_begin_action_cb, task,
+			"ObjectID", G_TYPE_STRING, id,
+			"BrowseFlag", G_TYPE_STRING, "BrowseMetadata",
+			"Filter", G_TYPE_STRING, cb_task_data->upnp_filter,
+			"StartingIndex", G_TYPE_INT, 0,
+			"RequestedCount", G_TYPE_INT, 0,
+			"SortCriteria", G_TYPE_STRING, "", NULL);
+
+	g_free(root_path);
+	g_free(id);
+
+exit:
+	*failed = FALSE;
+	cb_task_data->index++;
+
+	return action;
+}
+
+static void prv_browse_objects_chain_cancelled(GCancellable *cancellable,
+					       gpointer user_data)
+{
+	dls_async_task_t *cb_data = user_data;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	dleyna_task_processor_cancel_queue(cb_data->ut.browse_objects.queue_id);
+	dls_async_task_cancelled_cb(cancellable, user_data);
+
+	DLEYNA_LOG_DEBUG("Exit");
+}
+
+static void prv_browse_objects_chain_end(gboolean cancelled, gpointer data)
+{
+	dls_task_t *task = (dls_task_t *)data;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_async_browse_objects_t *cb_task_data = &cb_data->ut.browse_objects;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	if (!cancelled)
+		cb_data->task.result = g_variant_ref_sink(
+						g_variant_builder_end(
+							cb_task_data->avb));
+	else if (cb_data->error == NULL)
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_CANCELLED,
+					     "Operation cancelled.");
+
+	(void) g_idle_add(dls_async_task_complete, cb_data);
+	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
+
+	DLEYNA_LOG_DEBUG("Exit");
+}
+
+void dls_device_browse_objects(dls_client_t *client, dls_task_t *task)
+{
+	const dleyna_task_queue_key_t *queue_id;
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_async_browse_objects_t *cb_task_data;
+	dls_device_context_t *context;
+	const gchar **objs;
+	gsize length;
+	guint i;
+	gboolean path_ok;
+
+	DLEYNA_LOG_DEBUG("Root Path %s", task->target.root_path)
+
+	objs = g_variant_get_objv(task->ut.browse_objects.objects, &length);
+
+	path_ok = (length > 0);
+
+	for (i = 0; (i < length) && path_ok; i++)
+		path_ok = g_str_has_prefix(objs[i], task->target.root_path);
+
+	if (!path_ok) {
+		g_free(objs);
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_BAD_PATH,
+					     "root path is invalid.");
+		goto on_error;
+	}
+
+	queue_id = dleyna_task_processor_add_queue(
+			dls_server_get_task_processor(),
+			dleyna_service_task_create_source(),
+			DLS_SERVER_SINK,
+			DLEYNA_TASK_QUEUE_FLAG_AUTO_REMOVE,
+			dleyna_service_task_process_cb,
+			dleyna_service_task_cancel_cb,
+			dleyna_service_task_delete_cb);
+
+	dleyna_task_queue_set_finally(queue_id, prv_browse_objects_chain_end);
+	dleyna_task_queue_set_user_data(queue_id, task);
+
+	context = dls_device_get_context(task->target.device, client);
+	cb_data->proxy = context->service_proxy;
+
+	cb_task_data = &cb_data->ut.browse_objects;
+	cb_task_data->queue_id = queue_id;
+	cb_task_data->avb = g_variant_builder_new(G_VARIANT_TYPE("aa{sv}"));
+	cb_task_data->objects_id = objs;
+
+	g_object_add_weak_pointer((G_OBJECT(context->service_proxy)),
+				  (gpointer *)&cb_data->proxy);
+
+	cb_data->cancel_id = g_cancellable_connect(
+				cb_data->cancellable,
+				G_CALLBACK(prv_browse_objects_chain_cancelled),
+				cb_data, NULL);
+
+	for (i = 0; i < length; i++)
+		dleyna_service_task_add(queue_id,
+					prv_browse_objects_begin_action_cb,
+					cb_data->proxy,
+					prv_browse_objects_end_action_cb,
+					NULL, cb_data);
+
+	dleyna_task_queue_start(queue_id);
+
+on_error:
+
+	if (cb_data->error != NULL)
+		(void) g_idle_add(dls_async_task_complete, cb_data);
+}
+
 void dls_device_get_resource(dls_client_t *client,
 			     dls_task_t *task,
 			     const gchar *upnp_filter)

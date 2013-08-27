@@ -52,6 +52,12 @@ static void prv_delete(dls_task_t *task)
 			g_variant_unref(task->ut.search.filter);
 		g_free(task->ut.search.sort_by);
 		break;
+	case DLS_TASK_BROWSE_OBJECTS:
+		if (task->ut.browse_objects.objects)
+			g_variant_unref(task->ut.browse_objects.objects);
+		if (task->ut.browse_objects.filter)
+			g_variant_unref(task->ut.browse_objects.filter);
+		break;
 	case DLS_TASK_GET_RESOURCE:
 		if (task->ut.resource.filter)
 			g_variant_unref(task->ut.resource.filter);
@@ -406,6 +412,26 @@ dls_task_t *dls_task_search_ex_new(dleyna_connector_msg_id_t invocation,
 		      &task->ut.search.filter, &task->ut.search.sort_by);
 
 	task->multiple_retvals = TRUE;
+
+finished:
+
+	return task;
+}
+
+dls_task_t *dls_task_browse_objects_new(dleyna_connector_msg_id_t invocation,
+					const gchar *path, GVariant *parameters,
+					GError **error)
+{
+	dls_task_t *task;
+
+	task = prv_m2spec_task_new(DLS_TASK_BROWSE_OBJECTS, invocation, path,
+				   "(@aa{sv})", error, FALSE);
+	if (!task)
+		goto finished;
+
+	g_variant_get(parameters, "(@ao@as)",
+		      &task->ut.browse_objects.objects,
+		      &task->ut.browse_objects.filter);
 
 finished:
 

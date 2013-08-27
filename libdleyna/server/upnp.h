@@ -59,6 +59,10 @@ void dls_upnp_search(dls_upnp_t *upnp, dls_client_t *client,
 		     dls_task_t *task,
 		     dls_upnp_task_complete_t cb);
 
+void dls_upnp_browse_objects(dls_upnp_t *upnp, dls_client_t *client,
+			     dls_task_t *task,
+			     dls_upnp_task_complete_t cb);
+
 void dls_upnp_get_resource(dls_upnp_t *upnp, dls_client_t *client,
 			   dls_task_t *task,
 			   dls_upnp_task_complete_t cb);
