@@ -207,6 +207,9 @@ enum dls_interface_type_ {
 #define DLS_INTERFACE_GET_METADATA "GetMetaData"
 #define DLS_INTERFACE_METADATA "MetaData"
 
+#define DLS_INTERFACE_BROWSE_OBJECTS "BrowseObjects"
+#define DLS_INTERFACE_OBJECTS_PATH "Objects"
+
 #define DLS_INTERFACE_CREATE_REFERENCE "CreateReference"
 #define DLS_INTERFACE_REFPATH "RefPath"
 

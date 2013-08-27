@@ -39,6 +39,7 @@ enum dls_task_type_t_ {
 	DLS_TASK_GET_ALL_PROPS,
 	DLS_TASK_GET_PROP,
 	DLS_TASK_SEARCH,
+	DLS_TASK_BROWSE_OBJECTS,
 	DLS_TASK_GET_RESOURCE,
 	DLS_TASK_SET_PREFER_LOCAL_ADDRESSES,
 	DLS_TASK_SET_PROTOCOL_INFO,
@@ -92,6 +93,12 @@ struct dls_task_search_t_ {
 	guint start;
 	guint count;
 	gchar *sort_by;
+	GVariant *filter;
+};
+
+typedef struct dls_task_browse_objects_t_ dls_task_browse_objects_t;
+struct dls_task_browse_objects_t_ {
+	GVariant *objects;
 	GVariant *filter;
 };
 
@@ -186,6 +193,7 @@ struct dls_task_t_ {
 		dls_task_create_reference_t create_reference;
 		dls_task_get_icon_t get_icon;
 		dls_task_white_list_t white_list;
+		dls_task_browse_objects_t browse_objects;
 	} ut;
 };
 
@@ -221,6 +229,10 @@ dls_task_t *dls_task_search_new(dleyna_connector_msg_id_t invocation,
 dls_task_t *dls_task_search_ex_new(dleyna_connector_msg_id_t invocation,
 				   const gchar *path, GVariant *parameters,
 				   GError **error);
+
+dls_task_t *dls_task_browse_objects_new(dleyna_connector_msg_id_t invocation,
+					const gchar *path, GVariant *parameters,
+					GError **error);
 
 dls_task_t *dls_task_get_resource_new(dleyna_connector_msg_id_t invocation,
 				      const gchar *path, GVariant *parameters,

@@ -155,6 +155,12 @@ class Device(Container):
                 'com.intel.dleyna-server', path),
                                          'com.intel.dLeynaServer.MediaDevice')
 
+    def browse_objects(self, paths, fltr=['*']):
+        objects = self._deviceIF.BrowseObjects(paths, fltr)
+        for item in objects:
+            print_properties(item)
+            print ""
+
     def upload_to_any(self, name, file_path):
         (tid, path) = self._deviceIF.UploadToAnyContainer(name, file_path)
         print "Transfer ID: " + str(tid)
