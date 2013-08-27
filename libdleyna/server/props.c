@@ -1334,8 +1334,12 @@ static void prv_add_resources(GVariantBuilder *item_vb,
 	GVariant *val;
 
 	val = prv_compute_resources(object, filter_mask, all_res);
-	g_variant_builder_add(item_vb, "{sv}", DLS_INTERFACE_PROP_RESOURCES,
-			      val);
+
+	if (g_variant_n_children(val))
+		g_variant_builder_add(item_vb, "{sv}",
+				      DLS_INTERFACE_PROP_RESOURCES, val);
+	else
+		g_variant_unref(val);
 }
 
 gboolean dls_props_add_object(GVariantBuilder *item_vb,
@@ -1401,10 +1405,13 @@ gboolean dls_props_add_object(GVariantBuilder *item_vb,
 
 	if (filter_mask & DLS_UPNP_MASK_PROP_DLNA_MANAGED) {
 		flags = gupnp_didl_lite_object_get_dlna_managed(object);
-		prv_add_variant_prop(item_vb,
-				     DLS_INTERFACE_PROP_DLNA_MANAGED,
-				     prv_props_get_dlna_info_dict(
-						flags, g_prop_dlna_ocm));
+
+		if (flags != GUPNP_OCM_FLAGS_NONE)
+			prv_add_variant_prop(item_vb,
+					     DLS_INTERFACE_PROP_DLNA_MANAGED,
+					     prv_props_get_dlna_info_dict(
+							flags,
+							g_prop_dlna_ocm));
 	}
 
 	if ((filter_mask & DLS_UPNP_MASK_PROP_OBJECT_UPDATE_ID) &&
@@ -1433,6 +1440,7 @@ void dls_props_add_container(GVariantBuilder *item_vb,
 	gboolean searchable;
 	guint uint_val;
 	GUPnPDIDLLiteResource *res;
+	GVariant *val;
 	const char *str_val;
 
 	*have_child_count = FALSE;
@@ -1452,10 +1460,16 @@ void dls_props_add_container(GVariantBuilder *item_vb,
 				  searchable);
 	}
 
-	if (filter_mask & DLS_UPNP_MASK_PROP_CREATE_CLASSES)
-		prv_add_variant_prop(item_vb,
-				     DLS_INTERFACE_PROP_CREATE_CLASSES,
-				     prv_compute_create_classes(object));
+	if (filter_mask & DLS_UPNP_MASK_PROP_CREATE_CLASSES) {
+		val = prv_compute_create_classes(object);
+
+		if (g_variant_n_children(val))
+			prv_add_variant_prop(item_vb,
+					     DLS_INTERFACE_PROP_CREATE_CLASSES,
+					     val);
+		else
+			g_variant_unref(val);
+	}
 
 	if ((filter_mask & DLS_UPNP_MASK_PROP_CONTAINER_UPDATE_ID) &&
 	    gupnp_didl_lite_container_container_update_id_is_set(object)) {
@@ -1512,9 +1526,12 @@ void dls_props_add_item(GVariantBuilder *item_vb,
 
 	if (filter_mask & DLS_UPNP_MASK_PROP_ARTISTS) {
 		list = gupnp_didl_lite_object_get_artists(object);
-		prv_add_variant_prop(item_vb, DLS_INTERFACE_PROP_ARTISTS,
-				     prv_get_artists_prop(list));
-		g_list_free_full(list, g_object_unref);
+		if (list != NULL) {
+			prv_add_variant_prop(item_vb,
+					     DLS_INTERFACE_PROP_ARTISTS,
+					     prv_get_artists_prop(list));
+			g_list_free_full(list, g_object_unref);
+		}
 	}
 
 	if (filter_mask & DLS_UPNP_MASK_PROP_ALBUM)
