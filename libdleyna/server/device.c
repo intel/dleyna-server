@@ -1401,7 +1401,7 @@ static void prv_get_item(GUPnPDIDLLiteParser *parser,
 	if (!GUPNP_IS_DIDL_LITE_CONTAINER(object))
 		dls_props_add_item(cb_task_data->vb, object,
 				   cb_data->task.target.root_path,
-				   DLS_UPNP_MASK_ALL_PROPS,
+				   cb_task_data->filter_mask,
 				   cb_task_data->protocol_info);
 	else
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
@@ -1461,7 +1461,7 @@ static void prv_get_object(GUPnPDIDLLiteParser *parser,
 
 	if (!dls_props_add_object(cb_task_data->vb, object,
 				  cb_data->task.target.root_path,
-				  parent_path, DLS_UPNP_MASK_ALL_PROPS))
+				  parent_path, cb_task_data->filter_mask))
 		goto on_error;
 
 	g_free(path);
@@ -1491,7 +1491,7 @@ static void prv_get_all(GUPnPDIDLLiteParser *parser,
 			dls_props_add_container(
 				cb_task_data->vb,
 				(GUPnPDIDLLiteContainer *)
-				object, DLS_UPNP_MASK_ALL_PROPS,
+				object, cb_task_data->filter_mask,
 				cb_task_data->protocol_info,
 				&have_child_count);
 			if (!have_child_count)
@@ -1500,7 +1500,7 @@ static void prv_get_all(GUPnPDIDLLiteParser *parser,
 			dls_props_add_item(cb_task_data->vb,
 					   object,
 					   cb_data->task.target.root_path,
-					   DLS_UPNP_MASK_ALL_PROPS,
+					   cb_task_data->filter_mask,
 					   cb_task_data->protocol_info);
 		}
 	}

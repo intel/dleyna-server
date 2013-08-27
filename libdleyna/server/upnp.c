@@ -514,7 +514,7 @@ void dls_upnp_get_all_props(dls_upnp_t *upnp, dls_client_t *client,
 	DLEYNA_LOG_DEBUG("Root Object = %d", root_object);
 
 	cb_task_data->protocol_info = client->protocol_info;
-
+	cb_task_data->filter_mask = DLS_UPNP_MASK_ALL_PROPS;
 	dls_device_get_all_props(client, task, root_object);
 
 	DLEYNA_LOG_DEBUG("Exit with SUCCESS");
