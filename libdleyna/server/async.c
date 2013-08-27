@@ -40,6 +40,12 @@ void dls_async_task_delete(dls_async_task_t *cb_data)
 		if (cb_data->ut.get_all.vb)
 			g_variant_builder_unref(cb_data->ut.get_all.vb);
 		break;
+	case DLS_TASK_BROWSE_OBJECTS:
+		if (cb_data->ut.browse_objects.avb)
+			g_variant_builder_unref(cb_data->ut.browse_objects.avb);
+		g_free(cb_data->ut.browse_objects.objects_id);
+		g_free(cb_data->ut.browse_objects.upnp_filter);
+		break;
 	case DLS_TASK_UPLOAD_TO_ANY:
 	case DLS_TASK_UPLOAD:
 		g_free(cb_data->ut.upload.mime_type);

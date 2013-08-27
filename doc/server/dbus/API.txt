@@ -287,7 +287,7 @@ is emitted when this property changes.
 Methods:
 ---------
 
-The com.intel.dLeynaServer.MediaDevice interface currently exposes seven methods:
+The com.intel.dLeynaServer.MediaDevice interface currently exposes 8 methods:
 
 UploadToAnyContainer(s DisplayName, s FilePath) -> (u UploadId, o ObjectPath)
 
@@ -358,6 +358,17 @@ Returns the device icon bytes and mime type according to
 the RequestedMimeType and Resolution parameters.
 Both RequestedMimeType and Resolution parameters are currently
 reserved for future use and should be set as an empty string.
+
+BrowseObjects(as ObjectPath, as Filter) -> aa{sv}
+This method returns properties of all media objects specified by the first
+parameter.  The list of properties to return is specified by the second
+parameter.
+The first argument is an array of object path.
+The second argument is an array of properties to be included in the returned
+dictionary.  The format and the behaviour of this array is identical to the
+filter argument passed to the Search and List functions.
+The result is an array of property name+value dictionaries, one for each object
+specified in the first argument.
 
 
 Signals:
