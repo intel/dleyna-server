@@ -2983,6 +2983,10 @@ static void prv_browse_objects_chain_end(gboolean cancelled, gpointer data)
 		cb_data->task.result = g_variant_ref_sink(
 						g_variant_builder_end(
 							cb_task_data->avb));
+	else if (cb_data->error == NULL)
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_CANCELLED,
+					     "Operation cancelled.");
 
 	(void) g_idle_add(dls_async_task_complete, cb_data);
 	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
