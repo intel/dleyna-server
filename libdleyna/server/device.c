@@ -1461,7 +1461,7 @@ static void prv_get_object(GUPnPDIDLLiteParser *parser,
 
 	if (!dls_props_add_object(cb_task_data->vb, object,
 				  cb_data->task.target.root_path,
-				  parent_path, DLS_UPNP_MASK_ALL_PROPS))
+				  parent_path, cb_task_data->filter_mask))
 		goto on_error;
 
 	g_free(path);
