@@ -514,7 +514,7 @@ void dls_upnp_get_all_props(dls_upnp_t *upnp, dls_client_t *client,
 	DLEYNA_LOG_DEBUG("Root Object = %d", root_object);
 
 	cb_task_data->protocol_info = client->protocol_info;
-
+	cb_task_data->filter_mask = DLS_UPNP_MASK_ALL_PROPS;
 	dls_device_get_all_props(client, task, root_object);
 
 	DLEYNA_LOG_DEBUG("Exit with SUCCESS");
@@ -619,6 +619,32 @@ on_error:
 	g_free(upnp_filter);
 
 	DLEYNA_LOG_DEBUG("Exit with %s", !cb_data->action ? "FAIL" : "SUCCESS");
+}
+
+void dls_upnp_browse_objects(dls_upnp_t *upnp, dls_client_t *client,
+			     dls_task_t *task,
+			     dls_upnp_task_complete_t cb)
+{
+	dls_async_task_t *cb_data = (dls_async_task_t *)task;
+	dls_async_browse_objects_t *cb_task_data;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	cb_data->cb = cb;
+	cb_task_data = &cb_data->ut.browse_objects;
+	cb_task_data->get_all.protocol_info = client->protocol_info;
+
+	cb_task_data->get_all.filter_mask =
+		dls_props_parse_filter(upnp->filter_map,
+				       task->ut.browse_objects.filter,
+				       &cb_task_data->upnp_filter);
+
+	DLEYNA_LOG_DEBUG("Filter Mask 0x%"G_GUINT64_FORMAT"x",
+			 cb_task_data->get_all.filter_mask);
+
+	dls_device_browse_objects(client, task);
+
+	DLEYNA_LOG_DEBUG("Exit");
 }
 
 void dls_upnp_get_resource(dls_upnp_t *upnp, dls_client_t *client,

@@ -77,6 +77,16 @@ struct dls_async_update_t_ {
 	GHashTable *map;
 };
 
+typedef struct dls_async_browse_objects_t_ dls_async_browse_objects_t;
+struct dls_async_browse_objects_t_ {
+	dls_async_get_all_t get_all; /* pseudo inheritance - MUST be first */
+	GVariantBuilder *avb;
+	gchar *upnp_filter;
+	const dleyna_task_queue_key_t *queue_id;
+	const gchar **objects_id;
+	guint index;
+};
+
 struct dls_async_task_t_ {
 	dls_task_t task; /* pseudo inheritance - MUST be first field */
 	dls_upnp_task_complete_t cb;
@@ -91,6 +101,7 @@ struct dls_async_task_t_ {
 		dls_async_get_all_t get_all;
 		dls_async_upload_t upload;
 		dls_async_update_t update;
+		dls_async_browse_objects_t browse_objects;
 	} ut;
 };
 
