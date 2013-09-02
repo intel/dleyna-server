@@ -118,6 +118,11 @@ enum dls_interface_type_ {
 /* Evented State Variable Properties */
 #define DLS_INTERFACE_PROP_ESV_SYSTEM_UPDATE_ID "SystemUpdateID"
 
+/* Changed event properties */
+#define DLS_INTERFACE_PROP_CHANGE_TYPE "ChangeType"
+#define DLS_INTERFACE_PROP_UPDATE_ID "UpdateID"
+#define DLS_INTERFACE_PROP_SUBTREE_UPDATE "SubTreeUpdate"
+
 #define DLS_INTERFACE_GET_VERSION "GetVersion"
 #define DLS_INTERFACE_GET_SERVERS "GetServers"
 #define DLS_INTERFACE_RESCAN "Rescan"
@@ -175,8 +180,8 @@ enum dls_interface_type_ {
 #define DLS_INTERFACE_INVALIDATED_PROPERTIES "InvalidatedProperties"
 #define DLS_INTERFACE_ESV_CONTAINER_UPDATE_IDS "ContainerUpdateIDs"
 #define DLS_INTERFACE_CONTAINER_PATHS_ID "ContainerPathsIDs"
-#define DLS_INTERFACE_ESV_LAST_CHANGE "LastChange"
-#define DLS_INTERFACE_LAST_CHANGE_STATE_EVENT "StateEvent"
+#define DLS_INTERFACE_CHANGED_EVENT "Changed"
+#define DLS_INTERFACE_CHANGED_OBJECTS "ChangedObjects"
 
 #define DLS_INTERFACE_DELETE "Delete"
 

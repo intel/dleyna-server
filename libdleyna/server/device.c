@@ -98,6 +98,15 @@ struct prv_new_device_ct_t_ {
 	GHashTable *property_map;
 };
 
+enum prv_changed_event_type_t_ {
+	PRV_CHANGED_EVENT_ADD = 1,
+	PRV_CHANGED_EVENT_MOD,
+	PRV_CHANGED_EVENT_DEL,
+	PRV_CHANGED_EVENT_DONE,
+	PRV_CHANGED_EVENT_CONTAINER
+};
+typedef enum prv_changed_event_type_t_ prv_changed_event_type_t;
+
 static void prv_get_child_count(dls_async_task_t *cb_data,
 				dls_device_count_cb_t cb, const gchar *id);
 static void prv_retrieve_child_count_for_list(dls_async_task_t *cb_data);
@@ -265,16 +274,19 @@ static void prv_last_change_decode(GUPnPCDSLastChangeEntry *entry,
 				   const char *root_path)
 {
 	GUPnPCDSLastChangeEvent event;
-	GVariant *state;
 	const char *object_id;
 	const char *parent_id;
 	const char *mclass;
 	const char *media_class;
-	char *key[] = {"ADD", "DEL", "MOD", "DONE"};
+	const char *media_class_ex;
 	char *parent_path;
 	char *path = NULL;
 	gboolean sub_update;
 	guint32 update_id;
+	GVariantBuilder dict;
+	gboolean mod;
+
+	g_variant_builder_init(&dict, G_VARIANT_TYPE("a{sv}"));
 
 	object_id = gupnp_cds_last_change_entry_get_object_id(entry);
 	if (!object_id)
@@ -295,21 +307,81 @@ static void prv_last_change_decode(GUPnPCDSLastChangeEntry *entry,
 		if (!mclass)
 			goto on_error;
 
-		media_class = dls_props_upnp_class_to_media_spec_ex(mclass);
+		media_class = dls_props_upnp_class_to_media_spec(mclass);
 		if (!media_class)
 			goto on_error;
 
+		media_class_ex = dls_props_upnp_class_to_media_spec_ex(mclass);
+		if (!media_class_ex)
+			goto on_error;
+
 		parent_path = dls_path_from_id(root_path, parent_id);
-		state = g_variant_new("(oubos)", path, update_id, sub_update,
-				      parent_path, media_class);
+
+		g_variant_builder_add(
+				&dict, "{sv}",
+				DLS_INTERFACE_PROP_CHANGE_TYPE,
+				g_variant_new_uint32(PRV_CHANGED_EVENT_ADD));
+		g_variant_builder_add(
+				&dict, "{sv}",
+				DLS_INTERFACE_PROP_PATH,
+				g_variant_new_string(path));
+		g_variant_builder_add(
+				&dict, "{sv}",
+				DLS_INTERFACE_PROP_UPDATE_ID,
+				g_variant_new_uint32(update_id));
+		g_variant_builder_add(
+				&dict, "{sv}",
+				DLS_INTERFACE_PROP_SUBTREE_UPDATE,
+				g_variant_new_boolean(sub_update));
+		g_variant_builder_add(
+				&dict, "{sv}",
+				DLS_INTERFACE_PROP_PARENT,
+				g_variant_new_string(parent_path));
+		g_variant_builder_add(
+				&dict, "{sv}",
+				DLS_INTERFACE_PROP_TYPE,
+				g_variant_new_string(media_class));
+		g_variant_builder_add(
+				&dict, "{sv}",
+				DLS_INTERFACE_PROP_TYPE_EX,
+				g_variant_new_string(media_class_ex));
+
 		g_free(parent_path);
 		break;
 	case GUPNP_CDS_LAST_CHANGE_EVENT_OBJECT_REMOVED:
 	case GUPNP_CDS_LAST_CHANGE_EVENT_OBJECT_MODIFIED:
-		state = g_variant_new("(oub)", path, update_id, sub_update);
+		mod = (event == GUPNP_CDS_LAST_CHANGE_EVENT_OBJECT_REMOVED);
+		g_variant_builder_add(
+			&dict, "{sv}",
+			DLS_INTERFACE_PROP_CHANGE_TYPE,
+			g_variant_new_uint32(mod ? PRV_CHANGED_EVENT_MOD :
+							PRV_CHANGED_EVENT_DEL));
+		g_variant_builder_add(
+				&dict, "{sv}",
+				DLS_INTERFACE_PROP_PATH,
+				g_variant_new_string(path));
+		g_variant_builder_add(
+				&dict, "{sv}",
+				DLS_INTERFACE_PROP_UPDATE_ID,
+				g_variant_new_uint32(update_id));
+		g_variant_builder_add(
+				&dict, "{sv}",
+				DLS_INTERFACE_PROP_SUBTREE_UPDATE,
+				g_variant_new_boolean(sub_update));
 		break;
 	case GUPNP_CDS_LAST_CHANGE_EVENT_ST_DONE:
-		state = g_variant_new("(ou)", path, update_id);
+		g_variant_builder_add(
+				&dict, "{sv}",
+				DLS_INTERFACE_PROP_CHANGE_TYPE,
+				g_variant_new_uint32(PRV_CHANGED_EVENT_DONE));
+		g_variant_builder_add(
+				&dict, "{sv}",
+				DLS_INTERFACE_PROP_PATH,
+				g_variant_new_string(path));
+		g_variant_builder_add(
+				&dict, "{sv}",
+				DLS_INTERFACE_PROP_UPDATE_ID,
+				g_variant_new_uint32(update_id));
 		break;
 	case GUPNP_CDS_LAST_CHANGE_EVENT_INVALID:
 	default:
@@ -317,7 +389,7 @@ static void prv_last_change_decode(GUPnPCDSLastChangeEntry *entry,
 		break;
 	}
 
-	g_variant_builder_add(array, "(sv)", key[event - 1], state);
+	g_variant_builder_add(array, "@a{sv}", g_variant_builder_end(&dict));
 
 on_error:
 
@@ -354,7 +426,7 @@ static void prv_last_change_cb(GUPnPServiceProxy *proxy,
 		goto on_error;
 	}
 
-	g_variant_builder_init(&array, G_VARIANT_TYPE("a(sv)"));
+	g_variant_builder_init(&array, G_VARIANT_TYPE("aa{sv}"));
 	next = list;
 	while (next) {
 		prv_last_change_decode(next->data, &array, device->path);
@@ -362,12 +434,12 @@ static void prv_last_change_cb(GUPnPServiceProxy *proxy,
 		next = g_list_next(next);
 	}
 
-	val = g_variant_new("(@a(sv))", g_variant_builder_end(&array));
+	val = g_variant_new("(@aa{sv})", g_variant_builder_end(&array));
 
 	(void) dls_server_get_connector()->notify(device->connection,
 					   device->path,
 					   DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE,
-					   DLS_INTERFACE_ESV_LAST_CHANGE,
+					   DLS_INTERFACE_CHANGED_EVENT,
 					   val,
 					   NULL);
 
@@ -407,6 +479,44 @@ static void prv_build_container_update_array(const gchar *root_path,
 	g_strfreev(str_array);
 }
 
+static void prv_build_container_update_changed_array(const gchar *root_path,
+						     const gchar *value,
+						     GVariantBuilder *builder)
+{
+	gchar **str_array;
+	int pos = 0;
+	gchar *path;
+	guint id;
+	GVariantBuilder dict;
+
+	str_array = g_strsplit(value, ",", 0);
+
+	while (str_array[pos] && str_array[pos + 1]) {
+		g_variant_builder_init(&dict, G_VARIANT_TYPE("a{sv}"));
+
+		path = dls_path_from_id(root_path, str_array[pos++]);
+		id = atoi(str_array[pos++]);
+
+		g_variant_builder_add(
+			&dict, "{sv}",
+			DLS_INTERFACE_PROP_CHANGE_TYPE,
+			g_variant_new_uint32(PRV_CHANGED_EVENT_CONTAINER));
+		g_variant_builder_add(&dict, "{sv}",
+				      DLS_INTERFACE_PROP_PATH,
+				      g_variant_new_string(path));
+		g_variant_builder_add(&dict, "{sv}",
+				      DLS_INTERFACE_PROP_UPDATE_ID,
+				      g_variant_new_uint32(id));
+
+		g_variant_builder_add(builder, "@a{sv}",
+				      g_variant_builder_end(&dict));
+
+		g_free(path);
+	}
+
+	g_strfreev(str_array);
+}
+
 static void prv_container_update_cb(GUPnPServiceProxy *proxy,
 				    const char *variable,
 				    GValue *value,
@@ -429,6 +539,25 @@ static void prv_container_update_cb(GUPnPServiceProxy *proxy,
 				g_variant_new("(@a(ou))",
 					      g_variant_builder_end(&array)),
 				NULL);
+
+	if (!device->has_last_change) {
+		g_variant_builder_init(&array, G_VARIANT_TYPE("aa{sv}"));
+
+		prv_build_container_update_changed_array(
+						device->path,
+						g_value_get_string(value),
+						&array);
+
+		(void) dls_server_get_connector()->notify(
+					device->connection,
+					device->path,
+					DLEYNA_SERVER_INTERFACE_MEDIA_DEVICE,
+					DLS_INTERFACE_CHANGED_EVENT,
+					g_variant_new("(@aa{sv})",
+						      g_variant_builder_end(
+								      &array)),
+					NULL);
+	}
 }
 
 static void prv_system_update_cb(GUPnPServiceProxy *proxy,
@@ -869,6 +998,9 @@ static void prv_get_search_capabilities_cb(GUPnPServiceProxy *proxy,
 
 	prv_get_capabilities_analyze(priv_t->property_map, result,
 				     &priv_t->dev->search_caps);
+
+	if (g_hash_table_lookup(priv_t->property_map, "upnp:objectUpdateID"))
+		priv_t->dev->has_last_change = TRUE;
 
 on_error:
 
