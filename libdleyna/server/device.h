@@ -63,6 +63,7 @@ struct dls_device_t_ {
 	GVariant *sort_ext_caps;
 	GVariant *feature_list;
 	gboolean shutting_down;
+	gboolean has_last_change;
 	guint construct_step;
 	dls_device_icon_t icon;
 };

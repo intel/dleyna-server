@@ -29,19 +29,19 @@ import json
 def print_properties(props):
     print json.dumps(props, indent=4, sort_keys=True)
 
-def last_change(state_event, path):
-    print "LastChange signal from [%s]" % path
-    print "State Event:"
-    print_properties(state_event)
+def changed(objects, path):
+    print "Changed signal from [%s]" % path
+    print "Objects:"
+    print_properties(objects)
 
 if __name__ == '__main__':
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
     bus = dbus.SessionBus()
 
-    bus.add_signal_receiver(last_change,
+    bus.add_signal_receiver(changed,
                             bus_name="com.intel.dleyna-server",
-                            signal_name = "LastChange",
+                            signal_name = "Changed",
                             path_keyword="path")
 
     mainloop = gobject.MainLoop()
