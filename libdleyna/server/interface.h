@@ -43,6 +43,11 @@ enum dls_interface_type_ {
 #define DLS_INTERFACE_MEDIA_OBJECT "org.gnome.UPnP.MediaObject2"
 #define DLS_INTERFACE_MEDIA_ITEM "org.gnome.UPnP.MediaItem2"
 
+#define DLS_INTERFACE_PROP_ERROR "Error"
+#define DLS_INTERFACE_PROP_ERROR_ID "ID"
+#define DLS_INTERFACE_PROP_ERROR_NAME "Name"
+#define DLS_INTERFACE_PROP_ERROR_MESSAGE "Message"
+
 /* Manager Properties */
 #define DLS_INTERFACE_PROP_WHITE_LIST_ENTRIES "WhiteListEntries"
 #define DLS_INTERFACE_PROP_WHITE_LIST_ENABLED "WhiteListEnabled"

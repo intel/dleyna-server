@@ -147,4 +147,6 @@ void dls_props_add_manager(GUPnPContextManager *manager, GVariantBuilder *vb);
 GVariant *dls_props_get_manager_prop(GUPnPContextManager *manager,
 				     const gchar *prop);
 
+GVariant *dls_props_get_error_prop(GError *error);
+
 #endif /* DLS_PROPS_H__ */

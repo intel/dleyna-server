@@ -2123,3 +2123,29 @@ GVariant *dls_props_get_manager_prop(GUPnPContextManager *manager,
 
 	return retval;
 }
+
+GVariant *dls_props_get_error_prop(GError *error)
+{
+	GVariantBuilder gvb;
+
+	g_variant_builder_init(&gvb, G_VARIANT_TYPE("a{sv}"));
+
+	g_variant_builder_add(&gvb, "{sv}",
+			      DLS_INTERFACE_PROP_ERROR_ID,
+			      g_variant_new_int32(error->code));
+
+/* NOTE: We should modify the dleyna-connector API to add a new method to
+ *       retrieve the error string. Direct call to DBUS are forbidden.
+ *
+ *	g_variant_builder_add(&gvb, "{sv}",
+ *			      DLS_INTERFACE_PROP_ERROR_NAME,
+ *			      g_variant_new_string(
+ * 				g_dbus_error_get_remote_error(cb_data->error)));
+*/
+
+	g_variant_builder_add(&gvb, "{sv}",
+			      DLS_INTERFACE_PROP_ERROR_MESSAGE,
+			      g_variant_new_string(error->message));
+
+	return g_variant_builder_end(&gvb);
+}
