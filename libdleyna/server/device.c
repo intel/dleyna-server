@@ -312,8 +312,6 @@ static void prv_last_change_decode(GUPnPCDSLastChangeEntry *entry,
 			goto on_error;
 
 		media_class_ex = dls_props_upnp_class_to_media_spec_ex(mclass);
-		if (!media_class_ex)
-			goto on_error;
 
 		parent_path = dls_path_from_id(root_path, parent_id);
 
