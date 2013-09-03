@@ -363,12 +363,27 @@ BrowseObjects(as ObjectPath, as Filter) -> aa{sv}
 This method returns properties of all media objects specified by the first
 parameter.  The list of properties to return is specified by the second
 parameter.
-The first argument is an array of object path.
-The second argument is an array of properties to be included in the returned
-dictionary.  The format and the behaviour of this array is identical to the
+The first argument is an array of object paths.
+The second argument is an array of property name.  This is the list of
+properties that would be returned for each object.
+The format and the behaviour of this array is identical to the
 filter argument passed to the Search and List functions.
 The result is an array of property name+value dictionaries, one for each object
 specified in the first argument.
+In case of even a single 'Invalid path' in ObjectPath parameter, the function
+will failed and return an error.
+In case of 'Invalid ID', the function will succeed, and an 'Error' property
+will be set for this object.
+We guarantee that the number of elements of the result array is the same and in
+the same order as the ObjectPath array.
+
+The purposes of this method are:
+
+1. It allows applications to easily retrieve information about unrelated
+   objects in one call.
+2. It should be used in preference to GetAll, if an application wishes to
+   retrieve a subset of an object's properties. Browse is likely to be more
+   efficient than GetAll in such cases.
 
 
 Signals:

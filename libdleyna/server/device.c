@@ -2821,6 +2821,32 @@ static void prv_get_resource(GUPnPDIDLLiteParser *parser,
 			       task_data->protocol_info);
 }
 
+static void prv_browse_objects_add_error_result(dls_async_browse_objects_t *bo,
+						const gchar *path,
+						GError *error)
+{
+	GVariantBuilder evb;
+	GVariant* gv_result;
+
+	DLEYNA_LOG_WARNING("%s: %s", path, error->message);
+
+	g_variant_builder_init(&evb, G_VARIANT_TYPE("a{sv}"));
+
+	if (bo->get_all.filter_mask & DLS_UPNP_MASK_PROP_PATH)
+		g_variant_builder_add(
+			&evb, "{sv}", DLS_INTERFACE_PROP_PATH,
+			g_variant_new_object_path(path));
+
+	gv_result = dls_props_get_error_prop(error);
+
+	g_variant_builder_add(&evb, "{sv}",
+			      DLS_INTERFACE_PROP_ERROR, gv_result);
+
+	gv_result = g_variant_builder_end(&evb);
+
+	g_variant_builder_add(bo->avb, "@a{sv}", gv_result);
+}
+
 static void prv_browse_objects_end_action_cb(GUPnPServiceProxy *proxy,
 					     GUPnPServiceProxyAction *action,
 					     gpointer user_data)
@@ -2832,8 +2858,6 @@ static void prv_browse_objects_end_action_cb(GUPnPServiceProxy *proxy,
 	gchar *result = NULL;
 	const gchar *message;
 	gboolean end;
-	GVariant* gv_result;
-	GVariantBuilder evb;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -2889,33 +2913,18 @@ static void prv_browse_objects_end_action_cb(GUPnPServiceProxy *proxy,
 		goto on_exit;
 	}
 
-	gv_result = g_variant_builder_end(cb_task_data->get_all.vb);
+	g_variant_builder_add(cb_task_data->avb, "@a{sv}",
+			      g_variant_builder_end(cb_task_data->get_all.vb));
 
 on_exit:
 
 	if (cb_data->error != NULL) {
-		g_variant_builder_init(&evb, G_VARIANT_TYPE("a{sv}"));
-
-		if (cb_task_data->get_all.filter_mask & DLS_UPNP_MASK_PROP_PATH)
-			g_variant_builder_add(
-				&evb, "{sv}", DLS_INTERFACE_PROP_PATH,
-				g_variant_new_object_path(
-					cb_task_data->objects_id[
-						cb_task_data->index - 1]));
-
-		gv_result = dls_props_get_error_prop(cb_data->error);
-
-		g_variant_builder_add(&evb, "{sv}",
-				      DLS_INTERFACE_PROP_ERROR,
-				      g_variant_ref_sink(gv_result));
-
-		gv_result = g_variant_builder_end(&evb);
-
+		message = cb_task_data->objects_id[cb_task_data->index - 1];
+		prv_browse_objects_add_error_result(cb_task_data, message,
+						    cb_data->error);
 		g_error_free(cb_data->error);
 		cb_data->error = NULL;
 	}
-
-	g_variant_builder_add(cb_task_data->avb, "@a{sv}", gv_result);
 
 	if (cb_task_data->get_all.vb) {
 		g_variant_builder_unref(cb_data->ut.get_all.vb);
@@ -2957,13 +2966,15 @@ static GUPnPServiceProxyAction *prv_browse_objects_begin_action_cb(
 
 	if (error != NULL) {
 		DLEYNA_LOG_WARNING("%s: %s", path, error->message);
+
+		prv_browse_objects_add_error_result(cb_task_data, path, error);
+		action = NULL;
 		g_error_free(error);
+
+		goto exit;
 	}
 
 	DLEYNA_LOG_DEBUG("Browse Metadata for path [id]: %s [%s]", path, id);
-
-	*failed = FALSE;
-	cb_task_data->index++;
 
 	action = gupnp_service_proxy_begin_action(
 			proxy, "Browse",
@@ -2978,6 +2989,10 @@ static GUPnPServiceProxyAction *prv_browse_objects_begin_action_cb(
 	g_free(root_path);
 	g_free(id);
 
+exit:
+	*failed = FALSE;
+	cb_task_data->index++;
+
 	return action;
 }
 
@@ -2991,7 +3006,7 @@ static void prv_browse_objects_chain_cancelled(GCancellable *cancellable,
 	dleyna_task_processor_cancel_queue(cb_data->ut.browse_objects.queue_id);
 	dls_async_task_cancelled_cb(cancellable, user_data);
 
-	DLEYNA_LOG_DEBUG("Enter");
+	DLEYNA_LOG_DEBUG("Exit");
 }
 
 static void prv_browse_objects_chain_end(gboolean cancelled, gpointer data)
