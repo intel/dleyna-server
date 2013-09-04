@@ -1371,6 +1371,11 @@ static const gchar *prv_control_point_root_introspection(void)
 	return g_root_introspection;
 }
 
+static const gchar *prv_control_point_get_version(void)
+{
+	return VERSION;
+}
+
 static const dleyna_control_point_t g_control_point = {
 	prv_control_point_initialize,
 	prv_control_point_free,
@@ -1378,7 +1383,8 @@ static const dleyna_control_point_t g_control_point = {
 	prv_control_point_server_introspection,
 	prv_control_point_root_introspection,
 	prv_control_point_start_service,
-	prv_control_point_stop_service
+	prv_control_point_stop_service,
+	prv_control_point_get_version
 };
 
 const dleyna_control_point_t *dleyna_control_point_get_server(void)
