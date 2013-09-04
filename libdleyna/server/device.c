@@ -628,7 +628,7 @@ static dls_network_if_info_t *prv_get_network_if_info(xmlNode *device_if_node,
 	if ((info->device_uuid == NULL || strlen(info->device_uuid) > 70) ||
 	    (info->mac_address == NULL || strlen(info->mac_address) != 17) ||
 	    (info->network_if_mode == NULL) || (info->ip_addresses == NULL) ||
-	    (info->wake_on_pattern == NULL) || (info->wake_transport == NULL))
+	    (info->wake_on_pattern == NULL))
 		goto on_error;
 
 	if (strcmp(info->device_uuid, udn))
@@ -712,7 +712,7 @@ static gboolean prv_get_device_sleeping_state(dls_device_t *device,
 	gboolean found = FALSE;
 	const gchar *udn;
 	GList *next_ip;
-	guint ip_idx = 0;
+	guint ip_idx;
 	gchar *ip_address;
 
 	DLEYNA_LOG_DEBUG("Enter");
@@ -743,6 +743,7 @@ static gboolean prv_get_device_sleeping_state(dls_device_t *device,
 					 i, ctx->ip_address);
 
 			next_ip = info->ip_addresses;
+			ip_idx = 0;
 			while (next_ip != NULL) {
 				ip_address = (gchar *)next_ip->data;
 
@@ -5977,13 +5978,8 @@ void dls_device_wake(dls_client_t *client, dls_task_t *task)
 
 	info = device->network_if_info;
 
-	DLEYNA_LOG_DEBUG("MacAddress = %s", info->mac_address);
-	DLEYNA_LOG_DEBUG("DeviceUUID = %s", info->device_uuid);
-	DLEYNA_LOG_DEBUG("NetworkInterfaceMode = %s", info->network_if_mode);
-	DLEYNA_LOG_DEBUG("WakeOnPattern = %s", info->wake_on_pattern);
-	DLEYNA_LOG_DEBUG("WakeSupportedTransport = %s", info->wake_transport);
-
-	if (!strcmp(info->wake_transport, "UDP-Broadcast")) {
+	if ((info->wake_transport == NULL) ||
+	    !strcmp(info->wake_transport, "UDP-Broadcast")) {
 		socket_protocol = G_SOCKET_PROTOCOL_UDP;
 		broadcast = TRUE;
 	} else if (!strcmp(info->wake_transport, "UDP-Unicast")) {
@@ -5996,6 +5992,12 @@ void dls_device_wake(dls_client_t *client, dls_task_t *task)
 					     "Unsupported wake transport");
 		goto on_complete;
 	}
+
+	DLEYNA_LOG_DEBUG("MacAddress = %s", info->mac_address);
+	DLEYNA_LOG_DEBUG("DeviceUUID = %s", info->device_uuid);
+	DLEYNA_LOG_DEBUG("NetworkInterfaceMode = %s", info->network_if_mode);
+	DLEYNA_LOG_DEBUG("WakeOnPattern = %s", info->wake_on_pattern);
+	DLEYNA_LOG_DEBUG("WakeSupportedTransport = %s", info->wake_transport);
 
 	wake_on_ip_address = (gchar *)g_list_nth_data(info->ip_addresses,
 						info->ip_address_position);
