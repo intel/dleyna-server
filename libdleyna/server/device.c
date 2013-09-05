@@ -283,10 +283,10 @@ static void prv_last_change_decode(GUPnPCDSLastChangeEntry *entry,
 	char *path = NULL;
 	gboolean sub_update;
 	guint32 update_id;
-	GVariantBuilder dict;
+	GVariantBuilder *dict;
 	gboolean mod;
 
-	g_variant_builder_init(&dict, G_VARIANT_TYPE("a{sv}"));
+	dict = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 
 	object_id = gupnp_cds_last_change_entry_get_object_id(entry);
 	if (!object_id)
@@ -316,31 +316,31 @@ static void prv_last_change_decode(GUPnPCDSLastChangeEntry *entry,
 		parent_path = dls_path_from_id(root_path, parent_id);
 
 		g_variant_builder_add(
-				&dict, "{sv}",
+				dict, "{sv}",
 				DLS_INTERFACE_PROP_CHANGE_TYPE,
 				g_variant_new_uint32(PRV_CHANGED_EVENT_ADD));
 		g_variant_builder_add(
-				&dict, "{sv}",
+				dict, "{sv}",
 				DLS_INTERFACE_PROP_PATH,
 				g_variant_new_string(path));
 		g_variant_builder_add(
-				&dict, "{sv}",
+				dict, "{sv}",
 				DLS_INTERFACE_PROP_UPDATE_ID,
 				g_variant_new_uint32(update_id));
 		g_variant_builder_add(
-				&dict, "{sv}",
+				dict, "{sv}",
 				DLS_INTERFACE_PROP_SUBTREE_UPDATE,
 				g_variant_new_boolean(sub_update));
 		g_variant_builder_add(
-				&dict, "{sv}",
+				dict, "{sv}",
 				DLS_INTERFACE_PROP_PARENT,
 				g_variant_new_string(parent_path));
 		g_variant_builder_add(
-				&dict, "{sv}",
+				dict, "{sv}",
 				DLS_INTERFACE_PROP_TYPE,
 				g_variant_new_string(media_class));
 		g_variant_builder_add(
-				&dict, "{sv}",
+				dict, "{sv}",
 				DLS_INTERFACE_PROP_TYPE_EX,
 				g_variant_new_string(media_class_ex));
 
@@ -348,36 +348,36 @@ static void prv_last_change_decode(GUPnPCDSLastChangeEntry *entry,
 		break;
 	case GUPNP_CDS_LAST_CHANGE_EVENT_OBJECT_REMOVED:
 	case GUPNP_CDS_LAST_CHANGE_EVENT_OBJECT_MODIFIED:
-		mod = (event == GUPNP_CDS_LAST_CHANGE_EVENT_OBJECT_REMOVED);
+		mod = (event == GUPNP_CDS_LAST_CHANGE_EVENT_OBJECT_MODIFIED);
 		g_variant_builder_add(
-			&dict, "{sv}",
+			dict, "{sv}",
 			DLS_INTERFACE_PROP_CHANGE_TYPE,
 			g_variant_new_uint32(mod ? PRV_CHANGED_EVENT_MOD :
 							PRV_CHANGED_EVENT_DEL));
 		g_variant_builder_add(
-				&dict, "{sv}",
+				dict, "{sv}",
 				DLS_INTERFACE_PROP_PATH,
 				g_variant_new_string(path));
 		g_variant_builder_add(
-				&dict, "{sv}",
+				dict, "{sv}",
 				DLS_INTERFACE_PROP_UPDATE_ID,
 				g_variant_new_uint32(update_id));
 		g_variant_builder_add(
-				&dict, "{sv}",
+				dict, "{sv}",
 				DLS_INTERFACE_PROP_SUBTREE_UPDATE,
 				g_variant_new_boolean(sub_update));
 		break;
 	case GUPNP_CDS_LAST_CHANGE_EVENT_ST_DONE:
 		g_variant_builder_add(
-				&dict, "{sv}",
+				dict, "{sv}",
 				DLS_INTERFACE_PROP_CHANGE_TYPE,
 				g_variant_new_uint32(PRV_CHANGED_EVENT_DONE));
 		g_variant_builder_add(
-				&dict, "{sv}",
+				dict, "{sv}",
 				DLS_INTERFACE_PROP_PATH,
 				g_variant_new_string(path));
 		g_variant_builder_add(
-				&dict, "{sv}",
+				dict, "{sv}",
 				DLS_INTERFACE_PROP_UPDATE_ID,
 				g_variant_new_uint32(update_id));
 		break;
@@ -387,10 +387,12 @@ static void prv_last_change_decode(GUPnPCDSLastChangeEntry *entry,
 		break;
 	}
 
-	g_variant_builder_add(array, "@a{sv}", g_variant_builder_end(&dict));
+	g_variant_builder_add(array, "@a{sv}", g_variant_builder_end(dict));
+
 
 on_error:
 
+	g_variant_builder_unref(dict);
 	g_free(path);
 }
 
