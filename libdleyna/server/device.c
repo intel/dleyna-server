@@ -22,6 +22,15 @@
 
 #include <string.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <ifaddrs.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <net/if.h>
+
 #include <libgupnp/gupnp-error.h>
 #include <libgupnp-dlna/gupnp-dlna-profile.h>
 #include <libgupnp-dlna/gupnp-dlna-profile-guesser.h>
@@ -5996,6 +6005,70 @@ on_complete:
 	return error;
 }
 
+static gboolean prv_get_interface_ip_address(struct sockaddr *sock_address,
+					     gchar *host)
+{
+	socklen_t sock_len;
+	gint family;
+	gboolean res = FALSE;
+
+	family = sock_address->sa_family;
+
+	if (family != AF_INET && family != AF_INET6)
+		goto on_exit;
+
+	if (family == AF_INET)
+		sock_len = sizeof(struct sockaddr_in);
+	else
+		sock_len = sizeof(struct sockaddr_in6);
+
+	if (getnameinfo(sock_address, sock_len, host,
+			NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == 0) {
+		if (family == AF_INET6)
+			inet_ntop(AF_INET6, &sock_address, host, NI_MAXHOST);
+
+		res = TRUE;
+	}
+
+on_exit:
+	return res;
+}
+
+static gchar *prv_get_broadcast_ip_address(gchar *ip_address)
+{
+	struct ifaddrs *ifaddr;
+	struct ifaddrs *ifa;
+	char host[NI_MAXHOST];
+	gchar *broadcast_ip_address = NULL;
+
+	if (getifaddrs(&ifaddr) == -1) {
+		DLEYNA_LOG_WARNING("Failed to call getifaddrs");
+		goto on_exit;
+	}
+
+	ifa = ifaddr;
+	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+		if ((ifa->ifa_addr == NULL) ||
+		    (!prv_get_interface_ip_address(ifa->ifa_addr, host)) ||
+		    strcmp(host, ip_address))
+			continue;
+
+		if ((ifa->ifa_flags & IFF_BROADCAST) &&
+		    (ifa->ifa_ifu.ifu_broadaddr != NULL) &&
+		    prv_get_interface_ip_address(ifa->ifa_ifu.ifu_broadaddr,
+						 host)) {
+			broadcast_ip_address = g_strdup(host);
+
+			break;
+		}
+	}
+
+	freeifaddrs(ifaddr);
+
+on_exit:
+
+	return broadcast_ip_address;
+}
 
 void dls_device_wake(dls_client_t *client, dls_task_t *task)
 {
@@ -6010,6 +6083,7 @@ void dls_device_wake(dls_client_t *client, dls_task_t *task)
 	gsize packet_len;
 	guint8 *packet = NULL;
 	gchar *wake_on_ip_address;
+	gchar *broadcast_ip_address = NULL;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -6057,6 +6131,18 @@ void dls_device_wake(dls_client_t *client, dls_task_t *task)
 
 	DLEYNA_LOG_DEBUG("Context IP Address = %s", context->ip_address);
 	DLEYNA_LOG_DEBUG("Wake ON IP Address = %s", wake_on_ip_address);
+
+	if (broadcast) {
+		broadcast_ip_address = prv_get_broadcast_ip_address(
+							context->ip_address);
+
+		if (broadcast_ip_address != NULL) {
+			wake_on_ip_address = broadcast_ip_address;
+
+			DLEYNA_LOG_DEBUG("Use Broadcast IP Address = %s",
+					 broadcast_ip_address);
+		}
+	}
 
 	host_inet_address = g_inet_address_new_from_string(wake_on_ip_address);
 
@@ -6112,6 +6198,8 @@ on_complete:
 	(void) g_idle_add(dls_async_task_complete, cb_data);
 
 on_exit:
+	g_free(broadcast_ip_address);
+
 	DLEYNA_LOG_DEBUG("Exit");
 
 	return;
