@@ -46,7 +46,7 @@ com.intel.dLeynaServer.Manager
 Methods:
 ----------
 
-The interface com.intel.dLeynaServer.Manager contains 10 methods.
+The interface com.intel.dLeynaServer.Manager contains 6 methods.
 Descriptions of each of these methods along with their d-Bus
 signatures are given below.
 
@@ -127,24 +127,6 @@ discover new DMSs which for some reason were not detected when either
 they, or the device on which dLeyna-server runs, was started or joined
 the network.  New in version 0.0.2.
 
-WhiteListEnable(b enabled) -> void
-
-Enable or disable the Network Filtering feature.
-When enabled, only devices that are on allowed networks will be available.
-
-WhiteListAddEntries(as EntryList) -> void
-
-Add new entries to the list of allowed networks. An Entry could be an interface
-name (eth0), an ip address (127.0.0.1) or a SSID (MyWiFi)
-
-WhiteListRemoveEntries(as EntryList) -> void
-
-Remove entries from the list of allowed networks.
-
-WhiteListClear() -> void
-
-Remove all entries from the list, but it doesn't change the 'enabled' flag.
-
 
 Properties:
 ---------
@@ -157,13 +139,17 @@ of d-Bus properties.  These properties are described below:
 |------------------------------------------------------------------------------|
 | WhiteListEntries  |     as    | m  | The list of entries that compose the    |
 |                   |           |    | white list used to filter the networks. |
+|                   |           |    | An Entry could be an interface name     |
+|                   |           |    | (eth0), an ip address (127.0.0.1) or    |
+|                   |           |    | a SSID (MyWiFi)                         |
 |------------------------------------------------------------------------------|
 | WhiteListEnabled  |     b     | m  | True if the Network Filtering is active.|
 |------------------------------------------------------------------------------|
 
 A org.freedesktop.DBus.Properties.PropertiesChanged signal is emitted when
 these properties change.
-
+These properties can be changed using the Set() method of
+org.freedesktop.DBus.Properties interface.
 
 Signals:
 ---------

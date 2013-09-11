@@ -25,6 +25,9 @@
 
 #include <libgupnp/gupnp.h>
 #include <libgupnp-av/gupnp-av.h>
+
+#include <libdleyna/core/settings.h>
+
 #include "async.h"
 
 #define DLS_UPNP_MASK_PROP_PARENT			(1LL << 0)
@@ -142,9 +145,9 @@ const gchar *dls_props_upnp_class_to_media_spec(const gchar *upnp_class);
 
 const gchar *dls_props_upnp_class_to_media_spec_ex(const gchar *upnp_class);
 
-void dls_props_add_manager(GUPnPContextManager *manager, GVariantBuilder *vb);
+void dls_props_add_manager(dleyna_settings_t *settings, GVariantBuilder *vb);
 
-GVariant *dls_props_get_manager_prop(GUPnPContextManager *manager,
+GVariant *dls_props_get_manager_prop(dleyna_settings_t *settings,
 				     const gchar *prop);
 
 GVariant *dls_props_get_error_prop(GError *error);

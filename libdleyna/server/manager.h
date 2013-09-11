@@ -24,6 +24,7 @@
 #define DLS_MANAGER_H__
 
 #include <libdleyna/core/connector.h>
+#include <libdleyna/core/settings.h>
 #include <libgupnp/gupnp-context-manager.h>
 
 #include "task.h"
@@ -36,19 +37,20 @@ dls_manager_t *dls_manager_new(dleyna_connector_id_t connection,
 
 void dls_manager_delete(dls_manager_t *manager);
 
-void dls_manager_wl_enable(dls_task_t *task);
-
-void dls_manager_wl_add_entries(dls_task_t *task);
-
-void dls_manager_wl_remove_entries(dls_task_t *task);
-
-void dls_manager_wl_clear(dls_task_t *task);
+dleyna_white_list_t *dls_manager_get_white_list(dls_manager_t *manager);
 
 void dls_manager_get_all_props(dls_manager_t *manager,
+			       dleyna_settings_t *settings,
 			       dls_task_t *task,
 			       dls_manager_task_complete_t cb);
 
 void dls_manager_get_prop(dls_manager_t *manager,
+			  dleyna_settings_t *settings,
+			  dls_task_t *task,
+			  dls_manager_task_complete_t cb);
+
+void dls_manager_set_prop(dls_manager_t *manager,
+			  dleyna_settings_t *settings,
 			  dls_task_t *task,
 			  dls_manager_task_complete_t cb);
 
