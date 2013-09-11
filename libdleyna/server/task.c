@@ -46,6 +46,11 @@ static void prv_delete(dls_task_t *task)
 		g_free(task->ut.get_prop.interface_name);
 		g_free(task->ut.get_prop.prop_name);
 		break;
+	case DLS_TASK_MANAGER_SET_PROP:
+		g_free(task->ut.set_prop.interface_name);
+		g_free(task->ut.set_prop.prop_name);
+		g_variant_unref(task->ut.set_prop.params);
+		break;
 	case DLS_TASK_SEARCH:
 		g_free(task->ut.search.query);
 		if (task->ut.search.filter)
@@ -91,11 +96,6 @@ static void prv_delete(dls_task_t *task)
 	case DLS_TASK_GET_ICON:
 		g_free(task->ut.get_icon.resolution);
 		g_free(task->ut.get_icon.mime_type);
-		break;
-	case DLS_TASK_WHITE_LIST_ADD_ENTRIES:
-	case DLS_TASK_WHITE_LIST_REMOVE_ENTRIES:
-		if (task->ut.white_list.entries)
-			g_variant_unref(task->ut.white_list.entries);
 		break;
 	default:
 		break;
@@ -146,57 +146,6 @@ dls_task_t *dls_task_get_servers_new(dleyna_connector_msg_id_t invocation)
 	return task;
 }
 
-dls_task_t *dls_task_wl_enable_new(dleyna_connector_msg_id_t invocation,
-				   GVariant *parameters)
-{
-	dls_task_t *task = g_new0(dls_task_t, 1);
-
-	task->type = DLS_TASK_WHITE_LIST_ENABLE;
-	task->invocation = invocation;
-	task->synchronous = TRUE;
-	g_variant_get(parameters, "(b)",
-		      &task->ut.white_list.enabled);
-
-	return task;
-}
-
-dls_task_t *dls_task_wl_clear_new(dleyna_connector_msg_id_t invocation)
-{
-	dls_task_t *task = g_new0(dls_task_t, 1);
-
-	task->type = DLS_TASK_WHITE_LIST_CLEAR;
-	task->invocation = invocation;
-	task->synchronous = TRUE;
-
-	return task;
-}
-
-dls_task_t *dls_task_wl_add_entries_new(dleyna_connector_msg_id_t invocation,
-					GVariant *parameters)
-{
-	dls_task_t *task = g_new0(dls_task_t, 1);
-
-	task->type = DLS_TASK_WHITE_LIST_ADD_ENTRIES;
-	task->invocation = invocation;
-	task->synchronous = TRUE;
-	g_variant_get(parameters, "(@as)", &task->ut.white_list.entries);
-
-	return task;
-}
-
-dls_task_t *dls_task_wl_remove_entries_new(dleyna_connector_msg_id_t invocation,
-					   GVariant *parameters)
-{
-	dls_task_t *task = g_new0(dls_task_t, 1);
-
-	task->type = DLS_TASK_WHITE_LIST_REMOVE_ENTRIES;
-	task->invocation = invocation;
-	task->synchronous = TRUE;
-	g_variant_get(parameters, "(@as)", &task->ut.white_list.entries);
-
-	return task;
-}
-
 dls_task_t *dls_task_manager_get_prop_new(dleyna_connector_msg_id_t invocation,
 					  const gchar *path,
 					  GVariant *parameters,
@@ -233,6 +182,29 @@ dls_task_t *dls_task_manager_get_props_new(dleyna_connector_msg_id_t invocation,
 	task->type = DLS_TASK_MANAGER_GET_ALL_PROPS;
 	task->invocation = invocation;
 	task->result_format = "(@a{sv})";
+
+	return task;
+}
+
+dls_task_t *dls_task_manager_set_prop_new(dleyna_connector_msg_id_t invocation,
+					  const gchar *path,
+					  GVariant *parameters,
+					  GError **error)
+{
+	dls_task_t *task = (dls_task_t *)g_new0(dls_async_task_t, 1);
+
+	g_variant_get(parameters, "(ssv)",
+		      &task->ut.set_prop.interface_name,
+		      &task->ut.set_prop.prop_name,
+		      &task->ut.set_prop.params);
+
+	g_strstrip(task->ut.set_prop.interface_name);
+	g_strstrip(task->ut.set_prop.prop_name);
+
+	task->target.path = g_strstrip(g_strdup(path));
+
+	task->type = DLS_TASK_MANAGER_SET_PROP;
+	task->invocation = invocation;
 
 	return task;
 }
