@@ -55,12 +55,9 @@ enum dls_task_type_t_ {
 	DLS_TASK_GET_OBJECT_METADATA,
 	DLS_TASK_CREATE_REFERENCE,
 	DLS_TASK_GET_ICON,
-	DLS_TASK_WHITE_LIST_ENABLE,
-	DLS_TASK_WHITE_LIST_ADD_ENTRIES,
-	DLS_TASK_WHITE_LIST_REMOVE_ENTRIES,
-	DLS_TASK_WHITE_LIST_CLEAR,
 	DLS_TASK_MANAGER_GET_ALL_PROPS,
-	DLS_TASK_MANAGER_GET_PROP
+	DLS_TASK_MANAGER_GET_PROP,
+	DLS_TASK_MANAGER_SET_PROP
 };
 typedef enum dls_task_type_t_ dls_task_type_t;
 
@@ -85,6 +82,13 @@ typedef struct dls_task_get_prop_t_ dls_task_get_prop_t;
 struct dls_task_get_prop_t_ {
 	gchar *prop_name;
 	gchar *interface_name;
+};
+
+typedef struct dls_task_set_prop_t_ dls_task_set_prop_t;
+struct dls_task_set_prop_t_ {
+	gchar *prop_name;
+	gchar *interface_name;
+	GVariant *params;
 };
 
 typedef struct dls_task_search_t_ dls_task_search_t;
@@ -162,12 +166,6 @@ struct dls_task_get_icon_t_ {
 	gchar *resolution;
 };
 
-typedef struct dls_task_white_list_t_ dls_task_white_list_t;
-struct dls_task_white_list_t_ {
-	gboolean enabled;
-	GVariant *entries;
-};
-
 typedef struct dls_task_t_ dls_task_t;
 struct dls_task_t_ {
 	dleyna_task_atom_t atom; /* pseudo inheritance - MUST be first field */
@@ -182,6 +180,7 @@ struct dls_task_t_ {
 		dls_task_get_children_t get_children;
 		dls_task_get_props_t get_props;
 		dls_task_get_prop_t get_prop;
+		dls_task_set_prop_t set_prop;
 		dls_task_search_t search;
 		dls_task_get_resource_t resource;
 		dls_task_set_prefer_local_addresses_t prefer_local_addresses;
@@ -192,7 +191,6 @@ struct dls_task_t_ {
 		dls_task_update_t update;
 		dls_task_create_reference_t create_reference;
 		dls_task_get_icon_t get_icon;
-		dls_task_white_list_t white_list;
 		dls_task_browse_objects_t browse_objects;
 	} ut;
 };
@@ -296,18 +294,6 @@ dls_task_t *dls_task_get_icon_new(dleyna_connector_msg_id_t invocation,
 				  const gchar *path, GVariant *parameters,
 				  GError **error);
 
-
-dls_task_t *dls_task_wl_enable_new(dleyna_connector_msg_id_t invocation,
-				   GVariant *parameters);
-
-dls_task_t *dls_task_wl_clear_new(dleyna_connector_msg_id_t invocation);
-
-dls_task_t *dls_task_wl_add_entries_new(dleyna_connector_msg_id_t invocation,
-					GVariant *parameters);
-
-dls_task_t *dls_task_wl_remove_entries_new(dleyna_connector_msg_id_t invocation,
-					   GVariant *parameters);
-
 dls_task_t *dls_task_manager_get_prop_new(dleyna_connector_msg_id_t invocation,
 					  const gchar *path,
 					  GVariant *parameters,
@@ -317,6 +303,11 @@ dls_task_t *dls_task_manager_get_props_new(dleyna_connector_msg_id_t invocation,
 					   const gchar *path,
 					   GVariant *parameters,
 					   GError **error);
+
+dls_task_t *dls_task_manager_set_prop_new(dleyna_connector_msg_id_t invocation,
+					  const gchar *path,
+					  GVariant *parameters,
+					  GError **error);
 
 void dls_task_cancel(dls_task_t *task);
 
