@@ -2958,7 +2958,7 @@ static void prv_browse_objects_add_error_result(dls_async_browse_objects_t *bo,
 						GError *error)
 {
 	GVariantBuilder evb;
-	GVariant* gv_result;
+	GVariant *gv_result;
 
 	DLEYNA_LOG_WARNING("%s: %s", path, error->message);
 
