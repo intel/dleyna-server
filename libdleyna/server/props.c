@@ -2140,7 +2140,7 @@ GVariant *dls_props_get_error_prop(GError *error)
  *	g_variant_builder_add(&gvb, "{sv}",
  *			      DLS_INTERFACE_PROP_ERROR_NAME,
  *			      g_variant_new_string(
- * 				g_dbus_error_get_remote_error(cb_data->error)));
+ *				g_dbus_error_get_remote_error(cb_data->error)));
 */
 
 	g_variant_builder_add(&gvb, "{sv}",
