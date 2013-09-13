@@ -3347,6 +3347,7 @@ void dls_device_browse_objects(dls_client_t *client, dls_task_t *task)
 	gsize length;
 	guint i;
 	gboolean path_ok;
+	const char *message;
 
 	DLEYNA_LOG_DEBUG("Root Path %s", task->target.root_path)
 
@@ -3359,9 +3360,13 @@ void dls_device_browse_objects(dls_client_t *client, dls_task_t *task)
 
 	if (!path_ok) {
 		g_free(objs);
+
+		message = (length > 0) ? "At least one root path is invalid."
+				       : "Object path array is empty";
+
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_BAD_PATH,
-					     "root path is invalid.");
+					     "%s", message);
 		goto on_error;
 	}
 
