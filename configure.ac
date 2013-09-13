@@ -226,7 +226,6 @@ AC_SUBST([with_log_type])
 
 AC_CONFIG_FILES([Makefile					\
 		 libdleyna/server/Makefile			\
-		 libdleyna/server/dleyna-server-1.0.pc		\
 		 libdleyna/server/dleyna-server-service.conf	\
 		 server/dleyna-server-service-1.0.pc		\
 		 server/Makefile				\
