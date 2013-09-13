@@ -1,5 +1,3 @@
-libdleyna_serverincdir = $(includedir)/dleyna-1.0/libdleyna/server
-
 DLEYNA_SERVER_VERSION = 1:3:0
 
 AM_CFLAGS =	$(GLIB_CFLAGS)				\
@@ -16,7 +14,9 @@ ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 
 pkglib_LTLIBRARIES = libdleyna-server-1.0.la
 
-libdleyna_serverinc_HEADERS = 	control-point-server.h
+libdleyna_serverincdir = $(includedir)/dleyna-1.0/libdleyna/server
+
+libdleyna_serverinc_HEADERS = control-point-server.h
 
 libdleyna_server_1_0_la_LDFLAGS =	-version-info $(DLEYNA_SERVER_VERSION) \
 					-no-undefined
@@ -54,9 +54,6 @@ MAINTAINERCLEANFILES =	Makefile.in		\
 
 sysconf_DATA = dleyna-server-service.conf
 
-pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = dleyna-server-1.0.pc
-
 EXTRA_DIST = 	$(sysconf_DATA)			\
 		async.h				\
 		client.h			\
@@ -71,8 +68,8 @@ EXTRA_DIST = 	$(sysconf_DATA)			\
 		task.h				\
 		upnp.h
 
-CLEANFILES = $(pkgconfig_DATA) dleyna-server-service.conf
-DISTCLEANFILES = $(pkgconfig_DATA) dleyna-server-service.conf
+CLEANFILES = dleyna-server-service.conf
+DISTCLEANFILES = dleyna-server-service.conf
 
 maintainer-clean-local:
 	rm -rf build-aux
