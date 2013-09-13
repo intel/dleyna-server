@@ -127,6 +127,13 @@ static void prv_upload_job_delete(gpointer up);
 static void prv_get_sr_token_for_props(GUPnPServiceProxy *proxy,
 			     const dls_device_t *device,
 			     dls_async_task_t *cb_data);
+static void prv_browse_objects_end_action_cb(GUPnPServiceProxy *proxy,
+					     GUPnPServiceProxyAction *action,
+					     gpointer user_data);
+static GUPnPServiceProxyAction *prv_browse_objects_begin_action_cb(
+						dleyna_service_task_t *task,
+						GUPnPServiceProxy *proxy,
+						gboolean *failed);
 
 static void prv_object_builder_delete(void *dob)
 {
@@ -1552,7 +1559,7 @@ static void prv_get_container(GUPnPDIDLLiteParser *parser,
 	if (GUPNP_IS_DIDL_LITE_CONTAINER(object)) {
 		dls_props_add_container(cb_task_data->vb,
 					(GUPnPDIDLLiteContainer *)object,
-					DLS_UPNP_MASK_ALL_PROPS,
+					cb_task_data->filter_mask,
 					cb_task_data->protocol_info,
 					&have_child_count);
 		if (!have_child_count)
@@ -2979,6 +2986,139 @@ static void prv_browse_objects_add_error_result(dls_async_browse_objects_t *bo,
 	g_variant_builder_add(bo->avb, "@a{sv}", gv_result);
 }
 
+static void prv_get_child_count_end_action_cb(GUPnPServiceProxy *proxy,
+					      GUPnPServiceProxyAction *action,
+					      gpointer user_data)
+{
+	GError *error = NULL;
+	const gchar *message;
+	guint count = G_MAXUINT32;
+	gboolean end;
+	dls_async_browse_objects_t *cb_task_data;
+	dls_async_task_t *cb_data = user_data;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	end = gupnp_service_proxy_end_action(proxy, action, &error,
+					     "TotalMatches", G_TYPE_UINT,
+					     &count, NULL);
+
+	cb_task_data = &((dls_async_task_t *)user_data)->ut.browse_objects;
+
+	if (!end || (count == G_MAXUINT32)) {
+		message = (error != NULL) ? error->message : "Invalid result";
+		DLEYNA_LOG_WARNING("Browse operation failed: %s", message);
+
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_OPERATION_FAILED,
+					     "Browse operation failed: %s",
+					     message);
+		goto on_complete;
+	}
+
+	g_variant_builder_add(cb_task_data->get_all.vb, "{sv}",
+			      DLS_INTERFACE_PROP_CHILD_COUNT,
+			      g_variant_new_uint32(count));
+
+	g_variant_builder_add(cb_task_data->avb, "@a{sv}",
+			      g_variant_builder_end(cb_task_data->get_all.vb));
+
+	DLEYNA_LOG_DEBUG("Child Count: %u", count);
+
+on_complete:
+
+	if (cb_data->error != NULL) {
+		message = cb_task_data->objects_id[cb_task_data->index - 1];
+		prv_browse_objects_add_error_result(cb_task_data, message,
+						    cb_data->error);
+		g_error_free(cb_data->error);
+		cb_data->error = NULL;
+	}
+
+	if (cb_task_data->get_all.vb != NULL) {
+		g_variant_builder_unref(cb_task_data->get_all.vb);
+		cb_task_data->get_all.vb = NULL;
+	}
+
+	if (cb_task_data->index < cb_task_data->object_count)
+		dleyna_service_task_add(cb_task_data->queue_id,
+					prv_browse_objects_begin_action_cb,
+					proxy,
+					prv_browse_objects_end_action_cb,
+					NULL, user_data);
+
+	if (error)
+		g_error_free(error);
+
+	DLEYNA_LOG_DEBUG("Exit");
+}
+
+static GUPnPServiceProxyAction *prv_get_child_count_begin_action_cb(
+						dleyna_service_task_t *task,
+						GUPnPServiceProxy *proxy,
+						gboolean *failed)
+{
+	GUPnPServiceProxyAction *action;
+	dls_task_t *user_data;
+	const gchar *path;
+	gchar *root_path = NULL;
+	gchar *id = NULL;
+	dls_async_browse_objects_t *cb_task_data;
+	GError *error = NULL;
+
+	DLEYNA_LOG_DEBUG("Enter");
+
+	user_data = (dls_task_t *)dleyna_service_task_get_user_data(task);
+	cb_task_data = &((dls_async_task_t *)user_data)->ut.browse_objects;
+	path = cb_task_data->objects_id[cb_task_data->index - 1];
+
+	/* Should never fail. Error already managed in previous browse */
+	(void) dls_path_get_path_and_id(path, &root_path, &id, &error);
+
+	if (error != NULL)
+		goto exit;
+
+	action =  gupnp_service_proxy_begin_action(
+			proxy, "Browse",
+			dleyna_service_task_begin_action_cb, task,
+			"ObjectID", G_TYPE_STRING, id,
+			"BrowseFlag", G_TYPE_STRING, "BrowseDirectChildren",
+			"Filter", G_TYPE_STRING, "",
+			"StartingIndex", G_TYPE_INT, 0,
+			"RequestedCount", G_TYPE_INT, 1,
+			"SortCriteria", G_TYPE_STRING, "",
+			NULL);
+
+	g_free(root_path);
+	g_free(id);
+
+exit:
+	*failed = FALSE;
+
+	if (error != NULL) {
+		DLEYNA_LOG_WARNING("%s: %s", path, error->message);
+		action = NULL;
+
+		prv_browse_objects_add_error_result(cb_task_data, path, error);
+
+		if (cb_task_data->get_all.vb != NULL) {
+			g_variant_builder_unref(cb_task_data->get_all.vb);
+			cb_task_data->get_all.vb = NULL;
+		}
+
+		if (cb_task_data->index < cb_task_data->object_count)
+			dleyna_service_task_add(
+					cb_task_data->queue_id,
+					prv_browse_objects_begin_action_cb,
+					proxy,
+					prv_browse_objects_end_action_cb,
+					NULL, user_data);
+		g_error_free(error);
+	}
+
+	return action;
+}
+
 static void prv_browse_objects_end_action_cb(GUPnPServiceProxy *proxy,
 					     GUPnPServiceProxyAction *action,
 					     gpointer user_data)
@@ -2986,6 +3126,7 @@ static void prv_browse_objects_end_action_cb(GUPnPServiceProxy *proxy,
 	GError *error = NULL;
 	dls_async_task_t *cb_data = user_data;
 	dls_async_browse_objects_t *cb_task_data = &cb_data->ut.browse_objects;
+	dls_async_get_all_t *cb_all_data = &cb_data->ut.browse_objects.get_all;
 	GUPnPDIDLLiteParser *parser = NULL;
 	gchar *result = NULL;
 	const gchar *message;
@@ -3013,8 +3154,7 @@ static void prv_browse_objects_end_action_cb(GUPnPServiceProxy *proxy,
 	DLEYNA_LOG_DEBUG("Result: %s", result);
 	DLEYNA_LOG_DEBUG_NL();
 
-	cb_task_data->get_all.vb = g_variant_builder_new(
-						G_VARIANT_TYPE("a{sv}"));
+	cb_all_data->vb = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 
 	parser = gupnp_didl_lite_parser_new();
 
@@ -3045,8 +3185,19 @@ static void prv_browse_objects_end_action_cb(GUPnPServiceProxy *proxy,
 		goto on_exit;
 	}
 
+	if (cb_all_data->need_child_count &&
+	    (cb_all_data->filter_mask & DLS_UPNP_MASK_PROP_CHILD_COUNT)) {
+		DLEYNA_LOG_DEBUG("Need Child Count");
+		dleyna_service_task_add(cb_task_data->queue_id,
+					prv_get_child_count_begin_action_cb,
+					cb_data->proxy,
+					prv_get_child_count_end_action_cb,
+					NULL, cb_data);
+		goto no_complete;
+	}
+
 	g_variant_builder_add(cb_task_data->avb, "@a{sv}",
-			      g_variant_builder_end(cb_task_data->get_all.vb));
+			      g_variant_builder_end(cb_all_data->vb));
 
 on_exit:
 
@@ -3058,10 +3209,18 @@ on_exit:
 		cb_data->error = NULL;
 	}
 
-	if (cb_task_data->get_all.vb) {
-		g_variant_builder_unref(cb_data->ut.get_all.vb);
-		cb_data->ut.get_all.vb = NULL;
+	if (cb_all_data->vb != NULL) {
+		g_variant_builder_unref(cb_all_data->vb);
+		cb_all_data->vb = NULL;
 	}
+
+	if (cb_task_data->index < cb_task_data->object_count)
+		dleyna_service_task_add(cb_task_data->queue_id,
+					prv_browse_objects_begin_action_cb,
+					cb_data->proxy,
+					prv_browse_objects_end_action_cb,
+					NULL, cb_data);
+no_complete:
 
 	if (parser)
 		g_object_unref(parser);
@@ -3093,18 +3252,14 @@ static GUPnPServiceProxyAction *prv_browse_objects_begin_action_cb(
 	cb_task_data = &((dls_async_task_t *)user_data)->ut.browse_objects;
 	path = cb_task_data->objects_id[cb_task_data->index];
 
+	/* Reset dynamic field. */
+	cb_task_data->get_all.need_child_count = FALSE;
+
 	/* Process anyway. We will add an entry with error */
 	(void) dls_path_get_path_and_id(path, &root_path, &id, &error);
 
-	if (error != NULL) {
-		DLEYNA_LOG_WARNING("%s: %s", path, error->message);
-
-		prv_browse_objects_add_error_result(cb_task_data, path, error);
-		action = NULL;
-		g_error_free(error);
-
+	if (error != NULL)
 		goto exit;
-	}
 
 	DLEYNA_LOG_DEBUG("Browse Metadata for path [id]: %s [%s]", path, id);
 
@@ -3123,7 +3278,25 @@ static GUPnPServiceProxyAction *prv_browse_objects_begin_action_cb(
 
 exit:
 	*failed = FALSE;
+
+	/* It's the ONLY place where index is incremented */
 	cb_task_data->index++;
+
+	if (error != NULL) {
+		DLEYNA_LOG_WARNING("%s: %s", path, error->message);
+
+		prv_browse_objects_add_error_result(cb_task_data, path, error);
+		action = NULL;
+		g_error_free(error);
+
+		if (cb_task_data->index < cb_task_data->object_count)
+			dleyna_service_task_add(
+					cb_task_data->queue_id,
+					prv_browse_objects_begin_action_cb,
+					proxy,
+					prv_browse_objects_end_action_cb,
+					NULL, user_data);
+	}
 
 	return action;
 }
@@ -3211,6 +3384,7 @@ void dls_device_browse_objects(dls_client_t *client, dls_task_t *task)
 	cb_task_data->queue_id = queue_id;
 	cb_task_data->avb = g_variant_builder_new(G_VARIANT_TYPE("aa{sv}"));
 	cb_task_data->objects_id = objs;
+	cb_task_data->object_count = length;
 
 	g_object_add_weak_pointer((G_OBJECT(context->service_proxy)),
 				  (gpointer *)&cb_data->proxy);
@@ -3220,12 +3394,11 @@ void dls_device_browse_objects(dls_client_t *client, dls_task_t *task)
 				G_CALLBACK(prv_browse_objects_chain_cancelled),
 				cb_data, NULL);
 
-	for (i = 0; i < length; i++)
-		dleyna_service_task_add(queue_id,
-					prv_browse_objects_begin_action_cb,
-					cb_data->proxy,
-					prv_browse_objects_end_action_cb,
-					NULL, cb_data);
+	dleyna_service_task_add(queue_id,
+				prv_browse_objects_begin_action_cb,
+				cb_data->proxy,
+				prv_browse_objects_end_action_cb,
+				NULL, cb_data);
 
 	dleyna_task_queue_start(queue_id);
 

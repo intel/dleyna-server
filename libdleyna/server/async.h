@@ -84,6 +84,7 @@ struct dls_async_browse_objects_t_ {
 	gchar *upnp_filter;
 	const dleyna_task_queue_key_t *queue_id;
 	const gchar **objects_id;
+	guint object_count;
 	guint index;
 };
 
