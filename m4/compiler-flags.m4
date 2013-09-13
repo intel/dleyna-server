@@ -52,4 +52,5 @@ AC_DEFUN_ONCE([DLEYNA_SERVER_COMPILER_FLAGS], [
 	fi
 
 	CFLAGS+=" -Wno-format-extra-args"
+	CFLAGS+=" -Wl,--no-undefined"
 ])
