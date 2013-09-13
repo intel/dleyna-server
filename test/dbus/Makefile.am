@@ -1,7 +1,5 @@
 AM_CFLAGS =	$(GLIB_CFLAGS)		\
 		$(GIO_CFLAGS)
-		
-ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 
 dms_info_sources = dms-info.c
 
