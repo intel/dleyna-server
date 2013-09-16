@@ -163,8 +163,8 @@ static void prv_server_available_cb(GUPnPControlPoint *cp,
 
 	udn = gupnp_device_info_get_udn((GUPnPDeviceInfo *)proxy);
 
-	ip_address = gupnp_context_get_host_ip(
-		gupnp_control_point_get_context(cp));
+	ip_address = gssdp_client_get_host_ip(
+		GSSDP_CLIENT(gupnp_control_point_get_context(cp)));
 
 	if (!udn || !ip_address)
 		goto on_error;
