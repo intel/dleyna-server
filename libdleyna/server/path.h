@@ -33,4 +33,6 @@ gboolean dls_path_get_path_and_id(const gchar *object_path, gchar **root_path,
 
 gchar *dls_path_from_id(const gchar *root_path, const gchar *id);
 
+char *dls_path_convert_udn_to_path(const char *udn);
+
 #endif /* DLS_PATH_H__ */

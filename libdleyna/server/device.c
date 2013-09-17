@@ -1185,15 +1185,10 @@ dls_device_t *dls_device_new(
 
 	DLEYNA_LOG_DEBUG("New Device on %s", ip_address);
 
-	/* Strip 'uuid:' string prefix if exists and replace unauthorized
-	 * dbus path char from uuid string */
-	uuid = strchr(udn, ':');
-	uuid = g_strdup(uuid ? uuid + 1 : udn);
-	uuid = g_strdelimit(uuid, "-", '_');
-
+	uuid = dls_path_convert_udn_to_path(udn);
 	new_path = g_strdup_printf("%s/%s", DLEYNA_SERVER_PATH, uuid);
-	DLEYNA_LOG_DEBUG("Server Path %s", new_path);
 	g_free(uuid);
+	DLEYNA_LOG_DEBUG("Server Path %s", new_path);
 
 	dev = g_new0(dls_device_t, 1);
 
