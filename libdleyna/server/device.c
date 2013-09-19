@@ -3094,6 +3094,7 @@ static void prv_browse_objects_end_action_cb(GUPnPServiceProxy *proxy,
 	GError *error = NULL;
 	dls_async_task_t *cb_data = user_data;
 	dls_async_browse_objects_t *cb_task_data = &cb_data->ut.browse_objects;
+	dls_async_get_all_t *cb_all_data = &cb_data->ut.browse_objects.get_all;
 	GUPnPDIDLLiteParser *parser = NULL;
 	gchar *result = NULL;
 	const gchar *message;
@@ -3121,8 +3122,7 @@ static void prv_browse_objects_end_action_cb(GUPnPServiceProxy *proxy,
 	DLEYNA_LOG_DEBUG("Result: %s", result);
 	DLEYNA_LOG_DEBUG_NL();
 
-	cb_task_data->get_all.vb = g_variant_builder_new(
-						G_VARIANT_TYPE("a{sv}"));
+	cb_all_data->vb = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 
 	parser = gupnp_didl_lite_parser_new();
 
@@ -3153,7 +3153,8 @@ static void prv_browse_objects_end_action_cb(GUPnPServiceProxy *proxy,
 		goto on_exit;
 	}
 
-	if (cb_task_data->get_all.need_child_count) {
+	if (cb_all_data->need_child_count &&
+	    (cb_all_data->filter_mask & DLS_UPNP_MASK_PROP_CHILD_COUNT)) {
 		DLEYNA_LOG_DEBUG("Need Child Count");
 		dleyna_service_task_add(cb_task_data->queue_id,
 					prv_get_child_count_begin_action_cb,
@@ -3164,7 +3165,7 @@ static void prv_browse_objects_end_action_cb(GUPnPServiceProxy *proxy,
 	}
 
 	g_variant_builder_add(cb_task_data->avb, "@a{sv}",
-			      g_variant_builder_end(cb_task_data->get_all.vb));
+			      g_variant_builder_end(cb_all_data->vb));
 
 on_exit:
 
@@ -3176,9 +3177,9 @@ on_exit:
 		cb_data->error = NULL;
 	}
 
-	if (cb_task_data->get_all.vb) {
-		g_variant_builder_unref(cb_data->ut.get_all.vb);
-		cb_data->ut.get_all.vb = NULL;
+	if (cb_all_data->vb) {
+		g_variant_builder_unref(cb_all_data->vb);
+		cb_all_data->vb = NULL;
 	}
 
 	if (cb_task_data->index < cb_task_data->object_count)
