@@ -696,13 +696,18 @@ void dls_task_complete(dls_task_t *task)
 	if (task->invocation) {
 		if (task->result_format) {
 			if (task->multiple_retvals)
-				variant = task->result;
+				variant = g_variant_ref(task->result);
 			else
-				variant = g_variant_new(task->result_format,
-							task->result);
+				variant = g_variant_ref_sink(
+					g_variant_new(task->result_format,
+						      task->result));
 		}
+
 		dls_server_get_connector()->return_response(task->invocation,
 							    variant);
+		if (variant)
+			g_variant_unref(variant);
+
 		task->invocation = NULL;
 	}
 
