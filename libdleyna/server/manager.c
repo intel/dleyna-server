@@ -179,6 +179,38 @@ void dls_manager_get_prop(dls_manager_t *manager,
 	DLEYNA_LOG_DEBUG("Exit");
 }
 
+static void prv_set_prop_never_quit(dls_manager_t *manager,
+				    dleyna_settings_t *settings,
+				    gboolean never_quit,
+				    GError **error)
+{
+	GVariant *prop_val;
+	gboolean old_val;
+
+	DLEYNA_LOG_DEBUG("Enter %d", never_quit);
+
+	old_val = dleyna_settings_is_never_quit(settings);
+
+	if (old_val == never_quit)
+		goto exit;
+
+	/* If no error, the white list will be updated in the reload callack
+	 */
+	dleyna_settings_set_never_quit(settings, never_quit, error);
+
+	if (error == NULL) {
+		prop_val = g_variant_new_boolean(never_quit);
+		prv_wl_notify_prop(manager,
+				   DLS_INTERFACE_PROP_NEVER_QUIT,
+				   prop_val);
+		g_variant_unref(prop_val);
+	}
+
+exit:
+	DLEYNA_LOG_DEBUG("Exit");
+	return;
+}
+
 static void prv_set_prop_wl_enabled(dls_manager_t *manager,
 				     dleyna_settings_t *settings,
 				     gboolean enabled,
@@ -281,7 +313,11 @@ void dls_manager_set_prop(dls_manager_t *manager,
 					G_CALLBACK(dls_async_task_cancelled_cb),
 					cb_data, NULL);
 
-	if (!strcmp(name, DLS_INTERFACE_PROP_WHITE_LIST_ENABLED))
+	if (!strcmp(name, DLS_INTERFACE_PROP_NEVER_QUIT))
+		prv_set_prop_never_quit(manager, settings,
+					g_variant_get_boolean(param),
+					&error);
+	else if (!strcmp(name, DLS_INTERFACE_PROP_WHITE_LIST_ENABLED))
 		prv_set_prop_wl_enabled(manager, settings,
 					g_variant_get_boolean(param),
 					&error);
