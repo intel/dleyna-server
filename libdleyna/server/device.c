@@ -1559,7 +1559,7 @@ static void prv_get_container(GUPnPDIDLLiteParser *parser,
 	if (GUPNP_IS_DIDL_LITE_CONTAINER(object)) {
 		dls_props_add_container(cb_task_data->vb,
 					(GUPnPDIDLLiteContainer *)object,
-					DLS_UPNP_MASK_ALL_PROPS,
+					cb_task_data->filter_mask,
 					cb_task_data->protocol_info,
 					&have_child_count);
 		if (!have_child_count)
