@@ -3220,6 +3220,9 @@ static GUPnPServiceProxyAction *prv_browse_objects_begin_action_cb(
 	cb_task_data = &((dls_async_task_t *)user_data)->ut.browse_objects;
 	path = cb_task_data->objects_id[cb_task_data->index];
 
+	// Reset dynamic field.
+	cb_task_data->get_all.need_child_count = FALSE;
+
 	/* Process anyway. We will add an entry with error */
 	(void) dls_path_get_path_and_id(path, &root_path, &id, &error);
 
