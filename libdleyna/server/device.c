@@ -3084,6 +3084,13 @@ exit:
 		action = NULL;
 		g_error_free(error);
 
+		g_variant_builder_add(cb_task_data->avb, "@a{sv}",
+				      g_variant_builder_end(
+						cb_task_data->get_all.vb));
+
+		g_variant_builder_unref(cb_task_data->get_all.vb);
+		cb_task_data->get_all.vb = NULL;
+
 		if (cb_task_data->index < cb_task_data->object_count)
 			dleyna_service_task_add(
 					cb_task_data->queue_id,
