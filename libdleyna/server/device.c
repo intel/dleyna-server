@@ -2995,6 +2995,7 @@ static void prv_get_child_count_end_action_cb(GUPnPServiceProxy *proxy,
 	guint count = G_MAXUINT32;
 	gboolean end;
 	dls_async_browse_objects_t *cb_task_data;
+	dls_async_task_t *cb_data = user_data;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -3007,6 +3008,11 @@ static void prv_get_child_count_end_action_cb(GUPnPServiceProxy *proxy,
 	if (!end || (count == G_MAXUINT32)) {
 		message = (error != NULL) ? error->message : "Invalid result";
 		DLEYNA_LOG_WARNING("Browse operation failed: %s", message);
+
+		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
+					     DLEYNA_ERROR_OPERATION_FAILED,
+					     "Browse operation failed: %s",
+					     message);
 		goto on_complete;
 	}
 
@@ -3014,15 +3020,25 @@ static void prv_get_child_count_end_action_cb(GUPnPServiceProxy *proxy,
 			      DLS_INTERFACE_PROP_CHILD_COUNT,
 			      g_variant_new_uint32(count));
 
+	g_variant_builder_add(cb_task_data->avb, "@a{sv}",
+			      g_variant_builder_end(cb_task_data->get_all.vb));
+
 	DLEYNA_LOG_DEBUG("Child Count: %u", count);
 
 on_complete:
 
-	g_variant_builder_add(cb_task_data->avb, "@a{sv}",
-			      g_variant_builder_end(cb_task_data->get_all.vb));
+	if (cb_data->error != NULL) {
+		message = cb_task_data->objects_id[cb_task_data->index - 1];
+		prv_browse_objects_add_error_result(cb_task_data, message,
+						    cb_data->error);
+		g_error_free(cb_data->error);
+		cb_data->error = NULL;
+	}
 
-	g_variant_builder_unref(cb_task_data->get_all.vb);
-	cb_task_data->get_all.vb = NULL;
+	if (cb_task_data->get_all.vb != NULL) {
+		g_variant_builder_unref(cb_task_data->get_all.vb);
+		cb_task_data->get_all.vb = NULL;
+	}
 
 	if (cb_task_data->index < cb_task_data->object_count)
 		dleyna_service_task_add(cb_task_data->queue_id,
@@ -3082,14 +3098,13 @@ exit:
 	if (error != NULL) {
 		DLEYNA_LOG_WARNING("%s: %s", path, error->message);
 		action = NULL;
-		g_error_free(error);
 
-		g_variant_builder_add(cb_task_data->avb, "@a{sv}",
-				      g_variant_builder_end(
-						cb_task_data->get_all.vb));
+		prv_browse_objects_add_error_result(cb_task_data, path, error);
 
-		g_variant_builder_unref(cb_task_data->get_all.vb);
-		cb_task_data->get_all.vb = NULL;
+		if (cb_task_data->get_all.vb != NULL) {
+			g_variant_builder_unref(cb_task_data->get_all.vb);
+			cb_task_data->get_all.vb = NULL;
+		}
 
 		if (cb_task_data->index < cb_task_data->object_count)
 			dleyna_service_task_add(
@@ -3098,6 +3113,7 @@ exit:
 					proxy,
 					prv_browse_objects_end_action_cb,
 					NULL, user_data);
+		g_error_free(error);
 	}
 
 	return action;
@@ -3193,7 +3209,7 @@ on_exit:
 		cb_data->error = NULL;
 	}
 
-	if (cb_all_data->vb) {
+	if (cb_all_data->vb != NULL) {
 		g_variant_builder_unref(cb_all_data->vb);
 		cb_all_data->vb = NULL;
 	}
