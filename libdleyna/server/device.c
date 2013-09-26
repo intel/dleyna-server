@@ -3059,13 +3059,8 @@ static GUPnPServiceProxyAction *prv_get_child_count_begin_action_cb(
 	/* Should never fail. Error already managed in previous browse */
 	(void) dls_path_get_path_and_id(path, &root_path, &id, &error);
 
-	if (error != NULL) {
-		DLEYNA_LOG_WARNING("%s: %s", path, error->message);
-		action = NULL;
-		g_error_free(error);
-
+	if (error != NULL)
 		goto exit;
-	}
 
 	action =  gupnp_service_proxy_begin_action(
 			proxy, "Browse",
@@ -3083,6 +3078,20 @@ static GUPnPServiceProxyAction *prv_get_child_count_begin_action_cb(
 
 exit:
 	*failed = FALSE;
+
+	if (error != NULL) {
+		DLEYNA_LOG_WARNING("%s: %s", path, error->message);
+		action = NULL;
+		g_error_free(error);
+
+		if (cb_task_data->index < cb_task_data->object_count)
+			dleyna_service_task_add(
+					cb_task_data->queue_id,
+					prv_browse_objects_begin_action_cb,
+					proxy,
+					prv_browse_objects_end_action_cb,
+					NULL, user_data);
+	}
 
 	return action;
 }
@@ -3220,21 +3229,14 @@ static GUPnPServiceProxyAction *prv_browse_objects_begin_action_cb(
 	cb_task_data = &((dls_async_task_t *)user_data)->ut.browse_objects;
 	path = cb_task_data->objects_id[cb_task_data->index];
 
-	// Reset dynamic field.
+	/* Reset dynamic field. */
 	cb_task_data->get_all.need_child_count = FALSE;
 
 	/* Process anyway. We will add an entry with error */
 	(void) dls_path_get_path_and_id(path, &root_path, &id, &error);
 
-	if (error != NULL) {
-		DLEYNA_LOG_WARNING("%s: %s", path, error->message);
-
-		prv_browse_objects_add_error_result(cb_task_data, path, error);
-		action = NULL;
-		g_error_free(error);
-
+	if (error != NULL)
 		goto exit;
-	}
 
 	DLEYNA_LOG_DEBUG("Browse Metadata for path [id]: %s [%s]", path, id);
 
@@ -3253,8 +3255,25 @@ static GUPnPServiceProxyAction *prv_browse_objects_begin_action_cb(
 
 exit:
 	*failed = FALSE;
+
 	/* It's the ONLY place where index is incremented */
 	cb_task_data->index++;
+
+	if (error != NULL) {
+		DLEYNA_LOG_WARNING("%s: %s", path, error->message);
+
+		prv_browse_objects_add_error_result(cb_task_data, path, error);
+		action = NULL;
+		g_error_free(error);
+
+		if (cb_task_data->index < cb_task_data->object_count)
+			dleyna_service_task_add(
+					cb_task_data->queue_id,
+					prv_browse_objects_begin_action_cb,
+					proxy,
+					prv_browse_objects_end_action_cb,
+					NULL, user_data);
+	}
 
 	return action;
 }
