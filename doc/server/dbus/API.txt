@@ -137,6 +137,10 @@ of d-Bus properties.  These properties are described below:
 |------------------------------------------------------------------------------|
 |     Name          |   Type    |m/o*|              Description                |
 |------------------------------------------------------------------------------|
+| NeverQuit         |     b     | m  | True if the service always stay in      |
+|                   |           |    | memory running.  False if the service   |
+|                   |           |    | quit when the last client disconnects.  |
+|------------------------------------------------------------------------------|
 | WhiteListEntries  |     as    | m  | The list of entries that compose the    |
 |                   |           |    | white list used to filter the networks. |
 |                   |           |    | An Entry could be an interface name     |

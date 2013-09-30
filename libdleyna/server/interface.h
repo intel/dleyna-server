@@ -49,6 +49,7 @@ enum dls_interface_type_ {
 #define DLS_INTERFACE_PROP_ERROR_MESSAGE "Message"
 
 /* Manager Properties */
+#define DLS_INTERFACE_PROP_NEVER_QUIT "NeverQuit"
 #define DLS_INTERFACE_PROP_WHITE_LIST_ENTRIES "WhiteListEntries"
 #define DLS_INTERFACE_PROP_WHITE_LIST_ENABLED "WhiteListEnabled"
 
