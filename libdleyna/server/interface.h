@@ -49,6 +49,7 @@ enum dls_interface_type_ {
 #define DLS_INTERFACE_PROP_ERROR_MESSAGE "Message"
 
 /* Manager Properties */
+#define DLS_INTERFACE_PROP_NEVER_QUIT "NeverQuit"
 #define DLS_INTERFACE_PROP_WHITE_LIST_ENTRIES "WhiteListEntries"
 #define DLS_INTERFACE_PROP_WHITE_LIST_ENABLED "WhiteListEnabled"
 
@@ -157,10 +158,11 @@ enum dls_interface_type_ {
 
 #define DLS_INTERFACE_GET "Get"
 #define DLS_INTERFACE_GET_ALL "GetAll"
+#define DLS_INTERFACE_SET "Set"
 #define DLS_INTERFACE_INTERFACE_NAME "InterfaceName"
 #define DLS_INTERFACE_PROPERTY_NAME "PropertyName"
 #define DLS_INTERFACE_PROPERTIES_VALUE "Properties"
-#define DLS_INTERFACE_VALUE "value"
+#define DLS_INTERFACE_VALUE "Value"
 #define DLS_INTERFACE_CHILD_TYPES "ChildTypes"
 
 #define DLS_INTERFACE_VERSION "Version"
