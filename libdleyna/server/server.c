@@ -91,6 +91,8 @@ static const gchar g_root_introspection[] =
 	"    <signal name='"DLS_INTERFACE_LOST_SERVER"'>"
 	"      <arg type='o' name='"DLS_INTERFACE_PATH"'/>"
 	"    </signal>"
+	"    <property type='as' name='"DLS_INTERFACE_PROP_NEVER_QUIT"'"
+	"       access='readwrite'/>"
 	"    <property type='as' name='"DLS_INTERFACE_PROP_WHITE_LIST_ENTRIES"'"
 	"       access='readwrite'/>"
 	"    <property type='b' name='"DLS_INTERFACE_PROP_WHITE_LIST_ENABLED"'"
