@@ -2100,7 +2100,7 @@ GVariant *dls_props_get_manager_prop(dleyna_settings_t *settings,
 		b_value = dleyna_settings_is_white_list_enabled(settings);
 		retval = g_variant_ref_sink(g_variant_new_boolean(b_value));
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_WHITE_LIST_ENTRIES)) {
-		retval = prv_build_wl_entries(settings);
+		retval = g_variant_ref_sink(prv_build_wl_entries(settings));
 	}
 
 #if DLEYNA_LOG_LEVEL & DLEYNA_LOG_LEVEL_DEBUG
