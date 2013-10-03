@@ -1,3 +1,19 @@
+version 0.4.0
+	- Logs: provide correct component version
+	- Don't return empty properties in GetAll
+	- Refactor the filtering for GetAll
+	- Add a new MediaDevice BrowseObjects API
+	  https://github.com/01org/dleyna-server/issues/114
+	- Support for a new "Error" property, used in BrowseObjects
+	- Deprecate LastChange in favor of Changed signal
+	  https://github.com/01org/dleyna-server/issues/109
+	- Fix a memory leak
+	  https://github.com/01org/dleyna-collabora-android/issues/58
+	- Support of the ChildCount property
+	  https://github.com/01org/dleyna-server/issues/122
+	- New whitelist APIs
+	- Add a 'never quit' property to the Manager object
+
 version 0.2.1
 	- Various build optimizations
 	- Fix a crash case when the server stops
