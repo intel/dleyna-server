@@ -65,7 +65,7 @@ class UscError(Exception):
         self.message = message
 
     def __str__(self):
-        return 'DscError: ' + self.message
+        return 'UscError: ' + self.message
 
 class _UscStore(object):
     REMOTE_ID_OPTION = 'remote_id'
@@ -258,14 +258,14 @@ class UscController(object):
             try:
                 srt = server.get_prop('ServiceResetToken')
             except:
-                raise DscError("'ServiceResetToken' variable not supported")
+                raise UscError("'ServiceResetToken' variable not supported")
 
             try:
                 dlna_caps = server.get_prop('DLNACaps')
                 if not 'content-synchronization' in dlna_caps:
                     raise
             except:
-                raise DscError("'content-synchronization' cap not supported")
+                raise UscError("'content-synchronization' cap not supported")
 
             try:
                 search_caps = server.get_prop('SearchCaps')
@@ -274,10 +274,10 @@ class UscController(object):
                 if not [x for x in search_caps if 'ContainerUpdateID' in x]:
                     raise
             except:
-                raise DscError("'objectUpdateID' search cap not supported")
+                raise UscError("'objectUpdateID' search cap not supported")
 
             return srt
-        except DscError as err:
+        except UscError as err:
             print err
             return None
 
