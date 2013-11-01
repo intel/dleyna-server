@@ -509,6 +509,7 @@ static void prv_on_context_available(GUPnPContextManager *context_manager,
 }
 
 dls_upnp_t *dls_upnp_new(dleyna_connector_id_t connection,
+			 guint port,
 			 const dleyna_connector_dispatch_cb_t *dispatch_table,
 			 dls_upnp_callback_t found_server,
 			 dls_upnp_callback_t lost_server,
@@ -536,7 +537,7 @@ dls_upnp_t *dls_upnp_new(dleyna_connector_id_t connection,
 
 	dls_prop_maps_new(&upnp->property_map, &upnp->filter_map);
 
-	upnp->context_manager = gupnp_context_manager_create(0);
+	upnp->context_manager = gupnp_context_manager_create(port);
 
 	g_signal_connect(upnp->context_manager, "context-available",
 			 G_CALLBACK(prv_on_context_available),

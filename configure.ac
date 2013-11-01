@@ -84,7 +84,7 @@ AC_ARG_ENABLE(master-build,,
 		[master_build=no])
 
 AS_IF([test "x$master_build" = "xno"],
-      [PKG_CHECK_MODULES([DLEYNA_CORE], [dleyna-core-1.0 >= 0.4.0])],
+      [PKG_CHECK_MODULES([DLEYNA_CORE], [dleyna-core-1.0 >= 0.5.0])],
       [this_abs_top_srcdir=`cd "$srcdir" && pwd`;
        DLEYNA_CORE_CFLAGS="-I$this_abs_top_srcdir/../dleyna-core";
        DLEYNA_CORE_LIBS="-L$this_abs_top_srcdir/../dleyna-core/.libs -ldleyna-core-1.0"

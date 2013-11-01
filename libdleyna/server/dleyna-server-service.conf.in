@@ -12,6 +12,8 @@ never-quit=@never_quit@
 # IPC connector name
 connector-name=@with_connector_name@
 
+# Source port for SSDP messages
+#port=4321
 
 # Log configuration options
 [log]

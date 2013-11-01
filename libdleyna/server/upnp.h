@@ -32,6 +32,7 @@ typedef void (*dls_upnp_callback_t)(const gchar *path, void *user_data);
 typedef void (*dls_upnp_task_complete_t)(dls_task_t *task, GError *error);
 
 dls_upnp_t *dls_upnp_new(dleyna_connector_id_t connection,
+			 guint port,
 			 const dleyna_connector_dispatch_cb_t *dispatch_table,
 			 dls_upnp_callback_t found_server,
 			 dls_upnp_callback_t lost_server,
