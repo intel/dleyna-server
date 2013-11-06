@@ -311,10 +311,10 @@ class DscController(object):
         for item in servers:
             device = Device(item)
             uuid = device.get_prop('UDN')
-            new_srt = device.get_prop('ServiceResetToken')
-            new_id = device.get_prop('SystemUpdateID')
 
             if self.__config.has_section(uuid):
+                new_id = device.get_prop('SystemUpdateID')
+                new_srt = device.get_prop('ServiceResetToken')
                 cur_id = self.__config.getint(uuid, DscController.SUID_OPTION)
                 cur_srt = self.__config.get(uuid, DscController.SRT_OPTION)
                 if cur_id == -1 or cur_srt != new_srt:
