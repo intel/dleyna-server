@@ -320,11 +320,11 @@ class DscController(object):
                 if cur_id == -1 or cur_srt != new_srt:
                     print
                     print u'Server {0} needs *full* sync:'.format(uuid)
-                    yield item, uuid, 0, new_id, True
+                    yield item, uuid, 0, new_id, new_srt, True
                 elif cur_id < new_id:
                     print
                     print u'Server {0} needs sync:'.format(uuid)
-                    yield item, uuid, cur_id, new_id, False
+                    yield item, uuid, cur_id, new_id, new_srt, False
 
     def __check_trackable(self, server):
         try:
@@ -451,7 +451,7 @@ class DscController(object):
         """
         print u'Syncing...'
 
-        for item, uuid, cur, new, full_sync in \
+        for item, uuid, cur, new_id, new_srt, full_sync in \
                                     self.__need_sync(self.__upnp.get_servers()):
             sync = self.__config.getboolean(uuid, DscController.SYNC_OPTION)
 
@@ -474,7 +474,9 @@ class DscController(object):
                 else:
                     store.sync_item(obj)
 
-            self.__config.set(uuid, DscController.SUID_OPTION, str(new))
+            self.__config.set(uuid, DscController.SUID_OPTION, str(new_id))
+            if full_sync:
+                self.__config.set(uuid, DscController.SRT_OPTION, str(new_srt))
             self.__write_config()
 
         print
