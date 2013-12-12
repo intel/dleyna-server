@@ -49,7 +49,6 @@ struct dls_upnp_t_ {
 	void *user_data;
 	GHashTable *server_udn_map;
 	GHashTable *server_uc_map;
-	guint counter;
 };
 
 /* Private structure used in service task */
@@ -164,8 +163,8 @@ static void prv_server_available_cb(GUPnPControlPoint *cp,
 
 	udn = gupnp_device_info_get_udn((GUPnPDeviceInfo *)proxy);
 
-	ip_address = gupnp_context_get_host_ip(
-		gupnp_control_point_get_context(cp));
+	ip_address = gssdp_client_get_host_ip(
+		GSSDP_CLIENT(gupnp_control_point_get_context(cp)));
 
 	if (!udn || !ip_address)
 		goto on_error;
@@ -190,13 +189,10 @@ static void prv_server_available_cb(GUPnPControlPoint *cp,
 
 		device = dls_device_new(upnp->connection, proxy, ip_address,
 					upnp->interface_info,
-					upnp->property_map, upnp->counter,
-					queue_id);
+					upnp->property_map, udn, queue_id);
 
 		prv_update_device_context(priv_t, upnp, udn, device, ip_address,
 					  queue_id);
-
-		upnp->counter++;
 	} else {
 		DLEYNA_LOG_DEBUG("Device Found");
 

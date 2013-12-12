@@ -1182,16 +1182,19 @@ dls_device_t *dls_device_new(
 			const gchar *ip_address,
 			const dleyna_connector_dispatch_cb_t *dispatch_table,
 			GHashTable *property_map,
-			guint counter,
+			const char *udn,
 			const dleyna_task_queue_key_t *queue_id)
 {
 	dls_device_t *dev;
 	gchar *new_path;
+	gchar *uuid;
 	dls_device_context_t *context;
 
 	DLEYNA_LOG_DEBUG("New Device on %s", ip_address);
 
-	new_path = g_strdup_printf("%s/%u", DLEYNA_SERVER_PATH, counter);
+	uuid = dls_path_convert_udn_to_path(udn);
+	new_path = g_strdup_printf("%s/%s", DLEYNA_SERVER_PATH, uuid);
+	g_free(uuid);
 	DLEYNA_LOG_DEBUG("Server Path %s", new_path);
 
 	dev = g_new0(dls_device_t, 1);
