@@ -62,6 +62,7 @@ struct dls_async_get_all_t_ {
 	const gchar *protocol_info;
 	gboolean need_child_count;
 	gboolean device_object;
+	GUPnPServiceProxy *proxy;
 };
 
 typedef struct dls_async_upload_t_ dls_async_upload_t;

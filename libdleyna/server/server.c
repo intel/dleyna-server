@@ -150,8 +150,7 @@ static const gchar g_server_introspection[] =
 	"    <signal name='"DLS_INTERFACE_PROPERTIES_CHANGED"'>"
 	"      <arg type='s' name='"DLS_INTERFACE_INTERFACE_NAME"'/>"
 	"      <arg type='a{sv}' name='"DLS_INTERFACE_CHANGED_PROPERTIES"'/>"
-	"      <arg type='as' name='"
-	DLS_INTERFACE_INVALIDATED_PROPERTIES"'/>"
+	"      <arg type='as' name='"DLS_INTERFACE_INVALIDATED_PROPERTIES"'/>"
 	"    </signal>"
 	"  </interface>"
 	"  <interface name='"DLS_INTERFACE_MEDIA_OBJECT"'>"
@@ -440,6 +439,8 @@ static const gchar g_server_introspection[] =
 	"    </method>"
 	"    <method name='"DLS_INTERFACE_CANCEL"'>"
 	"    </method>"
+	"    <method name='"DLS_INTERFACE_WAKE"'>"
+	"    </method>"
 	"    <method name='"DLS_INTERFACE_GET_ICON"'>"
 	"      <arg type='s' name='"DLS_INTERFACE_REQ_MIME_TYPE"'"
 	"           direction='in'/>"
@@ -468,11 +469,9 @@ static const gchar g_server_introspection[] =
 	"       access='read'/>"
 	"    <property type='s' name='"DLS_INTERFACE_PROP_MANUFACTURER"'"
 	"       access='read'/>"
-	"    <property type='s' name='"
-	DLS_INTERFACE_PROP_MANUFACTURER_URL"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_MANUFACTURER_URL"'"
 	"       access='read'/>"
-	"    <property type='s' name='"
-	DLS_INTERFACE_PROP_MODEL_DESCRIPTION"'"
+	"    <property type='s' name='"DLS_INTERFACE_PROP_MODEL_DESCRIPTION"'"
 	"       access='read'/>"
 	"    <property type='s' name='"DLS_INTERFACE_PROP_MODEL_NAME"'"
 	"       access='read'/>"
@@ -485,6 +484,8 @@ static const gchar g_server_introspection[] =
 	"    <property type='s' name='"DLS_INTERFACE_PROP_PRESENTATION_URL"'"
 	"       access='read'/>"
 	"    <property type='s' name='"DLS_INTERFACE_PROP_ICON_URL"'"
+	"       access='read'/>"
+	"    <property type='b' name='"DLS_INTERFACE_PROP_SLEEPING"'"
 	"       access='read'/>"
 	"    <property type='a{sv}'name='"
 	DLS_INTERFACE_PROP_SV_DLNA_CAPABILITIES"'"
@@ -550,7 +551,7 @@ static void prv_process_sync_task(dls_task_t *task)
 		dls_task_complete(task);
 		break;
 	case DLS_TASK_GET_SERVERS:
-		task->result = dls_upnp_get_server_ids(g_context.upnp);
+		task->result = dls_upnp_get_device_ids(g_context.upnp);
 		dls_task_complete(task);
 		break;
 	case DLS_TASK_RESCAN:
@@ -701,6 +702,10 @@ static void prv_process_async_task(dls_task_t *task)
 	case DLS_TASK_GET_ICON:
 		dls_upnp_get_icon(g_context.upnp, client, task,
 				  prv_async_task_complete);
+		break;
+	case DLS_TASK_WAKE:
+		dls_upnp_wake(g_context.upnp, client, task,
+			      prv_async_task_complete);
 		break;
 	default:
 		break;
@@ -937,7 +942,13 @@ gboolean dls_server_get_object_info(const gchar *object_path,
 	}
 
 	*device = dls_device_from_path(*root_path,
-				dls_upnp_get_server_udn_map(g_context.upnp));
+				dls_upnp_get_device_udn_map(g_context.upnp));
+
+	if (*device == NULL) {
+		*device = dls_device_from_path(*root_path,
+				dls_upnp_get_sleeping_device_udn_map(
+							      g_context.upnp));
+	}
 
 	if (*device == NULL) {
 		DLEYNA_LOG_WARNING("Cannot locate device for %s", *root_path);
@@ -958,6 +969,20 @@ gboolean dls_server_get_object_info(const gchar *object_path,
 on_error:
 
 	return FALSE;
+}
+
+gboolean dls_server_is_device_sleeping(dls_device_t *dev)
+{
+	if (dev->sleeping_context != NULL)
+		return TRUE;
+	else
+		return dev->sleeping;
+}
+
+void dls_server_delete_sleeping_device(dls_device_t *dev)
+{
+	if (dev->sleeping_context != NULL)
+		dls_upnp_delete_sleeping_device(g_context.upnp, dev);
 }
 
 static const gchar *prv_get_device_id(const gchar *object, GError **error)
@@ -983,7 +1008,8 @@ on_error:
 static void prv_object_method_call(dleyna_connector_id_t conn,
 				   const gchar *sender, const gchar *object,
 				   const gchar *interface,
-				   const gchar *method, GVariant *parameters,
+				   const gchar *method,
+				   GVariant *parameters,
 				   dleyna_connector_msg_id_t invocation)
 {
 	dls_task_t *task;
@@ -1014,9 +1040,11 @@ finished:
 }
 
 static void prv_item_method_call(dleyna_connector_id_t conn,
-				 const gchar *sender, const gchar *object,
+				 const gchar *sender,
+				 const gchar *object,
 				 const gchar *interface,
-				 const gchar *method, GVariant *parameters,
+				 const gchar *method,
+				 GVariant *parameters,
 				 dleyna_connector_msg_id_t invocation)
 {
 	dls_task_t *task;
@@ -1149,9 +1177,11 @@ finished:
 }
 
 static void prv_device_method_call(dleyna_connector_id_t conn,
-				   const gchar *sender, const gchar *object,
+				   const gchar *sender,
+				   const gchar *object,
 				   const gchar *interface,
-				   const gchar *method, GVariant *parameters,
+				   const gchar *method,
+				   GVariant *parameters,
 				   dleyna_connector_msg_id_t invocation)
 {
 	dls_task_t *task;
@@ -1183,6 +1213,8 @@ static void prv_device_method_call(dleyna_connector_id_t conn,
 	} else if (!strcmp(method, DLS_INTERFACE_BROWSE_OBJECTS)) {
 		task = dls_task_browse_objects_new(invocation, object,
 						   parameters, &error);
+	} else if (!strcmp(method, DLS_INTERFACE_WAKE)) {
+		task = dls_task_wake_new(invocation, object, &error);
 	} else if (!strcmp(method, DLS_INTERFACE_CANCEL)) {
 		task = NULL;
 

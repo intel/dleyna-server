@@ -93,11 +93,14 @@ gboolean dls_props_parse_update_filter(GHashTable *filter_map,
 				       dls_upnp_prop_mask *mask,
 				       gchar **upnp_filter);
 
-void dls_props_add_device(GUPnPDeviceInfo *proxy,
+void dls_props_add_device(GUPnPDeviceInfo *root_proxy,
+			  GUPnPDeviceInfo *proxy,
+			  GUPnPServiceProxy *ems_proxy,
 			  const dls_device_t *device,
 			  GVariantBuilder *vb);
 
-GVariant *dls_props_get_device_prop(GUPnPDeviceInfo *proxy,
+GVariant *dls_props_get_device_prop(GUPnPDeviceInfo *root_proxy,
+				    GUPnPDeviceInfo *proxy,
 				    const dls_device_t *device,
 				    const gchar *prop);
 

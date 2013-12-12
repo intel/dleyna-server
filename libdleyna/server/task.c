@@ -97,6 +97,8 @@ static void prv_delete(dls_task_t *task)
 		g_free(task->ut.get_icon.resolution);
 		g_free(task->ut.get_icon.mime_type);
 		break;
+	case DLS_TASK_WAKE:
+		break;
 	default:
 		break;
 	}
@@ -220,6 +222,24 @@ static gboolean prv_set_task_target_info(dls_task_t *task, const gchar *path,
 					       &task->target.device, error);
 }
 
+static gboolean prv_is_task_allowed(dls_task_t *task, GError **error)
+{
+	if (dls_server_is_device_sleeping(task->target.device)) {
+		if (task->type != DLS_TASK_WAKE &&
+		    task->type != DLS_TASK_GET_PROP)
+			goto on_error;
+	}
+
+	return TRUE;
+
+on_error:
+	*error = g_error_new(DLEYNA_SERVER_ERROR,
+			     DLEYNA_ERROR_OPERATION_FAILED,
+			     "Target device is sleeping");
+
+	return FALSE;
+}
+
 static dls_task_t *prv_m2spec_task_new(dls_task_type_t type,
 				       dleyna_connector_msg_id_t invocation,
 				       const gchar *path,
@@ -236,14 +256,16 @@ static dls_task_t *prv_m2spec_task_new(dls_task_type_t type,
 		task = (dls_task_t *)g_new0(dls_async_task_t, 1);
 	}
 
-	if (!prv_set_task_target_info(task, path, error)) {
+	task->type = type;
+
+	if (!prv_set_task_target_info(task, path, error) ||
+	    !prv_is_task_allowed(task, error)) {
 		prv_delete(task);
 		task = NULL;
 
 		goto finished;
 	}
 
-	task->type = type;
 	task->invocation = invocation;
 	task->result_format = result_format;
 
@@ -654,6 +676,17 @@ dls_task_t *dls_task_get_icon_new(dleyna_connector_msg_id_t invocation,
 		      &task->ut.get_icon.resolution);
 
 finished:
+
+	return task;
+}
+
+dls_task_t *dls_task_wake_new(dleyna_connector_msg_id_t invocation,
+			      const gchar *path, GError **error)
+{
+	dls_task_t *task;
+
+	task = prv_m2spec_task_new(DLS_TASK_WAKE, invocation, path,
+				   NULL, error, FALSE);
 
 	return task;
 }

@@ -39,9 +39,13 @@ dls_upnp_t *dls_upnp_new(dleyna_connector_id_t connection,
 
 void dls_upnp_delete(dls_upnp_t *upnp);
 
-GVariant *dls_upnp_get_server_ids(dls_upnp_t *upnp);
+GVariant *dls_upnp_get_device_ids(dls_upnp_t *upnp);
 
-GHashTable *dls_upnp_get_server_udn_map(dls_upnp_t *upnp);
+GHashTable *dls_upnp_get_device_udn_map(dls_upnp_t *upnp);
+
+GHashTable *dls_upnp_get_sleeping_device_udn_map(dls_upnp_t *upnp);
+
+void dls_upnp_delete_sleeping_device(dls_upnp_t *upnp, dls_device_t *device);
 
 void dls_upnp_get_children(dls_upnp_t *upnp, dls_client_t *client,
 			   dls_task_t *task,
@@ -108,6 +112,10 @@ void dls_upnp_create_reference(dls_upnp_t *upnp, dls_client_t *client,
 void dls_upnp_get_icon(dls_upnp_t *upnp, dls_client_t *client,
 		       dls_task_t *task,
 		       dls_upnp_task_complete_t cb);
+
+void dls_upnp_wake(dls_upnp_t *upnp, dls_client_t *client,
+		   dls_task_t *task,
+		   dls_upnp_task_complete_t cb);
 
 void dls_upnp_unsubscribe(dls_upnp_t *upnp);
 
