@@ -23,29 +23,21 @@ dnl
 AC_DEFUN([_DLEYNA_LOG_LEVEL_CHECK_VALUE],
 [
 	AS_CASE($1,
-		[[[1-6]]], [AS_IF([test ${log_array[[${log_level}]]} -ne 0],
+		[[[1-6]]], [AS_IF([test "x${log_unique}" = xyes],
 				[
-					AC_MSG_ERROR(["$1 should be set once"], 1)
-				],
-				[test "x${log_single}" = xyes],
-				[
-					AC_MSG_ERROR(["Unique value element already set"], 1)
+					AC_MSG_ERROR(["Log levels 0, 7 and 8 cannot be combined with other values"], 1)
 				])
+				let log_level_count++
 			],
 
 		[0|7|8], [AS_IF([test ${log_level_count} -ne 0],
 				[
-					AC_MSG_ERROR(["$1 should be a unique value element"], 1)
+					AC_MSG_ERROR(["Log level $1 cannot be combined with other values"], 1)
 				])
-			  log_single=yes
+				log_unique=yes
 			],
-
 		[AC_MSG_ERROR(["$1 is not a valid value"], 1)]
 	)
-
-	log_name=LOG_LEVEL_${log_level}
-	eval log_value=\$${log_name}
-	let "LOG_LEVEL |= ${log_value}"
 ]
 )
 
@@ -57,19 +49,18 @@ AC_DEFUN([DLEYNA_LOG_LEVEL_CHECK],
 	IFS=","
 
 	log_ok=yes
-	log_single=no
+	log_unique=no
 	log_level_count=0
 	LOG_LEVEL=0
-	log_array=(0 0 0 0 0 0 0 0 0)
 
 	for log_level in $1
 	do
 		IFS=${old_IFS}
 		_DLEYNA_LOG_LEVEL_CHECK_VALUE([$log_level])
 		IFS=","
-
-		let log_level_count++
-		let log_array[[${log_level}]]++
+		log_name=LOG_LEVEL_${log_level}
+		eval log_value=\$${log_name}
+		let "LOG_LEVEL |= ${log_value}"
 	done
 
 	IFS=${old_IFS}
