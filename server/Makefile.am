@@ -1,7 +1,7 @@
 AM_CFLAGS =	$(GLIB_CFLAGS)				\
 		$(GIO_CFLAGS)				\
 		$(DLEYNA_CORE_CFLAGS)			\
-		-I$(top_builddir)/libdleyna/server	\
+		-I$(top_srcdir)	\
 		-include config.h
 
 libexec_PROGRAMS = dleyna-server-service
