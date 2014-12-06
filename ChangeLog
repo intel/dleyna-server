@@ -1,3 +1,30 @@
+version 0.5.0
+    - [Build] Fix out-of-source-tree builds
+	  https://github.com/01org/dleyna-server/issues/143
+	- Fix various configure & build issues
+	  [Autoconf] Sub Makefile: Remove ACLOCAL_AMFLAGS
+	  https://github.com/01org/dleyna-collabora-android/issues/127
+	  [Autoconf] Add --no-undefined to compiler option
+	- [upnp] Use "port" setting when creating GUPnPContextManager
+	  https://github.com/01org/dleyna-collabora-android/issues/140
+    - [Deprecated API] Use new API instead of deprecated
+	  https://github.com/01org/dleyna-server/issues/104
+    - [Device] Fix wake-on ip address used for broadcast
+    - [Device] Sleeping devices cache cleanup
+    - [Device] Improve sleeping context lookup
+    - [Device] Move the network interface info storage
+    - [Device] Improve Network Interface info and device context matching
+    - [Device] Retrieve sleeping state via GetInterfaceInfo action
+    - [Device] Add sleeping device memory cache
+    - [Device] Add wake packet sending support
+    - [Device] Add Energy Management features
+    - [Configuration] Remove libdleyna-server .pc file
+	  https://github.com/01org/dleyna-server/issues/113
+    - [Documentation] Fix URL to MediaServer2Spec
+    - [test] Save changed ServiceResetToken in configuration
+    - [test] Survive a missing ServiceResetToken in dsc
+    - [Tests] Fix a typo in the Upload Sync Controller's error management
+
 version 0.4.0
 	- Logs: provide correct component version
 	- Don't return empty properties in GetAll
