@@ -622,7 +622,7 @@ static void prv_add_variant_prop(GVariantBuilder *vb, const gchar *key,
 
 void dls_props_add_child_count(GVariantBuilder *item_vb, gint value)
 {
-	prv_add_int_prop(item_vb, DLS_INTERFACE_PROP_CHILD_COUNT, value);
+	prv_add_uint_prop(item_vb, DLS_INTERFACE_PROP_CHILD_COUNT, value);
 }
 
 static void prv_add_bool_prop(GVariantBuilder *vb, const gchar *key,
