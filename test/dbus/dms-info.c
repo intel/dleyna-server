@@ -14,7 +14,7 @@
  * along with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright (C) 2012-2013 Intel Corporation. All rights reserved.
+ * Copyright (C) 2012-2015 Intel Corporation. All rights reserved.
  *
  * Mark Ryan <mark.d.ryan@intel.com>
  *

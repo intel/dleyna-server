@@ -1,7 +1,7 @@
 /*
  * dLeyna
  *
- * Copyright (C) 2012-2013 Intel Corporation. All rights reserved.
+ * Copyright (C) 2012-2015 Intel Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU Lesser General Public License,
@@ -52,7 +52,6 @@ struct dls_upnp_t_ {
 	GHashTable *device_udn_map;
 	GHashTable *sleeping_device_udn_map;
 	GHashTable *device_uc_map;
-	guint counter;
 };
 
 /* Private structure used in service task */
@@ -286,13 +285,12 @@ static void prv_device_available_cb(GUPnPControlPoint *cp,
 					device_info,
 					ip_address,
 					upnp->interface_info,
-					upnp->property_map, upnp->counter,
+					upnp->property_map, 
+					udn,
 					queue_id);
 
 		prv_update_device_context(priv_t, upnp, udn, device, ip_address,
 					  queue_id);
-
-		upnp->counter++;
 	} else {
 		DLEYNA_LOG_DEBUG("Device Found");
 

@@ -1,7 +1,7 @@
 /*
  * dLeyna
  *
- * Copyright (C) 2012-2013 Intel Corporation. All rights reserved.
+ * Copyright (C) 2012-2015 Intel Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU Lesser General Public License,
@@ -116,7 +116,7 @@ dls_device_t *dls_device_new(
 			const gchar *ip_address,
 			const dleyna_connector_dispatch_cb_t *dispatch_table,
 			GHashTable *filter_map,
-			guint counter,
+			const char *udn,
 			const dleyna_task_queue_key_t *queue_id);
 
 dls_device_t *dls_device_from_path(const gchar *path, GHashTable *device_list);
