@@ -26,7 +26,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <netdb.h>
+#ifdef __ANDROID__
+#include "ifaddrs.h"
+#else
 #include <ifaddrs.h>
+#endif
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <net/if.h>
