@@ -1505,6 +1505,23 @@ void dls_props_add_container(GVariantBuilder *item_vb,
 		prv_add_resources(item_vb, GUPNP_DIDL_LITE_OBJECT(object),
 				  filter_mask, FALSE);
 
+
+	if (filter_mask & DLS_UPNP_MASK_PROP_ARTIST) {
+		GUPnPDIDLLiteObject *obj = GUPNP_DIDL_LITE_OBJECT(object);
+		const char *artist = gupnp_didl_lite_object_get_artist(obj);
+		prv_add_string_prop (item_vb,
+				     DLS_INTERFACE_PROP_ARTIST,
+				     artist);
+	}
+
+	if (filter_mask & DLS_UPNP_MASK_PROP_ALBUM_ART_URL) {
+		GUPnPDIDLLiteObject *obj = GUPNP_DIDL_LITE_OBJECT(object);
+		const char *url = gupnp_didl_lite_object_get_album_art(obj);
+		prv_add_string_prop (item_vb,
+				     DLS_INTERFACE_PROP_ALBUM_ART_URL,
+				     url);
+	}
+
 	res = prv_get_matching_resource(GUPNP_DIDL_LITE_OBJECT(object),
 					protocol_info);
 	if (res) {
@@ -2039,6 +2056,20 @@ GVariant *dls_props_get_container_prop(const gchar *prop,
 		DLEYNA_LOG_DEBUG("Prop %s = %u", prop, uint_val);
 
 		retval = g_variant_ref_sink(g_variant_new_uint32(uint_val));
+	} else if (!strcmp(prop, DLS_INTERFACE_PROP_ARTIST)) {
+		const char *strval = gupnp_didl_lite_object_get_artist(
+						GUPNP_DIDL_LITE_OBJECT(object));
+
+		DLEYNA_LOG_DEBUG("Prop %s = %u", prop, uint_val);
+
+		retval = g_variant_ref_sink(g_variant_new_string(strval));
+	} else if (!strcmp(prop, DLS_INTERFACE_PROP_ALBUM_ART_URL)) {
+		const char *strval = gupnp_didl_lite_object_get_album_art(
+						GUPNP_DIDL_LITE_OBJECT(object));
+
+		DLEYNA_LOG_DEBUG("Prop %s = %u", prop, uint_val);
+
+		retval = g_variant_ref_sink(g_variant_new_string(strval));
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_RESOURCES)) {
 		retval = g_variant_ref_sink(
 			prv_compute_resources(object, DLS_UPNP_MASK_ALL_PROPS,
