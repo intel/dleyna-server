@@ -21,36 +21,36 @@ dnl Regis Merlino <regis.merlino@intel.com>
 dnl
 
 AC_DEFUN_ONCE([DLEYNA_SERVER_COMPILER_FLAGS], [
-	if (test x"${CFLAGS}" = x""); then
+	if test x"${CFLAGS}" = x""; then
 		CFLAGS="-Wall"
-		CFLAGS+=" -O2"
-		CFLAGS+=" -D_FORTIFY_SOURCE=2"
+		AS_VAR_APPEND([CFLAGS], [" -O2"])
+		AS_VAR_APPEND([CFLAGS], [" -D_FORTIFY_SOURCE=2"])
 	fi
 
-	if (test x"$USE_MAINTAINER_MODE" = x"yes"); then
-		CFLAGS+=" -Wextra"
-		CFLAGS+=" -Wno-unused-parameter"
-		CFLAGS+=" -Wno-missing-field-initializers"
-		CFLAGS+=" -Wdeclaration-after-statement"
-		CFLAGS+=" -Wmissing-declarations"
-		CFLAGS+=" -Wredundant-decls"
-		CFLAGS+=" -Wcast-align"
+	if test x"$USE_MAINTAINER_MODE" = x"yes"; then
+		AS_VAR_APPEND([CFLAGS], [" -Wextra"])
+		AS_VAR_APPEND([CFLAGS], [" -Wno-unused-parameter"])
+		AS_VAR_APPEND([CFLAGS], [" -Wno-missing-field-initializers"])
+		AS_VAR_APPEND([CFLAGS], [" -Wdeclaration-after-statement"])
+		AS_VAR_APPEND([CFLAGS], [" -Wmissing-declarations"])
+		AS_VAR_APPEND([CFLAGS], [" -Wredundant-decls"])
+		AS_VAR_APPEND([CFLAGS], [" -Wcast-align"])
 
-		CFLAGS+=" -Wstrict-prototypes"
-		CFLAGS+=" -Wmissing-prototypes"
-		CFLAGS+=" -Wnested-externs"
-		CFLAGS+=" -Wshadow"
-		CFLAGS+=" -Wformat=2"
-		CFLAGS+=" -Winit-self"
+		AS_VAR_APPEND([CFLAGS], [" -Wstrict-prototypes"])
+		AS_VAR_APPEND([CFLAGS], [" -Wmissing-prototypes"])
+		AS_VAR_APPEND([CFLAGS], [" -Wnested-externs"])
+		AS_VAR_APPEND([CFLAGS], [" -Wshadow"])
+		AS_VAR_APPEND([CFLAGS], [" -Wformat=2"])
+		AS_VAR_APPEND([CFLAGS], [" -Winit-self"])
 
-		CFLAGS+=" -std=gnu99"
-		CFLAGS+=" -pedantic"
-		CFLAGS+=" -Wno-overlength-strings"
+		AS_VAR_APPEND([CFLAGS], [" -std=gnu99"])
+		AS_VAR_APPEND([CFLAGS], [" -pedantic"])
+		AS_VAR_APPEND([CFLAGS], [" -Wno-overlength-strings"])
 
-		CFLAGS+=" -DG_DISABLE_DEPRECATED"
-		CFLAGS+=" -DGLIB_DISABLE_DEPRECATION_WARNINGS"
+		AS_VAR_APPEND([CFLAGS], [" -DG_DISABLE_DEPRECATED"])
+		AS_VAR_APPEND([CFLAGS], [" -DGLIB_DISABLE_DEPRECATION_WARNINGS"])
 	fi
 
-	CFLAGS+=" -Wno-format-extra-args"
-	CFLAGS+=" -Wl,--no-undefined"
+	AS_VAR_APPEND([CFLAGS], [" -Wno-format-extra-args"])
+	AS_VAR_APPEND([CFLAGS], [" -Wl,--no-undefined"])
 ])
