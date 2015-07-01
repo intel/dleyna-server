@@ -27,7 +27,7 @@ AC_DEFUN([_DLEYNA_LOG_LEVEL_CHECK_VALUE],
 				[
 					AC_MSG_ERROR(["Log levels 0, 7 and 8 cannot be combined with other values"], 1)
 				])
-				let log_level_count++
+				: $((log_level_count++))
 			],
 
 		[0|7|8], [AS_IF([test ${log_level_count} -ne 0],
@@ -60,7 +60,7 @@ AC_DEFUN([DLEYNA_LOG_LEVEL_CHECK],
 		IFS=","
 		log_name=LOG_LEVEL_${log_level}
 		eval log_value=\$${log_name}
-		let "LOG_LEVEL |= ${log_value}"
+		: $((LOG_LEVEL |= ${log_value}))
 	done
 
 	IFS=${old_IFS}
