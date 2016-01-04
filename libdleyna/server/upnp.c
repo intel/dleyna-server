@@ -547,6 +547,9 @@ dls_upnp_t *dls_upnp_new(dleyna_connector_id_t connection,
 void dls_upnp_delete(dls_upnp_t *upnp)
 {
 	if (upnp) {
+		g_signal_handlers_disconnect_by_func (G_OBJECT (upnp->context_manager),
+						      G_CALLBACK(prv_on_context_available),
+						      upnp);
 		g_object_unref(upnp->context_manager);
 		g_hash_table_unref(upnp->property_map);
 		g_hash_table_unref(upnp->filter_map);

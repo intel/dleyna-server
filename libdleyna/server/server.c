@@ -1352,12 +1352,15 @@ static void prv_control_point_stop_service(void)
 {
 	uint i;
 
-	if (g_context.manager)
+	if (g_context.manager) {
 		dls_manager_delete(g_context.manager);
+		g_context.manager = NULL;
+	}
 
 	if (g_context.upnp) {
 		dls_upnp_unsubscribe(g_context.upnp);
 		dls_upnp_delete(g_context.upnp);
+		g_context.upnp = NULL;
 	}
 
 	if (g_context.connection) {
