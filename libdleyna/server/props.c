@@ -2060,14 +2060,14 @@ GVariant *dls_props_get_container_prop(const gchar *prop,
 		const char *strval = gupnp_didl_lite_object_get_artist(
 						GUPNP_DIDL_LITE_OBJECT(object));
 
-		DLEYNA_LOG_DEBUG("Prop %s = %u", prop, uint_val);
+		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, strval);
 
 		retval = g_variant_ref_sink(g_variant_new_string(strval));
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_ALBUM_ART_URL)) {
 		const char *strval = gupnp_didl_lite_object_get_album_art(
 						GUPNP_DIDL_LITE_OBJECT(object));
 
-		DLEYNA_LOG_DEBUG("Prop %s = %u", prop, uint_val);
+		DLEYNA_LOG_DEBUG("Prop %s = %s", prop, strval);
 
 		retval = g_variant_ref_sink(g_variant_new_string(strval));
 	} else if (!strcmp(prop, DLS_INTERFACE_PROP_RESOURCES)) {
