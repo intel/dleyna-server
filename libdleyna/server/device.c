@@ -1866,7 +1866,7 @@ static gboolean prv_child_count_for_list_cb(dls_async_task_t *cb_data,
 static void prv_retrieve_child_count_for_list(dls_async_task_t *cb_data)
 {
 	dls_async_bas_t *cb_task_data = &cb_data->ut.bas;
-	dls_device_object_builder_t *builder;
+	dls_device_object_builder_t *builder = NULL;
 	guint i;
 
 	for (i = cb_task_data->retrieved; i < cb_task_data->vbs->len; ++i) {
@@ -1878,7 +1878,7 @@ static void prv_retrieve_child_count_for_list(dls_async_task_t *cb_data)
 
 	cb_task_data->retrieved = i;
 
-	if (i < cb_task_data->vbs->len)
+	if (i < cb_task_data->vbs->len && builder)
 		prv_get_child_count(cb_data, prv_child_count_for_list_cb,
 				    builder->id);
 	else
@@ -5897,7 +5897,7 @@ static uint8_t *prv_hex_str_to_bin(const gchar *hex_str, gsize *out_len)
 	gsize i;
 	gsize j;
 	uint8_t *buffer = NULL;
-	uint8_t byte;
+	uint8_t byte = 0;
 	gsize len;
 
 	len = strlen(hex_str);
