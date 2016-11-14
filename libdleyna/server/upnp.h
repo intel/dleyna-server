@@ -24,6 +24,7 @@
 #define DLS_UPNP_H__
 
 #include <libdleyna/core/connector.h>
+#include <libgupnp/gupnp-context-manager.h>
 
 #include "client.h"
 #include "async.h"
