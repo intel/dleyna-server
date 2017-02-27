@@ -1,7 +1,7 @@
 /*
  * dLeyna
  *
- * Copyright (C) 2013 Intel Corporation. All rights reserved.
+ * Copyright (C) 2012-2017 Intel Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU Lesser General Public License,
