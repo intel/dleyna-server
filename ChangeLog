@@ -1,14 +1,39 @@
-version 0.5.0
+version 0.6.0
+    - [Props] Fix ChildCount property type
+    - Added new core.c and core.h to Makefile.am.
+    - Add Artist and AlbumArtURL to MediaContainer2
+    - ifaddrs.h for Andriod compile
+    - [m4] Don't use bash arrays in m4 macros
+    - [m4] Don't use bash "let" builtin
+    - [m4] Use AS_VAR_APPEND macro instead of "+="
+      Merge pull request #149
+    - Fix possible use-after-free on exit
+      Merge pull request #151
+    - fix for issue #156
+      Invalid log line
+      https://github.com/01org/dleyna-server/issues/156
+      Merge pull request #157
+    - fix for issues #154 and #155
+      Dereference of undefined pointer value
+      https://github.com/01org/dleyna-server/issues/154
+      Result of operation is garbage or undefined
+      https://github.com/01org/dleyna-server/issues/155
+      Merge pull request #158
+    - Include libgupnp/gupnp-context-manager.h
+      Merge pull request #159
+    - Changed the Copyright to 2017
+
+ version 0.5.0
     - [Build] Fix out-of-source-tree builds
-	  https://github.com/01org/dleyna-server/issues/143
-	- Fix various configure & build issues
-	  [Autoconf] Sub Makefile: Remove ACLOCAL_AMFLAGS
-	  https://github.com/01org/dleyna-collabora-android/issues/127
-	  [Autoconf] Add --no-undefined to compiler option
-	- [upnp] Use "port" setting when creating GUPnPContextManager
-	  https://github.com/01org/dleyna-collabora-android/issues/140
+      https://github.com/01org/dleyna-server/issues/143
+    - Fix various configure & build issues
+      [Autoconf] Sub Makefile: Remove ACLOCAL_AMFLAGS
+      https://github.com/01org/dleyna-collabora-android/issues/127
+      [Autoconf] Add --no-undefined to compiler option
+    - [upnp] Use "port" setting when creating GUPnPContextManager
+      https://github.com/01org/dleyna-collabora-android/issues/140
     - [Deprecated API] Use new API instead of deprecated
-	  https://github.com/01org/dleyna-server/issues/104
+      https://github.com/01org/dleyna-server/issues/104
     - [Device] Fix wake-on ip address used for broadcast
     - [Device] Sleeping devices cache cleanup
     - [Device] Improve sleeping context lookup
@@ -19,7 +44,7 @@ version 0.5.0
     - [Device] Add wake packet sending support
     - [Device] Add Energy Management features
     - [Configuration] Remove libdleyna-server .pc file
-	  https://github.com/01org/dleyna-server/issues/113
+      https://github.com/01org/dleyna-server/issues/113
     - [Documentation] Fix URL to MediaServer2Spec
     - [test] Save changed ServiceResetToken in configuration
     - [test] Survive a missing ServiceResetToken in dsc
