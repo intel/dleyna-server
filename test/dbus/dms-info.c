@@ -360,8 +360,6 @@ int main(int argc, char *argv[])
 	if (sigprocmask(SIG_BLOCK, &mask, NULL) == -1)
 		goto on_error;
 
-	g_type_init();
-
 	/* Create proxy for com.intel.dLeynaServer.Manager.  The Manager
 	object has no properties.  We will create the proxy asynchronously
 	and use G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES to ensure that
