@@ -2688,7 +2688,7 @@ static void prv_sleeping_for_prop_cb(GUPnPServiceProxy *proxy,
 
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_OPERATION_FAILED,
-					     "GetNetworkInterfaceInfo failed: %s",
+					     "GetInterfaceInfo failed: %s",
 					     message);
 
 		goto on_complete;
