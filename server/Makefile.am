@@ -15,11 +15,11 @@ dleyna_server_service_LDADD =	$(GLIB_LIBS)				    			\
 
 dbusservicedir = $(DBUS_SERVICE_DIR)
 dbusservice_in_files = com.intel.dleyna-server.service.in
-dbusservice_DATA = com.intel.dleyna-server.service
+dbusservice_DATA = $(DLEYNA_SERVER_NAME).service
 
-# Replace the 'libexecdir' marker with its fully expanded value
-%.service: %.service.in Makefile
-	$(AM_V_GEN) $(SED) -e "s|\@libexecdir\@|$(libexecdir)|" $< > $@
+# Replace the 'libexecdir' marker and DLEYNA_SERVER_NAME with their fully expanded value
+$(DLEYNA_SERVER_NAME).service: com.intel.dleyna-server.service.in Makefile
+	$(AM_V_GEN) $(SED) -e "s|\@libexecdir\@|$(libexecdir)|" -e "s|\@DLEYNA_SERVER_NAME\@|$(DLEYNA_SERVER_NAME)|" $< > $@
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = dleyna-server-service-1.0.pc
