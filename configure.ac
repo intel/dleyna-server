@@ -205,9 +205,14 @@ AM_CONDITIONAL([BUILD_SERVER], [test "x$enable_lib_only" = "xno"])
 AC_DEFINE([DLEYNA_SERVER_OBJECT], "/com/intel/dLeynaServer", [Name of object exposed by dleyna-server])
 AC_DEFINE([DLEYNA_SERVER_PATH], "/com/intel/dLeynaServer/server", [Path of server objects])
 
-DLEYNA_SERVER_NAME=com.intel.dleyna-server
+AC_ARG_WITH(dleyna-service-name,
+		AS_HELP_STRING(
+			[--with-dleyna-service-name],
+			[Specify a D-Bus service name to own]),
+		[with_dleyna_service_name="$withval"], [with_dleyna_service_name="com.intel.dleyna-server"])
+DLEYNA_SERVER_NAME=$with_dleyna_service_name
 AC_SUBST(DLEYNA_SERVER_NAME)
-AC_DEFINE([DLEYNA_SERVER_NAME], "com.intel.dleyna-server",
+AC_DEFINE_UNQUOTED([DLEYNA_SERVER_NAME], ["$with_dleyna_service_name"],
 				 [d-Bus Name of dleyna-server])
 
 DLEYNA_SERVER_INTERFACE_MANAGER=com.intel.dLeynaServer.Manager
