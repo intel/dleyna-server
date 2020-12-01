@@ -2256,15 +2256,14 @@ static void prv_system_update_id_for_props_cb(GUPnPServiceProxy *proxy,
 			      DLS_SYSTEM_UPDATE_VAR,
 			      g_variant_new_uint32(id));
 
-	cb_data->task.result = g_variant_ref_sink(g_variant_builder_end(
-							cb_task_data->vb));
-
 on_complete:
 
 	if (!cb_data->error)
 		prv_get_sr_token_for_props(proxy, cb_data->task.target.device,
 					   cb_data);
 	else {
+		cb_data->task.result = g_variant_ref_sink(g_variant_builder_end(
+							cb_task_data->vb));
 		(void) g_idle_add(dls_async_task_complete, cb_data);
 		g_cancellable_disconnect(cb_data->cancellable,
 					 cb_data->cancel_id);
@@ -2688,7 +2687,7 @@ static void prv_sleeping_for_prop_cb(GUPnPServiceProxy *proxy,
 
 		cb_data->error = g_error_new(DLEYNA_SERVER_ERROR,
 					     DLEYNA_ERROR_OPERATION_FAILED,
-					     "GetNetworkInterfaceInfo failed: %s",
+					     "GetInterfaceInfo failed: %s",
 					     message);
 
 		goto on_complete;
