@@ -5789,6 +5789,7 @@ static void tcp_wake_cb(GObject *source, GAsyncResult *result,
 	dls_async_task_t *cb_data = (dls_async_task_t *)tcp_data->task;
 	GError *tcp_error = NULL;
 	gssize written;
+	guint max_wake_on_delay;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
@@ -5854,6 +5855,8 @@ on_write:
 	goto on_exit;
 
 on_complete:
+	// Save no delay for potential use later
+	max_wake_on_delay = tcp_data->max_wake_on_delay;
 	prv_free_tcp_data(tcp_data);
 
 	if (!g_cancellable_is_cancelled(cb_data->cancellable)) {
@@ -5861,7 +5864,7 @@ on_complete:
 
 		if (cb_data->task.target.device->sleeping_context != NULL)
 			prv_start_wake_on_watcher(cb_data->task.target.device,
-						  tcp_data->max_wake_on_delay);
+						  max_wake_on_delay);
 	}
 
 	g_cancellable_disconnect(cb_data->cancellable, cb_data->cancel_id);
