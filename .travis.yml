@@ -1,0 +1,16 @@
+language: C
+dist: focal
+sudo: true
+
+before_install:
+  - sudo apt-get update -qq
+
+install:
+  - sudo apt install libglib2.0-dev libgupnp-1.2-dev libgupnp-dlna-2.0-dev libgupnp-av-1.0-dev libsoup2.4-dev
+  - sudo apt install ninja-build clang-tools python3-pip
+
+script:
+  - pip3 install meson
+  - meson build -Dman_pages=false
+  - ninja -C build
+  - ninja -C build scan-build
