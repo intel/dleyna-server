@@ -5909,7 +5909,7 @@ static uint8_t *prv_hex_str_to_bin(const gchar *hex_str, gsize *out_len)
 		goto on_exit;
 	}
 
-	buffer = g_malloc(len / 2);
+	buffer = g_malloc0(len / 2);
 
 	for (i = 0, j = 0; i < len; i += 2, j++) {
 		if (!prv_hex_char_to_byte(hex_str[i], &buffer[j]))
