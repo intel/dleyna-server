@@ -73,6 +73,7 @@ gupnp_av = dependency('gupnp-av-1.0', version: '>= 0.11.5')
 gupnp_dlna = dependency('gupnp-dlna-2.0', version: '>= 0.9.4')
 soup = dependency('libsoup-2.4', version: '>= 2.28.2')
 dleyna_core = dependency('dleyna-core-1.0', version: '>= 0.6.0')
+libxml2 = dependency('libxml-2.0')
 
 cc = meson.get_compiler('c')
 math = cc.find_library('m', required: false)
