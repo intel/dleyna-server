@@ -8,7 +8,8 @@ server_service = executable(
         server_dep,
     ],
     install: true,
-    install_dir: join_paths(get_option('prefix'), get_option('libexecdir'))
+    install_dir: join_paths(get_option('prefix'), get_option('libexecdir')),
+    install_rpath: join_paths(get_option('prefix'), get_option('libdir'), 'dleyna-server')
 )
 
 server_name = get_option('server_name')
