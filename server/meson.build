@@ -8,7 +8,8 @@ server_service = executable(
         server_dep,
     ],
     install: true,
-    install_dir: join_paths(get_option('prefix'), get_option('libexecdir'))
+    install_dir: join_paths(get_option('prefix'), get_option('libexecdir')),
+    install_rpath: library_dir
 )
 
 dbus_conf = configuration_data()

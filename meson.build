@@ -21,6 +21,8 @@ log_types = {
     'glib' : 1
 }
 
+library_dir=join_paths(get_option('prefix'), get_option('libdir'), 'dleyna-server')
+
 conf.set_quoted('VERSION', meson.project_version())
 
 conf.set('DLEYNA_LOG_LEVEL_DISABLED', log_levels[0], description: 'Log level flag for disabled messages')

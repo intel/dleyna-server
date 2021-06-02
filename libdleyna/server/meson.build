@@ -33,7 +33,7 @@ libdleyna_server = library(
         config_h
     ],
     install: true,
-    install_dir: join_paths(get_option('prefix'), get_option('libdir'), 'dleyna-server')
+    install_dir: library_dir
 )
 
 # FIXME: Change the .in file to directly take the values we put in config.h
