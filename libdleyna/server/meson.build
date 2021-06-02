@@ -29,6 +29,7 @@ libdleyna_server = library(
         gupnp_av,
         gupnp_dlna,
         soup,
+        libxml2,
         math,
         config_h
     ],
